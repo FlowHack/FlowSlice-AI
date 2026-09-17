@@ -105,10 +105,66 @@ ICON_FILE = STORAGE_DIR / "tab_icon.svg"
 
 # Собственный строгий геометрический знак: стилизованный поток/капля с крестом.
 _TAB_ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
-  <g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M10 2.5c2.8 3.4 4.5 5.9 4.5 8.2a4.5 4.5 0 0 1-9 0c0-2.3 1.7-4.8 4.5-8.2z"/>
-    <path d="M10 10.5v3.2"/>
-    <path d="M8.2 12.1h3.6"/>
+  <g fill="#ffffff">
+    <rect x="8" y="0" width="4" height="1"/>
+    <rect x="6" y="1" width="1" height="1"/>
+    <rect x="13" y="1" width="1" height="1"/>
+    <rect x="5" y="2" width="1" height="1"/>
+    <rect x="14" y="2" width="1" height="1"/>
+    <rect x="5" y="3" width="1" height="1"/>
+    <rect x="14" y="3" width="1" height="1"/>
+    <rect x="4" y="5" width="1" height="1"/>
+    <rect x="15" y="5" width="1" height="1"/>
+    <rect x="4" y="6" width="1" height="1"/>
+    <rect x="15" y="6" width="1" height="1"/>
+    <rect x="4" y="7" width="1" height="1"/>
+    <rect x="7" y="7" width="2" height="1"/>
+    <rect x="11" y="7" width="2" height="1"/>
+    <rect x="15" y="7" width="1" height="1"/>
+    <rect x="4" y="8" width="2" height="1"/>
+    <rect x="14" y="8" width="2" height="1"/>
+    <rect x="5" y="9" width="2" height="1"/>
+    <rect x="13" y="9" width="2" height="1"/>
+    <rect x="4" y="12" width="1" height="1"/>
+    <rect x="6" y="12" width="2" height="1"/>
+    <rect x="12" y="12" width="2" height="1"/>
+    <rect x="15" y="12" width="1" height="1"/>
+    <rect x="2" y="13" width="1" height="1"/>
+    <rect x="4" y="13" width="1" height="1"/>
+    <rect x="7" y="13" width="1" height="1"/>
+    <rect x="12" y="13" width="1" height="1"/>
+    <rect x="15" y="13" width="1" height="1"/>
+    <rect x="17" y="13" width="1" height="1"/>
+    <rect x="2" y="14" width="1" height="1"/>
+    <rect x="6" y="14" width="1" height="1"/>
+    <rect x="13" y="14" width="1" height="1"/>
+    <rect x="17" y="14" width="1" height="1"/>
+    <rect x="1" y="15" width="1" height="1"/>
+    <rect x="3" y="15" width="1" height="1"/>
+    <rect x="6" y="15" width="3" height="1"/>
+    <rect x="11" y="15" width="3" height="1"/>
+    <rect x="16" y="15" width="1" height="1"/>
+    <rect x="18" y="15" width="1" height="1"/>
+    <rect x="1" y="16" width="1" height="1"/>
+    <rect x="3" y="16" width="1" height="1"/>
+    <rect x="5" y="16" width="1" height="1"/>
+    <rect x="8" y="16" width="4" height="1"/>
+    <rect x="14" y="16" width="1" height="1"/>
+    <rect x="16" y="16" width="1" height="1"/>
+    <rect x="18" y="16" width="1" height="1"/>
+    <rect x="5" y="17" width="1" height="1"/>
+    <rect x="7" y="17" width="1" height="1"/>
+    <rect x="12" y="17" width="1" height="1"/>
+    <rect x="14" y="17" width="1" height="1"/>
+    <rect x="0" y="18" width="1" height="1"/>
+    <rect x="2" y="18" width="1" height="1"/>
+    <rect x="5" y="18" width="1" height="1"/>
+    <rect x="7" y="18" width="1" height="1"/>
+    <rect x="12" y="18" width="1" height="1"/>
+    <rect x="14" y="18" width="1" height="1"/>
+    <rect x="17" y="18" width="1" height="1"/>
+    <rect x="19" y="18" width="1" height="1"/>
+    <rect x="0" y="19" width="20" height="1"/>
   </g>
 </svg>"""
 
