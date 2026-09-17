@@ -1625,7 +1625,7 @@ body.theme-dark {
         lines.push("FlowSlice AI: " + (m.text || ""));
       }
     }
-    copyText(lines.join("\n\n"));
+    copyText(lines.join("\\n\\n"));
   }
 
   function renderUsage(msg) {
