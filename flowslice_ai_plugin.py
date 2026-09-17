@@ -2179,7 +2179,6 @@ class _ChatEngine:
         self._next_id = 1
         self._msg_counter = 1
         self._gen = False
-        self._gen_chat_id: int | None = None
         self._ctx_tokens = 0
         self._post_sink: Any = None
         self._pending_attachment: dict[str, Any] | None = None
@@ -2268,10 +2267,38 @@ class _ChatEngine:
         if not self._chats:
             self._create_chat()
 
+    def _flatten_chats(self) -> list[dict[str, Any]]:
+        """Возвращает копию чатов без тяжёлых вложений для записи на диск.
+
+        Фото (data URI) и текст файлов в памяти сохраняются для превью и API
+        текущей сессии, но на диск пишутся только их текстовые пометки.
+        """
+        result: list[dict[str, Any]] = []
+        for chat in self._chats:
+            flat_msgs: list[dict[str, Any]] = []
+            for msg in chat.get("msgs", []):
+                flat = dict(msg)
+                if flat.get("image"):
+                    flat.pop("image", None)
+                    if " [фото]" not in str(flat.get("text", "")):
+                        flat["text"] = str(flat.get("text", "")) + " [фото]"
+                file_info = flat.get("file")
+                if file_info:
+                    name = str(file_info.get("name", "файл"))
+                    flat["file"] = {"name": name}
+                    marker = f" [файл: {name}]"
+                    if marker not in str(flat.get("text", "")):
+                        flat["text"] = str(flat.get("text", "")) + marker
+                flat_msgs.append(flat)
+            flat_chat = dict(chat)
+            flat_chat["msgs"] = flat_msgs
+            result.append(flat_chat)
+        return result
+
     def _save_chats(self) -> None:
-        """Сохраняет историю чатов в файл под блокировкой."""
+        """Сохраняет историю чатов в файл под блокировкой без тяжёлых вложений."""
         payload = {
-            "chats": self._chats,
+            "chats": self._flatten_chats(),
             "active": self._active,
             "next_id": self._next_id,
             "next_msg_id": self._msg_counter,
@@ -2440,6 +2467,9 @@ class _ChatEngine:
         text = str(message.get("text", "")).strip()
         if not text:
             return
+        if text.startswith("/") and self._handle_command(text):
+            self._pending_attachment = None
+            return
         if self._gen:
             self._post(
                 {
@@ -2449,8 +2479,7 @@ class _ChatEngine:
                 }
             )
             return
-        if text.startswith("/") and self._handle_command(text):
-            return
+        self._pending_confirm = None
         chat = self._active_chat()
         edit_id = message.get("edit_id")
         if edit_id is not None:
@@ -2679,7 +2708,6 @@ class _ChatEngine:
             )
             return
         self._gen = True
-        self._gen_chat_id = chat_id
         threading.Thread(
             target=self._worker, args=(chat_id, user_text, user_msg_id), daemon=True
         ).start()
@@ -2689,7 +2717,6 @@ class _ChatEngine:
         chat = self._chat_by_id(chat_id)
         if chat is None:
             self._gen = False
-            self._gen_chat_id = None
             return
         msg_id = self._next_msg_id()
         chat["msgs"].append(
@@ -2716,7 +2743,6 @@ class _ChatEngine:
             )
         finally:
             self._gen = False
-            self._gen_chat_id = None
             self._post({"type": "status", "text": ""})
             self._save_chats()
 
@@ -2751,6 +2777,18 @@ class _ChatEngine:
                 del msgs[index]
                 return
 
+    def _collect_context_images(self, chat: dict[str, Any]) -> list[str]:
+        """Собирает data URI изображений из последних сообщений чата."""
+        images: list[str] = []
+        for msg in reversed(chat.get("msgs", [])):
+            image = msg.get("image")
+            if not isinstance(image, str) or not image.startswith("data:"):
+                continue
+            images.append(image)
+            if len(images) >= MAX_IMAGES_IN_HISTORY:
+                break
+        return images
+
     def _build_messages(self, chat: dict[str, Any], user_text: str) -> list[dict[str, Any]]:
         """Собирает список сообщений для запроса к модели."""
         flags = chat.get("context_flags", {})
@@ -2769,21 +2807,19 @@ class _ChatEngine:
                 "\n\n[Файл: " + str(file_info.get("name", "файл")) + "]\n"
                 + str(file_info.get("text", ""))
             )
-        image = last_user.get("image") if last_user is not None else None
-        if image and self._config.get("provider") != "deepseek":
-            messages.append(
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": user_content},
-                        {"type": "image_url", "image_url": {"url": image}},
-                    ],
-                }
+        images = self._collect_context_images(chat)
+        if images and self._config.get("provider") != "deepseek":
+            content: list[dict[str, Any]] = [{"type": "text", "text": user_content}]
+            content.extend(
+                {"type": "image_url", "image_url": {"url": img}} for img in images
             )
+            messages.append({"role": "user", "content": content})
         else:
-            if image:
+            if images:
                 user_content += (
-                    "\n[Изображение прикреплено, но модель DeepSeek его не поддерживает]"
+                    "\n[Прикреплено изображений: "
+                    + str(len(images))
+                    + ". Модель DeepSeek не поддерживает изображения]"
                 )
             messages.append({"role": "user", "content": user_content})
         return messages
