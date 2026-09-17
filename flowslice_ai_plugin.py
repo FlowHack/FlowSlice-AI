@@ -22,6 +22,7 @@ import importlib
 import json
 import logging
 import pathlib
+import random
 import sys
 import threading
 import time
@@ -64,17 +65,198 @@ if not _LOGGER.handlers:
     _LOGGER.setLevel(logging.INFO)
 
 
+DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
+    "deepseek": {
+        "name": "DeepSeek",
+        "base_url": "https://api.deepseek.com/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "deepseek-chat": {"name": "DeepSeek V4 Flash", "builtin": True},
+            "deepseek-reasoner": {"name": "DeepSeek V4 Pro", "builtin": True},
+        },
+    },
+    "openrouter": {
+        "name": "OpenRouter",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "deepseek/deepseek-chat-v3-0324": {"name": "DeepSeek V3 (0324)", "builtin": True},
+            "anthropic/claude-sonnet-4-5": {"name": "Claude Sonnet 4.5", "builtin": True},
+            "openai/gpt-5.1": {"name": "GPT-5.1", "builtin": True},
+            "google/gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "builtin": True},
+            "meta-llama/llama-3.3-70b-instruct:free": {"name": "Llama 3.3 70B (free)", "builtin": True},
+        },
+    },
+    "google": {
+        "name": "Google Gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "builtin": True},
+            "gemini-2.5-pro": {"name": "Gemini 2.5 Pro", "builtin": True},
+            "gemini-2.5-flash-lite": {"name": "Gemini 2.5 Flash Lite", "builtin": True},
+        },
+    },
+    "anthropic": {
+        "name": "Anthropic",
+        "base_url": "https://api.anthropic.com/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "claude-opus-4-8": {"name": "Claude Opus 4.8", "builtin": True},
+            "claude-sonnet-4-6": {"name": "Claude Sonnet 4.6", "builtin": True},
+            "claude-haiku-4-5": {"name": "Claude Haiku 4.5", "builtin": True},
+        },
+    },
+    "openai": {
+        "name": "OpenAI",
+        "base_url": "https://api.openai.com/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "gpt-5.1": {"name": "GPT-5.1", "builtin": True},
+            "gpt-5-mini": {"name": "GPT-5 Mini", "builtin": True},
+            "gpt-4o": {"name": "GPT-4o", "builtin": True},
+        },
+    },
+    "groq": {
+        "name": "Groq",
+        "base_url": "https://api.groq.com/openai/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "llama-3.3-70b-versatile": {"name": "Llama 3.3 70B Versatile", "builtin": True},
+            "llama-3.1-8b-instant": {"name": "Llama 3.1 8B Instant", "builtin": True},
+            "deepseek-r1-distill-llama-70b": {"name": "DeepSeek R1 Distill 70B", "builtin": True},
+        },
+    },
+    "glm": {
+        "name": "Zhipu GLM",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "glm-4.6": {"name": "GLM-4.6", "builtin": True},
+            "glm-4.5": {"name": "GLM-4.5", "builtin": True},
+            "glm-4-flash": {"name": "GLM-4-Flash", "builtin": True},
+        },
+    },
+    "cerebras": {
+        "name": "Cerebras",
+        "base_url": "https://api.cerebras.ai/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "llama3.3-70b": {"name": "Llama 3.3 70B", "builtin": True},
+            "llama-3.1-8b": {"name": "Llama 3.1 8B", "builtin": True},
+        },
+    },
+    "mistral": {
+        "name": "Mistral",
+        "base_url": "https://api.mistral.ai/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "mistral-large-latest": {"name": "Mistral Large", "builtin": True},
+            "mistral-small-latest": {"name": "Mistral Small", "builtin": True},
+        },
+    },
+    "xai": {
+        "name": "xAI",
+        "base_url": "https://api.x.ai/v1",
+        "api_key": "",
+        "builtin": True,
+        "models": {
+            "grok-3": {"name": "Grok 3", "builtin": True},
+            "grok-3-mini": {"name": "Grok 3 Mini", "builtin": True},
+        },
+    },
+    "custom": {
+        "name": "Custom",
+        "base_url": "",
+        "api_key": "",
+        "builtin": False,
+        "models": {},
+    },
+}
+
 DEFAULT_CONFIG: dict[str, Any] = {
-    "provider": "deepseek",
-    "base_url": "https://api.deepseek.com/v1",
-    "model": "deepseek-chat",
-    "api_key": "",
-    "custom_base_url": "",
-    "custom_model": "",
+    "providers": json.loads(json.dumps(DEFAULT_PROVIDERS)),
+    "active_provider": "deepseek",
+    "active_model": "deepseek-chat",
     "theme": "auto",
     "font_size": 14,
     "font_style": "system",
+    "temperature": 0.7,
+    "max_tokens": 4096,
+    "reasoning": False,
     "usage": {},
+}
+
+# Ключи настроек, отправляемые в UI (без секретов).
+SETTINGS_KEYS: tuple[str, ...] = (
+    "active_provider",
+    "active_model",
+    "temperature",
+    "max_tokens",
+    "reasoning",
+    "theme",
+    "font_size",
+    "font_style",
+)
+
+# Служебные команды чата: единый источник для /help и state.
+COMMANDS: list[tuple[str, str]] = [
+    ("/context", "полный дамп контекста слайсера"),
+    ("/clear", "очистить историю чата"),
+    ("/model", "отчёт о модели на столе"),
+    ("/printer", "сводка профилей печати"),
+    ("/stats", "статистика использования"),
+    ("/help", "список команд"),
+    ("/reset", "сбросить настройки плагина"),
+]
+
+# Разделы пресетов: ключ результата → (атрибут коллекции, поля для full_config_value).
+PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "printer": (
+        "printers",
+        (
+            "printer_model",
+            "nozzle_diameter",
+            "printable_height",
+            "printer_technology",
+        ),
+    ),
+    "filament": (
+        "filaments",
+        (
+            "filament_type",
+            "filament_flow_ratio",
+            "nozzle_temperature",
+            "nozzle_temperature_initial_layer",
+            "bed_temperature",
+            "chamber_temperature",
+        ),
+    ),
+    "print": (
+        "prints",
+        (
+            "layer_height",
+            "initial_layer_print_height",
+            "sparse_infill_density",
+            "sparse_infill_pattern",
+            "wall_loops",
+            "enable_support",
+            "support_type",
+            "default_print_speed",
+            "outer_wall_speed",
+            "travel_speed",
+            "brim_type",
+        ),
+    ),
 }
 
 SYSTEM_PROMPT = (
@@ -258,6 +440,7 @@ body {
 }
 /* Принудительная чисто белая тема */
 body.theme-light {
+  color-scheme: light;
   --orca-bg: #ffffff;
   --orca-fg: #1a1a1a;
   --orca-muted: #6b6b6b;
@@ -268,6 +451,7 @@ body.theme-light {
 }
 /* Принудительная чисто чёрная тема */
 body.theme-dark {
+  color-scheme: dark;
   --orca-bg: #000000;
   --orca-fg: #e6e6e6;
   --orca-muted: #8a8a8a;
@@ -275,6 +459,15 @@ body.theme-dark {
   --orca-input: #141414;
   --orca-accent: #d9534f;
   --orca-accent-fg: #ffffff;
+}
+/* Нативные дропдауны: явные цвета, чтобы не было белого текста на белом фоне */
+select {
+  background: var(--orca-input);
+  color: var(--orca-fg);
+}
+select option {
+  background: var(--orca-input);
+  color: var(--orca-fg);
 }
 ::-webkit-scrollbar {
   width: 8px;
@@ -643,6 +836,54 @@ body.theme-dark {
 .composer {
   padding: 8px 16px 12px;
   border-top: 1px solid var(--orca-border);
+  position: relative;
+}
+/* ===== Автодополнение команд по «/» ===== */
+.cmd-suggest {
+  position: absolute;
+  bottom: 100%;
+  left: 16px;
+  right: 16px;
+  margin-bottom: 6px;
+  background: var(--orca-bg);
+  border: 1px solid var(--orca-border);
+  border-radius: 8px;
+  max-height: 210px;
+  overflow-y: auto;
+  z-index: 60;
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.25);
+}
+.cmd-suggest-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.cmd-suggest-item:hover {
+  background: var(--orca-input);
+}
+.cmd-suggest-item.active {
+  background: var(--orca-input);
+  box-shadow: inset 2px 0 0 var(--orca-accent);
+}
+.cmd-suggest-cmd {
+  font-family: Consolas, monospace;
+  color: var(--orca-accent);
+  white-space: nowrap;
+}
+.cmd-suggest-desc {
+  color: var(--orca-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmd-suggest-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--orca-muted);
 }
 .attach-preview {
   display: flex;
@@ -798,6 +1039,57 @@ body.theme-dark {
 .key-row input {
   flex: 1;
 }
+.eye-btn {
+  border: 1px solid var(--orca-border);
+  background: transparent;
+  color: var(--orca-muted);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.eye-btn:hover {
+  border-color: var(--orca-accent);
+  color: var(--orca-accent);
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.check-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--orca-accent);
+  margin: 0;
+}
+.check-row label {
+  margin: 0;
+  cursor: pointer;
+}
+.range-value {
+  color: var(--orca-accent);
+  font-weight: 600;
+}
+.copy-modal-text {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+.copy-modal-text:focus {
+  outline: none;
+  border-color: var(--orca-accent);
+}
 .ghost-btn {
   border: 1px solid var(--orca-border);
   background: transparent;
@@ -887,6 +1179,134 @@ body.theme-dark {
 .toast-hide {
   opacity: 0;
 }
+
+/* ===== Чип выбора модели под композером ===== */
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+.model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid var(--orca-border);
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: var(--orca-font);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.model-chip:hover {
+  border-color: var(--orca-accent);
+}
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orca-accent);
+  flex-shrink: 0;
+}
+.chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip-caret {
+  color: var(--orca-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* ===== Модалка выбора модели ===== */
+.mp-modal {
+  width: 440px;
+  max-width: 92vw;
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--orca-bg);
+  border: 1px solid var(--orca-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.mp-search {
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  font-family: var(--orca-font);
+  font-size: 13px;
+}
+.mp-search:focus {
+  outline: none;
+  border-color: var(--orca-accent);
+}
+.mp-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+  min-height: 120px;
+}
+.mp-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--orca-muted);
+  padding: 10px 8px 4px;
+}
+.mp-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.mp-item:hover {
+  background: var(--orca-input);
+}
+.mp-item.active {
+  background: var(--orca-input);
+  box-shadow: inset 2px 0 0 var(--orca-accent);
+}
+.mp-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mp-item-id {
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: var(--orca-muted);
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mp-check {
+  color: var(--orca-accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.mp-empty {
+  padding: 14px 10px;
+  font-size: 12px;
+  color: var(--orca-muted);
+  text-align: center;
+}
 </style>
 </head>
 <body>
@@ -931,13 +1351,21 @@ body.theme-dark {
 
     <!-- Композер -->
     <div class="composer">
+      <div class="cmd-suggest" id="cmdSuggest" style="display:none"></div>
       <div class="attach-preview" id="attachPreview"></div>
       <div class="input-row">
         <button type="button" id="attachBtn" class="icon-btn" title="Прикрепить файл">📎</button>
         <textarea id="input" rows="1" placeholder="Сообщение… (Enter — отправить, Shift+Enter — новая строка)"></textarea>
         <button type="button" id="stopBtn" class="stop-btn" title="Остановить генерацию" style="display:none">■</button>
         <button type="button" id="sendBtn" class="send-btn" title="Отправить">➤</button>
-        <input type="file" id="fileInput" multiple style="display:none">
+        <input type="file" id="fileInput" multiple accept="image/*,.txt,.md,.json,.gcode,.stl,.3mf" style="display:none">
+      </div>
+      <div class="composer-footer">
+        <button type="button" id="modelChip" class="model-chip" title="Выбрать модель">
+          <span class="chip-dot"></span>
+          <span class="chip-label" id="modelChipLabel">—</span>
+          <span class="chip-caret">▾</span>
+        </button>
       </div>
     </div>
   </section>
@@ -952,29 +1380,32 @@ body.theme-dark {
     </div>
     <div class="field">
       <label for="setProvider">Провайдер</label>
-      <select id="setProvider">
-        <option value="deepseek">DeepSeek</option>
-        <option value="openrouter">OpenRouter</option>
-        <option value="custom">Custom</option>
-      </select>
+      <select id="setProvider"></select>
     </div>
     <div class="field" id="setModelWrap">
       <label for="setModel">Модель</label>
       <select id="setModel"></select>
     </div>
-    <div class="field" id="setCustomModelWrap" style="display:none">
-      <label for="setCustomModel">Идентификатор модели</label>
-      <input type="text" id="setCustomModel" placeholder="например, deepseek-chat">
-    </div>
-    <div class="field" id="setBaseWrap" style="display:none">
-      <label for="setBase">Базовый URL API</label>
-      <input type="text" id="setBase" placeholder="https://api.example.com/v1">
-    </div>
     <div class="field">
       <label for="setApiKey">API-ключ</label>
       <div class="key-row">
         <input type="password" id="setApiKey" autocomplete="off">
+        <button type="button" id="setApiKeyEye" class="eye-btn" title="Показать ключ">👁</button>
         <button type="button" id="testKeyBtn" class="ghost-btn">Проверить ключ</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="setTemperature">Температура: <span id="setTemperatureValue" class="range-value">0.7</span></label>
+      <input type="range" id="setTemperature" min="0" max="2" step="0.1" value="0.7">
+    </div>
+    <div class="field">
+      <label for="setMaxTokens">Максимум токенов</label>
+      <input type="number" id="setMaxTokens" min="1" max="100000" step="1" value="4096">
+    </div>
+    <div class="field">
+      <div class="check-row">
+        <input type="checkbox" id="setReasoning">
+        <label for="setReasoning">Расширенное мышление</label>
       </div>
     </div>
     <div class="field">
@@ -1014,6 +1445,32 @@ body.theme-dark {
   </div>
 </div>
 
+<!-- Модалка выбора модели -->
+<div class="modal-overlay" id="modelPickerModal" style="display:none">
+  <div class="mp-modal">
+    <div class="modal-header">
+      <span>Выбор модели</span>
+      <button type="button" id="mpClose" class="icon-btn" title="Закрыть">✕</button>
+    </div>
+    <input type="text" id="mpSearch" class="mp-search" placeholder="Поиск модели или провайдера…">
+    <div class="mp-list" id="mpList"></div>
+  </div>
+</div>
+
+<!-- Модалка ручного копирования (fallback буфера обмена) -->
+<div class="modal-overlay" id="copyModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Скопируйте текст вручную</span>
+      <button type="button" id="copyModalClose" class="icon-btn" title="Закрыть">✕</button>
+    </div>
+    <textarea class="copy-modal-text" id="copyModalText" readonly></textarea>
+    <div class="modal-actions">
+      <button type="button" id="copyModalOk" class="primary-btn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -1027,23 +1484,14 @@ body.theme-dark {
     model: "Модель со стола",
     history: "История"
   };
-  var MODELS = {
-    deepseek: [
-      { value: "deepseek-chat", label: "DeepSeek V4 Flash" },
-      { value: "deepseek-reasoner", label: "DeepSeek Reasoner" }
-    ],
-    openrouter: [
-      { value: "deepseek/deepseek-v4-flash-0731", label: "DeepSeek V4 Flash (OpenRouter)" },
-      { value: "openrouter/auto", label: "OpenRouter Auto" }
-    ],
-    custom: []
-  };
 
   /* ===== Состояние ===== */
   var state = {
     chats: [],
     active: null,
     settings: {},
+    providers: [],
+    commands: [],
     context_flags: {},
     context_tokens: 0,
     status: "idle"
@@ -1120,11 +1568,131 @@ body.theme-dark {
   }
 
   /* ===== Header ===== */
+  function providerById(pid) {
+    var providers = state.providers || [];
+    for (var i = 0; i < providers.length; i++) {
+      if (providers[i].id === pid) {
+        return providers[i];
+      }
+    }
+    return null;
+  }
+
   function renderHeader() {
     var s = state.settings || {};
-    var model = s.model || "—";
-    var provider = s.provider || "—";
-    byId("modelStatus").textContent = model + " · " + provider;
+    var provider = providerById(s.active_provider);
+    var providerName = provider ? provider.name : (s.active_provider || "—");
+    var modelName = s.active_model || "—";
+    var model = null;
+    if (provider) {
+      var models = provider.models || [];
+      for (var i = 0; i < models.length; i++) {
+        if (models[i].id === s.active_model) {
+          model = models[i];
+          break;
+        }
+      }
+    }
+    if (model && model.name) {
+      modelName = model.name;
+    }
+    byId("modelStatus").textContent = providerName + " · " + modelName;
+  }
+
+  /* ===== Модель-пикер ===== */
+  function renderModelChip() {
+    var s = state.settings || {};
+    var provider = providerById(s.active_provider);
+    var providerName = provider ? provider.name : (s.active_provider || "—");
+    var modelName = s.active_model || "—";
+    if (provider) {
+      var models = provider.models || [];
+      for (var i = 0; i < models.length; i++) {
+        if (models[i].id === s.active_model) {
+          modelName = models[i].name || models[i].id;
+          break;
+        }
+      }
+    }
+    byId("modelChipLabel").textContent = providerName + " · " + modelName;
+  }
+
+  function openModelPicker() {
+    byId("mpSearch").value = "";
+    renderModelPicker();
+    byId("modelPickerModal").style.display = "flex";
+    byId("mpSearch").focus();
+  }
+
+  function closeModelPicker() {
+    byId("modelPickerModal").style.display = "none";
+  }
+
+  function renderModelPicker() {
+    var list = byId("mpList");
+    list.innerHTML = "";
+    var query = byId("mpSearch").value.trim().toLowerCase();
+    var providers = state.providers || [];
+    var withModels = [];
+    for (var i = 0; i < providers.length; i++) {
+      var models = providers[i].models || [];
+      if (models.length > 0) {
+        withModels.push(providers[i]);
+      }
+    }
+    var s = state.settings || {};
+    var activeProvider = s.active_provider;
+    var activeModel = s.active_model;
+    var single = withModels.length <= 1;
+    var shown = 0;
+    for (var p = 0; p < withModels.length; p++) {
+      var prov = withModels[p];
+      var provName = prov.name || prov.id;
+      var provMatch = query && provName.toLowerCase().indexOf(query) !== -1;
+      var models = (prov.models || []).slice().sort(function (a, b) {
+        var na = (a.name || a.id).toLowerCase();
+        var nb = (b.name || b.id).toLowerCase();
+        return na < nb ? -1 : (na > nb ? 1 : 0);
+      });
+      var groupItems = [];
+      for (var m = 0; m < models.length; m++) {
+        var model = models[m];
+        var modelName = model.name || model.id;
+        if (query && !provMatch && modelName.toLowerCase().indexOf(query) === -1) {
+          continue;
+        }
+        groupItems.push(model);
+      }
+      if (groupItems.length === 0) {
+        continue;
+      }
+      if (!single) {
+        list.appendChild(el("div", "mp-group-title", provName));
+      }
+      for (var k = 0; k < groupItems.length; k++) {
+        var item = groupItems[k];
+        var isActive = prov.id === activeProvider && item.id === activeModel;
+        var row = el("div", "mp-item" + (isActive ? " active" : ""));
+        row.setAttribute("data-provider", prov.id);
+        row.setAttribute("data-model", item.id);
+        row.appendChild(el("span", "mp-item-name", item.name || item.id));
+        row.appendChild(el("code", "mp-item-id", item.id));
+        if (isActive) {
+          row.appendChild(el("span", "mp-check", "✓"));
+        }
+        (function (pid, mid) {
+          row.addEventListener("click", function () {
+            post({ type: "set_model", provider: pid, model: mid });
+            closeModelPicker();
+          });
+        })(prov.id, item.id);
+        list.appendChild(row);
+        shown++;
+      }
+    }
+    if (shown === 0) {
+      list.appendChild(el("div", "mp-empty", "Ничего не найдено"));
+    }
   }
 
   /* ===== Sidebar ===== */
@@ -1394,6 +1962,7 @@ body.theme-dark {
   /* ===== Полный ререндер по state ===== */
   function renderState() {
     renderHeader();
+    renderModelChip();
     renderSidebar();
     renderContext();
     renderMessages();
@@ -1514,15 +2083,56 @@ body.theme-dark {
   }
 
   function copyText(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text || "").then(function () {
-        showToast("Скопировано", "ok");
-      }, function () {
-        showToast("Не удалось скопировать", "err");
-      });
-    } else {
-      showToast("Буфер обмена недоступен", "err");
+    var value = text || "";
+    // Шаг 1: современный async API буфера обмена
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      try {
+        navigator.clipboard.writeText(value).then(function () {
+          showToast("Скопировано", "ok");
+        }, function () {
+          copyTextFallback(value);
+        });
+        return;
+      } catch (err) {
+        copyTextFallback(value);
+        return;
+      }
     }
+    copyTextFallback(value);
+  }
+
+  function copyTextFallback(value) {
+    // Шаг 2: скрытый textarea + execCommand("copy")
+    var ok = false;
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = value;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.left = "-1000px";
+      document.body.appendChild(ta);
+      ta.select();
+      ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch (err) {
+      ok = false;
+    }
+    if (ok) {
+      showToast("Скопировано", "ok");
+      return;
+    }
+    // Шаг 3: ручное копирование — модалка с авто-выделением
+    showToast("Не удалось скопировать — выделите текст вручную", "err");
+    var textEl = byId("copyModalText");
+    textEl.value = value;
+    byId("copyModal").style.display = "flex";
+    textEl.focus();
+    textEl.select();
+  }
+
+  function closeCopyModal() {
+    byId("copyModal").style.display = "none";
   }
 
   function autoResize() {
@@ -1531,7 +2141,115 @@ body.theme-dark {
     input.style.height = Math.min(input.scrollHeight, 120) + "px";
   }
 
+  /* ===== Автодополнение команд по «/» ===== */
+  var cmdSuggestIndex = -1;
+  var cmdSuggestMatches = [];
+
+  function cmdSuggestOpen() {
+    return byId("cmdSuggest").style.display !== "none";
+  }
+
+  function setCmdActive(idx) {
+    var list = byId("cmdSuggest");
+    var items = list.querySelectorAll(".cmd-suggest-item");
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.remove("active");
+    }
+    if (items[idx]) {
+      items[idx].classList.add("active");
+    }
+    cmdSuggestIndex = idx;
+  }
+
+  function closeCmdSuggest() {
+    byId("cmdSuggest").style.display = "none";
+    byId("cmdSuggest").innerHTML = "";
+    cmdSuggestIndex = -1;
+    cmdSuggestMatches = [];
+  }
+
+  function chooseCmd(cmd) {
+    byId("input").value = cmd;
+    closeCmdSuggest();
+    sendMessage();
+  }
+
+  function updateCmdSuggest() {
+    var input = byId("input");
+    var text = input.value;
+    var list = byId("cmdSuggest");
+    if (text.charAt(0) !== "/" || text.indexOf("\\n") !== -1) {
+      closeCmdSuggest();
+      return;
+    }
+    var query = text.toLowerCase();
+    var commands = state.commands || [];
+    var matches = [];
+    for (var i = 0; i < commands.length; i++) {
+      var cmd = commands[i].cmd || "";
+      if (cmd.toLowerCase().indexOf(query) === 0) {
+        matches.push(commands[i]);
+      }
+    }
+    list.innerHTML = "";
+    if (matches.length === 0) {
+      list.appendChild(el("div", "cmd-suggest-empty", "Команда не найдена"));
+      list.style.display = "block";
+      cmdSuggestIndex = -1;
+      cmdSuggestMatches = [];
+      return;
+    }
+    for (var j = 0; j < matches.length; j++) {
+      (function (cmdObj, idx) {
+        var item = el("div", "cmd-suggest-item");
+        item.appendChild(el("span", "cmd-suggest-cmd", cmdObj.cmd));
+        item.appendChild(el("span", "cmd-suggest-desc", cmdObj.desc || ""));
+        item.addEventListener("click", function () {
+          chooseCmd(cmdObj.cmd);
+        });
+        item.addEventListener("mousemove", function () {
+          setCmdActive(idx);
+        });
+        list.appendChild(item);
+      })(matches[j], j);
+    }
+    cmdSuggestMatches = matches;
+    cmdSuggestIndex = 0;
+    setCmdActive(0);
+    list.style.display = "block";
+  }
+
   function onInputKey(e) {
+    if (cmdSuggestOpen()) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (cmdSuggestMatches.length > 0) {
+          setCmdActive((cmdSuggestIndex + 1) % cmdSuggestMatches.length);
+        }
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (cmdSuggestMatches.length > 0) {
+          setCmdActive(
+            (cmdSuggestIndex - 1 + cmdSuggestMatches.length) % cmdSuggestMatches.length
+          );
+        }
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        if (cmdSuggestMatches[cmdSuggestIndex]) {
+          e.preventDefault();
+          chooseCmd(cmdSuggestMatches[cmdSuggestIndex].cmd);
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeCmdSuggest();
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       sendMessage();
@@ -1539,44 +2257,54 @@ body.theme-dark {
   }
 
   /* ===== Модалка настроек ===== */
+  function renderProviderSelect() {
+    var select = byId("setProvider");
+    select.innerHTML = "";
+    var providers = state.providers || [];
+    for (var i = 0; i < providers.length; i++) {
+      var option = document.createElement("option");
+      option.value = providers[i].id;
+      option.textContent = providers[i].name || providers[i].id;
+      select.appendChild(option);
+    }
+  }
+
   function renderModelSelect() {
-    var provider = byId("setProvider").value;
-    var isCustom = provider === "custom";
-    byId("setModelWrap").style.display = isCustom ? "none" : "block";
-    byId("setCustomModelWrap").style.display = isCustom ? "block" : "none";
-    byId("setBaseWrap").style.display = isCustom ? "block" : "none";
+    var providerId = byId("setProvider").value;
+    var provider = providerById(providerId);
     var select = byId("setModel");
     select.innerHTML = "";
-    var options = MODELS[provider] || [];
-    for (var i = 0; i < options.length; i++) {
+    var models = (provider && provider.models) || [];
+    for (var i = 0; i < models.length; i++) {
       var option = document.createElement("option");
-      option.value = options[i].value;
-      option.textContent = options[i].label;
+      option.value = models[i].id;
+      option.textContent = models[i].name || models[i].id;
       select.appendChild(option);
     }
     var s = state.settings || {};
-    if (!isCustom) {
-      var matched = false;
-      for (var j = 0; j < options.length; j++) {
-        if (options[j].value === s.model) {
-          matched = true;
-        }
+    var matched = false;
+    for (var j = 0; j < models.length; j++) {
+      if (models[j].id === s.active_model) {
+        matched = true;
       }
-      select.value = matched ? s.model : (options.length > 0 ? options[0].value : "");
     }
+    select.value = matched ? s.active_model : (models.length > 0 ? models[0].id : "");
   }
 
   function fillSettingsForm() {
     var s = state.settings || {};
-    byId("setProvider").value = s.provider || "deepseek";
+    renderProviderSelect();
+    byId("setProvider").value = s.active_provider || (state.providers[0] ? state.providers[0].id : "");
+    renderModelSelect();
     byId("setApiKey").value = s.api_key || "";
+    byId("setTemperature").value = String(s.temperature !== undefined ? s.temperature : 0.7);
+    byId("setTemperatureValue").textContent = String(s.temperature !== undefined ? s.temperature : 0.7);
+    byId("setMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 4096);
+    byId("setReasoning").checked = !!s.reasoning;
     byId("setTheme").value = s.theme || "auto";
     byId("setFontSize").value = String(s.font_size || 14);
     byId("setFontSizeValue").textContent = String(s.font_size || 14);
     byId("setFontStyle").value = s.font_style || "system";
-    byId("setCustomModel").value = s.custom_model || "";
-    byId("setBase").value = s.custom_base_url || "";
-    renderModelSelect();
   }
 
   function openSettings() {
@@ -1590,21 +2318,17 @@ body.theme-dark {
   }
 
   function saveSettings() {
-    var provider = byId("setProvider").value;
     var settings = {
-      provider: provider,
+      active_provider: byId("setProvider").value,
+      active_model: byId("setModel").value,
       api_key: byId("setApiKey").value,
+      temperature: parseFloat(byId("setTemperature").value),
+      max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
+      reasoning: byId("setReasoning").checked,
       theme: byId("setTheme").value,
       font_size: parseInt(byId("setFontSize").value, 10) || 14,
       font_style: byId("setFontStyle").value
     };
-    if (provider === "custom") {
-      settings.custom_model = byId("setCustomModel").value.trim();
-      settings.custom_base_url = byId("setBase").value.trim();
-      settings.model = settings.custom_model;
-    } else {
-      settings.model = byId("setModel").value;
-    }
     post({ type: "save_settings", settings: settings });
     closeSettings();
   }
@@ -1710,6 +2434,8 @@ body.theme-dark {
         state.chats = msg.chats || [];
         state.active = msg.active || null;
         state.settings = msg.settings || {};
+        state.providers = msg.providers || [];
+        state.commands = msg.commands || [];
         state.context_flags = msg.context_flags || {};
         state.context_tokens = msg.context_tokens || 0;
         state.status = msg.status || "idle";
@@ -1763,7 +2489,14 @@ body.theme-dark {
       this.value = "";
     });
     byId("input").addEventListener("keydown", onInputKey);
-    byId("input").addEventListener("input", autoResize);
+    byId("input").addEventListener("input", function () {
+      autoResize();
+      updateCmdSuggest();
+    });
+    byId("input").addEventListener("blur", function () {
+      // Небольшая задержка, чтобы клик по элементу списка успел сработать
+      setTimeout(closeCmdSuggest, 150);
+    });
     byId("newChatBtn").addEventListener("click", function () {
       post({ type: "new_chat" });
     });
@@ -1781,6 +2514,16 @@ body.theme-dark {
     byId("testKeyBtn").addEventListener("click", function () {
       post({ type: "test_key" });
     });
+    byId("setApiKeyEye").addEventListener("click", function () {
+      var keyInput = byId("setApiKey");
+      var masked = keyInput.type === "password";
+      keyInput.type = masked ? "text" : "password";
+      this.textContent = masked ? "🙈" : "👁";
+      this.title = masked ? "Скрыть ключ" : "Показать ключ";
+    });
+    byId("setTemperature").addEventListener("input", function () {
+      byId("setTemperatureValue").textContent = this.value;
+    });
     byId("exportBtn").addEventListener("click", exportChat);
     byId("setProvider").addEventListener("change", renderModelSelect);
     byId("setPeriod").addEventListener("change", function () {
@@ -1788,6 +2531,26 @@ body.theme-dark {
     });
     byId("searchInput").addEventListener("input", renderSidebar);
     byId("messages").addEventListener("scroll", onMessagesScroll);
+    byId("copyModalClose").addEventListener("click", closeCopyModal);
+    byId("copyModalOk").addEventListener("click", closeCopyModal);
+    byId("copyModal").addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeCopyModal();
+      }
+    });
+    byId("modelChip").addEventListener("click", openModelPicker);
+    byId("mpClose").addEventListener("click", closeModelPicker);
+    byId("modelPickerModal").addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeModelPicker();
+      }
+    });
+    byId("mpSearch").addEventListener("input", renderModelPicker);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && byId("modelPickerModal").style.display !== "none") {
+        closeModelPicker();
+      }
+    });
 
     if (window.orca && typeof window.orca.onMessage === "function") {
       window.orca.onMessage(onMessage);
@@ -1822,10 +2585,11 @@ body {
 }
 body {
   padding: 16px;
-  background: var(--orca-bg);
-  color: var(--orca-fg);
-  font-family: var(--orca-font);
+  background: var(--orca-bg, #1e1e1e);
+  color: var(--orca-fg, #e6e6e6);
+  font-family: var(--orca-font, sans-serif);
   font-size: 14px;
+  color-scheme: dark light;
 }
 h1 {
   margin: 0 0 4px 0;
@@ -1834,11 +2598,11 @@ h1 {
 }
 .subtitle {
   margin: 0 0 16px 0;
-  color: var(--orca-muted);
+  color: var(--orca-muted, #8a8a8a);
   font-size: 12px;
 }
 .card {
-  border: 1px solid var(--orca-border);
+  border: 1px solid var(--orca-border, #3a3a3a);
   border-radius: 8px;
   padding: 14px;
   margin-bottom: 12px;
@@ -1849,28 +2613,7 @@ h1 {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--orca-muted);
-}
-.provider {
-  display: flex;
-  gap: 10px;
-}
-.provider input[type="radio"] {
-  display: none;
-}
-.provider label {
-  flex: 1;
-  border: 1px solid var(--orca-border);
-  border-radius: 8px;
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-}
-.provider input[type="radio"]:checked + label {
-  border-color: var(--accent);
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--orca-muted, #8a8a8a);
 }
 .field {
   margin-bottom: 12px;
@@ -1882,19 +2625,24 @@ h1 {
   display: block;
   margin-bottom: 6px;
   font-size: 12px;
-  color: var(--orca-muted);
+  color: var(--orca-muted, #8a8a8a);
 }
 input[type="text"],
 input[type="password"],
+input[type="number"],
 select {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--orca-border);
+  border: 1px solid var(--orca-border, #3a3a3a);
   border-radius: 6px;
-  background: var(--orca-bg);
-  color: var(--orca-fg);
-  font-family: var(--orca-font);
+  background: var(--orca-input, #2a2a2a);
+  color: var(--orca-fg, #e6e6e6);
+  font-family: var(--orca-font, sans-serif);
   font-size: 14px;
+}
+select option {
+  background: var(--orca-input, #2a2a2a);
+  color: var(--orca-fg, #e6e6e6);
 }
 input:focus,
 select:focus {
@@ -1904,6 +2652,47 @@ select:focus {
 input[type="range"] {
   width: 100%;
   accent-color: var(--accent);
+}
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  margin: 0;
+}
+.key-row {
+  display: flex;
+  gap: 6px;
+}
+.key-row input {
+  flex: 1;
+}
+.eye-btn {
+  border: 1px solid var(--orca-border, #3a3a3a);
+  background: transparent;
+  color: var(--orca-muted, #8a8a8a);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.eye-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.check-row label {
+  margin: 0;
+  cursor: pointer;
+}
+.range-value {
+  color: var(--accent);
+  font-weight: 600;
 }
 .row {
   display: flex;
@@ -1954,6 +2743,143 @@ button.danger:hover {
   font-size: 11px;
   color: var(--orca-muted);
 }
+
+/* ===== Управление провайдерами ===== */
+.provider-card {
+  border: 1px solid var(--orca-border, #3a3a3a);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.provider-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.provider-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.badge-builtin {
+  background: var(--orca-input, #2a2a2a);
+  color: var(--orca-muted, #8a8a8a);
+  border: 1px solid var(--orca-border, #3a3a3a);
+}
+.badge-custom {
+  background: rgba(217, 83, 79, 0.12);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.models-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--orca-muted, #8a8a8a);
+  margin: 10px 0 6px;
+}
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+.model-row:hover {
+  background: var(--orca-input, #2a2a2a);
+}
+.model-name {
+  flex: 1;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-id {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  color: var(--orca-muted, #8a8a8a);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-del {
+  border: none;
+  background: transparent;
+  color: var(--orca-muted, #8a8a8a);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.model-del:hover {
+  color: var(--accent);
+  background: rgba(217, 83, 79, 0.1);
+}
+.ghost-btn {
+  border: 1px solid var(--orca-border, #3a3a3a);
+  background: transparent;
+  color: var(--orca-fg, #e6e6e6);
+  border-radius: 6px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-family: var(--orca-font, sans-serif);
+  font-size: 13px;
+}
+.ghost-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.primary-btn {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-family: var(--orca-font, sans-serif);
+  font-size: 13px;
+}
+.primary-btn:hover {
+  filter: brightness(1.1);
+}
+.inline-form {
+  border: 1px dashed var(--orca-border, #3a3a3a);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+.form-error {
+  color: var(--accent);
+  font-size: 12px;
+  min-height: 0;
+}
+input.invalid {
+  border-color: var(--accent);
+}
+.prov-del {
+  margin-top: 10px;
+}
+.add-provider-wrap {
+  margin-top: 4px;
+}
 </style>
 </head>
 <body>
@@ -1961,34 +2887,48 @@ button.danger:hover {
 <p class="subtitle">Настройки ассистента инженера 3D-печати</p>
 
 <div class="card">
-  <p class="card-title">Провайдер</p>
-  <div class="provider">
-    <input type="radio" id="provider-deepseek" name="provider" value="deepseek">
-    <label for="provider-deepseek">DeepSeek</label>
-    <input type="radio" id="provider-openrouter" name="provider" value="openrouter">
-    <label for="provider-openrouter">OpenRouter</label>
-    <input type="radio" id="provider-custom" name="provider" value="custom">
-    <label for="provider-custom">Custom</label>
+  <p class="card-title">Активная модель</p>
+  <div class="row">
+    <div class="field">
+      <label for="provider">Провайдер</label>
+      <select id="provider"></select>
+    </div>
+    <div class="field">
+      <label for="modelSelect">Модель</label>
+      <select id="modelSelect"></select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="temperature">Температура: <span id="temperatureValue" class="range-value">0.7</span></label>
+    <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+  </div>
+  <div class="field">
+    <label for="maxTokens">Максимум токенов</label>
+    <input type="number" id="maxTokens" min="1" max="100000" step="1" value="4096">
+  </div>
+  <div class="field">
+    <div class="check-row">
+      <input type="checkbox" id="reasoning">
+      <label for="reasoning">Расширенное мышление</label>
+    </div>
   </div>
 </div>
 
 <div class="card">
-  <p class="card-title">Модель и доступ</p>
-  <div class="field" id="modelSelectWrap">
-    <label for="modelSelect">Модель</label>
-    <select id="modelSelect"></select>
+  <p class="card-title">Провайдеры</p>
+  <div id="providersList"></div>
+  <div class="add-provider-wrap">
+    <button type="button" class="ghost-btn" id="addProviderBtn">+ Добавить провайдера</button>
   </div>
-  <div class="field" id="customModelWrap">
-    <label for="customModel">Идентификатор модели</label>
-    <input type="text" id="customModel" placeholder="например, deepseek-chat">
-  </div>
-  <div class="field" id="customBaseWrap">
-    <label for="customBase">Базовый URL API</label>
-    <input type="text" id="customBase" placeholder="https://api.example.com/v1">
-  </div>
-  <div class="field">
-    <label for="apiKey">API-ключ</label>
-    <input type="password" id="apiKey" autocomplete="off">
+  <div class="inline-form" id="addProviderForm" style="display:none">
+    <input type="text" id="pName" placeholder="Название провайдера">
+    <input type="text" id="pBaseUrl" placeholder="Base URL (https://…/v1)">
+    <input type="password" id="pApiKey" placeholder="API-ключ" autocomplete="off">
+    <div class="form-error" id="pError"></div>
+    <div class="form-actions">
+      <button type="button" class="primary-btn" id="pOk">Добавить</button>
+      <button type="button" class="ghost-btn" id="pCancel">Отмена</button>
+    </div>
   </div>
 </div>
 
@@ -2049,18 +2989,6 @@ button.danger:hover {
 
 <script>
 const DEFAULTS = __DEFAULTS_JSON__;
-
-const MODELS = {
-  deepseek: [
-    { value: "deepseek-chat", label: "DeepSeek V4 Flash" },
-    { value: "deepseek-reasoner", label: "DeepSeek Reasoner" }
-  ],
-  openrouter: [
-    { value: "deepseek/deepseek-v4-flash-0731", label: "DeepSeek V4 Flash (OpenRouter)" },
-    { value: "openrouter/auto", label: "OpenRouter Auto" }
-  ],
-  custom: []
-};
 
 let cfg = {};
 
@@ -2135,45 +3063,370 @@ function updateStats() {
   byId("statTokens").textContent = String(result.tokens);
 }
 
-function renderProvider() {
-  const provider = cfg.provider || DEFAULTS.provider;
-  const radios = document.querySelectorAll("input[name=provider]");
-  for (let i = 0; i < radios.length; i++) {
-    radios[i].checked = radios[i].value === provider;
+function providerById(pid) {
+  const providers = cfg.providers && typeof cfg.providers === "object" ? cfg.providers : {};
+  return providers[pid] || null;
+}
+
+/* ===== Управление провайдерами ===== */
+
+function mk(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) {
+    node.className = cls;
   }
-  const modelSelect = byId("modelSelect");
-  const options = MODELS[provider] || [];
-  modelSelect.innerHTML = "";
-  for (let j = 0; j < options.length; j++) {
-    const option = document.createElement("option");
-    option.value = options[j].value;
-    option.textContent = options[j].label;
-    modelSelect.appendChild(option);
+  if (text !== undefined && text !== null) {
+    node.textContent = text;
   }
-  const isCustom = provider === "custom";
-  byId("modelSelectWrap").style.display = isCustom ? "none" : "block";
-  byId("customModelWrap").style.display = isCustom ? "block" : "none";
-  byId("customBaseWrap").style.display = isCustom ? "block" : "none";
-  if (isCustom) {
-    byId("customModel").value = cfg.custom_model || "";
-  } else {
-    let matched = false;
-    for (let k = 0; k < options.length; k++) {
-      if (options[k].value === cfg.model) {
-        matched = true;
+  return node;
+}
+
+function markInvalid(input) {
+  input.classList.add("invalid");
+}
+
+function clearInvalid(input) {
+  input.classList.remove("invalid");
+}
+
+function slugify(text) {
+  const out = [];
+  for (const ch of String(text).toLowerCase()) {
+    if (/[a-z0-9_-]/.test(ch)) {
+      out.push(ch);
+    } else if (/\\s/.test(ch)) {
+      out.push("-");
+    }
+  }
+  const slug = out.join("").replace(/^-+|-+$/g, "");
+  return slug || "provider";
+}
+
+function randSuffix() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  for (let i = 0; i < 4; i++) {
+    s += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return s;
+}
+
+function modelRow(pid, mid, mdef) {
+  const row = mk("div", "model-row");
+  row.setAttribute("data-mid", mid);
+  row.appendChild(mk("span", "model-name", mdef.name || mid));
+  row.appendChild(mk("code", "model-id", mid));
+  if (!mdef.builtin) {
+    const delBtn = mk("button", "model-del", "✕");
+    delBtn.type = "button";
+    delBtn.title = "Удалить модель";
+    delBtn.setAttribute("data-mid", mid);
+    delBtn.addEventListener("click", function () {
+      const providers = cfg.providers || {};
+      const prov = providers[pid];
+      if (!prov) {
+        return;
       }
-    }
-    if (!matched && options.length > 0) {
-      cfg.model = options[0].value;
-    }
-    modelSelect.value = cfg.model || "";
+      const models = prov.models || {};
+      delete models[mid];
+      if (cfg.active_provider === pid && cfg.active_model === mid) {
+        const rest = Object.keys(models);
+        cfg.active_model = rest.length > 0 ? rest[0] : "";
+      }
+      renderProviders();
+      renderModelSelect();
+      collect();
+    });
+    row.appendChild(delBtn);
   }
-  byId("customBase").value = cfg.custom_base_url || "";
+  return row;
+}
+
+function addModel(pid, nameInput, idInput, baseUrlInput, apiKeyInput, errEl) {
+  const name = nameInput.value.trim();
+  const modelId = idInput.value.trim();
+  const providers = cfg.providers || {};
+  const prov = providers[pid];
+  if (!prov) {
+    return false;
+  }
+  const models = prov.models && typeof prov.models === "object" ? prov.models : {};
+  clearInvalid(nameInput);
+  clearInvalid(idInput);
+  if (baseUrlInput) {
+    clearInvalid(baseUrlInput);
+  }
+  errEl.textContent = "";
+  let ok = true;
+  if (!modelId) {
+    markInvalid(idInput);
+    errEl.textContent = "Укажите идентификатор модели.";
+    ok = false;
+  } else if (models[modelId]) {
+    markInvalid(idInput);
+    errEl.textContent = "Модель с таким model_id уже существует.";
+    ok = false;
+  }
+  if (!name) {
+    markInvalid(nameInput);
+    errEl.textContent = (errEl.textContent ? errEl.textContent + " " : "") + "Укажите имя модели.";
+    ok = false;
+  }
+  if (!prov.builtin && baseUrlInput && !baseUrlInput.value.trim()) {
+    markInvalid(baseUrlInput);
+    errEl.textContent = (errEl.textContent ? errEl.textContent + " " : "") + "Укажите Base URL.";
+    ok = false;
+  }
+  if (!ok) {
+    return false;
+  }
+  const entry = { name: name, builtin: false };
+  if (baseUrlInput && baseUrlInput.value.trim()) {
+    entry.base_url = baseUrlInput.value.trim();
+  }
+  if (apiKeyInput && apiKeyInput.value.trim()) {
+    entry.api_key = apiKeyInput.value.trim();
+  }
+  models[modelId] = entry;
+  renderProviders();
+  renderModelSelect();
+  collect();
+  return true;
+}
+
+function providerCard(pid, prov) {
+  const card = mk("div", "provider-card");
+  card.setAttribute("data-pid", pid);
+  const head = mk("div", "provider-head");
+  head.appendChild(mk("span", "provider-name", prov.name || pid));
+  head.appendChild(mk(
+    "span",
+    "badge " + (prov.builtin ? "badge-builtin" : "badge-custom"),
+    prov.builtin ? "встроенный" : "пользовательский"
+  ));
+  card.appendChild(head);
+
+  const urlField = mk("div", "field");
+  urlField.appendChild(mk("label", "", "Base URL"));
+  const urlInput = mk("input", "prov-base-url");
+  urlInput.type = "text";
+  urlInput.value = prov.base_url || "";
+  urlInput.addEventListener("input", function () {
+    prov.base_url = urlInput.value;
+    collect();
+  });
+  urlField.appendChild(urlInput);
+  card.appendChild(urlField);
+
+  const keyField = mk("div", "field");
+  keyField.appendChild(mk("label", "", "API-ключ"));
+  const keyRow = mk("div", "key-row");
+  const keyInput = mk("input", "prov-api-key");
+  keyInput.type = "password";
+  keyInput.autocomplete = "off";
+  keyInput.value = prov.api_key || "";
+  keyInput.addEventListener("input", function () {
+    prov.api_key = keyInput.value;
+    collect();
+  });
+  const eyeBtn = mk("button", "eye-btn", "👁");
+  eyeBtn.type = "button";
+  eyeBtn.title = "Показать ключ";
+  eyeBtn.addEventListener("click", function () {
+    const masked = keyInput.type === "password";
+    keyInput.type = masked ? "text" : "password";
+    this.textContent = masked ? "🙈" : "👁";
+    this.title = masked ? "Скрыть ключ" : "Показать ключ";
+  });
+  keyRow.appendChild(keyInput);
+  keyRow.appendChild(eyeBtn);
+  keyField.appendChild(keyRow);
+  card.appendChild(keyField);
+
+  card.appendChild(mk("div", "models-title", "Модели"));
+  const models = prov.models && typeof prov.models === "object" ? prov.models : {};
+  const mids = Object.keys(models).sort();
+  for (let j = 0; j < mids.length; j++) {
+    card.appendChild(modelRow(pid, mids[j], models[mids[j]]));
+  }
+
+  const addBtn = mk("button", "ghost-btn add-model-btn", "+ Добавить модель");
+  addBtn.type = "button";
+  addBtn.addEventListener("click", function () {
+    form.style.display = "flex";
+    addBtn.style.display = "none";
+  });
+  card.appendChild(addBtn);
+
+  const form = mk("div", "inline-form add-model-form");
+  form.style.display = "none";
+  const mName = mk("input", "m-name");
+  mName.type = "text";
+  mName.placeholder = "Имя модели";
+  const mId = mk("input", "m-id");
+  mId.type = "text";
+  mId.placeholder = "model_id (идентификатор API)";
+  form.appendChild(mName);
+  form.appendChild(mId);
+  let mBaseUrl = null;
+  let mApiKey = null;
+  if (!prov.builtin) {
+    mBaseUrl = mk("input", "m-base-url");
+    mBaseUrl.type = "text";
+    mBaseUrl.placeholder = "Base URL (override)";
+    mApiKey = mk("input", "m-api-key");
+    mApiKey.type = "password";
+    mApiKey.placeholder = "API-ключ (override)";
+    form.appendChild(mBaseUrl);
+    form.appendChild(mApiKey);
+  }
+  const err = mk("div", "form-error");
+  form.appendChild(err);
+  const actions = mk("div", "form-actions");
+  const okBtn = mk("button", "primary-btn", "Добавить");
+  okBtn.type = "button";
+  okBtn.addEventListener("click", function () {
+    addModel(pid, mName, mId, mBaseUrl, mApiKey, err);
+  });
+  const cancelBtn = mk("button", "ghost-btn", "Отмена");
+  cancelBtn.type = "button";
+  cancelBtn.addEventListener("click", function () {
+    form.style.display = "none";
+    addBtn.style.display = "";
+    clearInvalid(mName);
+    clearInvalid(mId);
+    if (mBaseUrl) {
+      clearInvalid(mBaseUrl);
+    }
+    err.textContent = "";
+  });
+  actions.appendChild(okBtn);
+  actions.appendChild(cancelBtn);
+  form.appendChild(actions);
+  card.appendChild(form);
+
+  if (!prov.builtin) {
+    const delBtn = mk("button", "danger prov-del", "Удалить провайдера");
+    delBtn.type = "button";
+    delBtn.addEventListener("click", function () {
+      if (window.confirm("Удалить провайдера «" + (prov.name || pid) + "»?")) {
+        const providers = cfg.providers || {};
+        delete providers[pid];
+        if (cfg.active_provider === pid) {
+          const rest = Object.keys(providers);
+          cfg.active_provider = rest.length > 0 ? rest[0] : "";
+        }
+        renderProviders();
+        renderProviderSelect();
+        renderModelSelect();
+        collect();
+      }
+    });
+    card.appendChild(delBtn);
+  }
+  return card;
+}
+
+function renderProviders() {
+  const container = byId("providersList");
+  container.innerHTML = "";
+  const providers = cfg.providers && typeof cfg.providers === "object" ? cfg.providers : {};
+  const ids = Object.keys(providers).sort();
+  for (let i = 0; i < ids.length; i++) {
+    container.appendChild(providerCard(ids[i], providers[ids[i]]));
+  }
+}
+
+function addProvider() {
+  const nameInput = byId("pName");
+  const urlInput = byId("pBaseUrl");
+  const keyInput = byId("pApiKey");
+  const errEl = byId("pError");
+  const name = nameInput.value.trim();
+  const baseUrl = urlInput.value.trim();
+  clearInvalid(nameInput);
+  clearInvalid(urlInput);
+  errEl.textContent = "";
+  let ok = true;
+  if (!name) {
+    markInvalid(nameInput);
+    errEl.textContent = "Укажите название провайдера.";
+    ok = false;
+  }
+  if (!baseUrl) {
+    markInvalid(urlInput);
+    errEl.textContent = (errEl.textContent ? errEl.textContent + " " : "") + "Укажите Base URL.";
+    ok = false;
+  }
+  if (!ok) {
+    return;
+  }
+  const pid = slugify(name) + "_" + randSuffix();
+  if (!cfg.providers || typeof cfg.providers !== "object") {
+    cfg.providers = {};
+  }
+  cfg.providers[pid] = {
+    name: name,
+    base_url: baseUrl,
+    api_key: keyInput.value.trim(),
+    builtin: false,
+    models: {}
+  };
+  byId("addProviderForm").style.display = "none";
+  byId("addProviderBtn").style.display = "";
+  nameInput.value = "";
+  urlInput.value = "";
+  keyInput.value = "";
+  renderProviders();
+  renderProviderSelect();
+  collect();
+}
+
+function renderProviderSelect() {
+  const select = byId("provider");
+  select.innerHTML = "";
+  const providers = cfg.providers && typeof cfg.providers === "object" ? cfg.providers : {};
+  const ids = Object.keys(providers);
+  for (let i = 0; i < ids.length; i++) {
+    const option = document.createElement("option");
+    option.value = ids[i];
+    option.textContent = providers[ids[i]].name || ids[i];
+    select.appendChild(option);
+  }
+  if (cfg.active_provider && providers[cfg.active_provider]) {
+    select.value = cfg.active_provider;
+  } else if (ids.length > 0) {
+    select.value = ids[0];
+  }
+}
+
+function renderModelSelect() {
+  const provider = providerById(byId("provider").value) || { models: {} };
+  const models = provider.models && typeof provider.models === "object" ? provider.models : {};
+  const select = byId("modelSelect");
+  select.innerHTML = "";
+  const ids = Object.keys(models);
+  for (let i = 0; i < ids.length; i++) {
+    const option = document.createElement("option");
+    option.value = ids[i];
+    option.textContent = models[ids[i]].name || ids[i];
+    select.appendChild(option);
+  }
+  if (cfg.active_model && models[cfg.active_model]) {
+    select.value = cfg.active_model;
+  } else if (ids.length > 0) {
+    select.value = ids[0];
+  }
 }
 
 function fillForm() {
-  renderProvider();
-  byId("apiKey").value = cfg.api_key || "";
+  renderProviderSelect();
+  renderModelSelect();
+  renderProviders();
+  byId("temperature").value = String(cfg.temperature !== undefined ? cfg.temperature : DEFAULTS.temperature);
+  byId("temperatureValue").textContent = String(cfg.temperature !== undefined ? cfg.temperature : DEFAULTS.temperature);
+  byId("maxTokens").value = String(cfg.max_tokens !== undefined ? cfg.max_tokens : DEFAULTS.max_tokens);
+  byId("reasoning").checked = !!cfg.reasoning;
   byId("theme").value = cfg.theme || DEFAULTS.theme;
   byId("fontSize").value = String(cfg.font_size || DEFAULTS.font_size);
   byId("fontSizeValue").textContent = String(cfg.font_size || DEFAULTS.font_size);
@@ -2182,15 +3435,12 @@ function fillForm() {
 }
 
 function collect() {
-  const provider = cfg.provider || DEFAULTS.provider;
-  if (provider === "custom") {
-    cfg.custom_model = byId("customModel").value.trim();
-    cfg.model = cfg.custom_model;
-    cfg.custom_base_url = byId("customBase").value.trim();
-  } else {
-    cfg.model = byId("modelSelect").value;
-  }
-  cfg.api_key = byId("apiKey").value;
+  const providerId = byId("provider").value;
+  cfg.active_provider = providerId;
+  cfg.active_model = byId("modelSelect").value;
+  cfg.temperature = parseFloat(byId("temperature").value);
+  cfg.max_tokens = parseInt(byId("maxTokens").value, 10) || DEFAULTS.max_tokens;
+  cfg.reasoning = byId("reasoning").checked;
   cfg.theme = byId("theme").value;
   cfg.font_size = parseInt(byId("fontSize").value, 10) || DEFAULTS.font_size;
   cfg.font_style = byId("fontStyle").value;
@@ -2200,29 +3450,113 @@ function collect() {
   window.orca.saveConfig(cfg);
 }
 
-function setProvider(provider) {
-  cfg.provider = provider;
-  renderProvider();
+function onProviderChange() {
+  cfg.active_provider = byId("provider").value;
+  renderModelSelect();
   collect();
 }
 
 function resetAll() {
-  cfg = JSON.parse(JSON.stringify(DEFAULTS));
+  cfg = normalizeConfig(JSON.parse(JSON.stringify(DEFAULTS)));
   fillForm();
   window.orca.saveConfig(cfg);
 }
 
-function wire() {
-  const radios = document.querySelectorAll("input[name=provider]");
-  for (let i = 0; i < radios.length; i++) {
-    radios[i].addEventListener("change", function () {
-      setProvider(this.value);
-    });
+/* Нормализация конфигурации: поддержка новой и старой (provider/model/...)
+   схем, чтобы страница настроек не падала на устаревших данных. */
+function normalizeConfig(raw) {
+  const base = JSON.parse(JSON.stringify(DEFAULTS));
+  if (!raw || typeof raw !== "object") {
+    return base;
   }
+  if (!raw.providers || typeof raw.providers !== "object") {
+    const providerId = raw.provider || base.active_provider;
+    const providers = {};
+    const baseProviders = base.providers || {};
+    const baseIds = Object.keys(baseProviders);
+    for (let i = 0; i < baseIds.length; i++) {
+      providers[baseIds[i]] = JSON.parse(JSON.stringify(baseProviders[baseIds[i]]));
+    }
+    if (providerId === "custom") {
+      providers["custom"] = {
+        name: "Custom",
+        base_url: raw.custom_base_url || "",
+        api_key: raw.api_key || "",
+        builtin: false,
+        models: {}
+      };
+      if (raw.custom_model) {
+        providers["custom"].models[raw.custom_model] = {
+          name: raw.custom_model,
+          builtin: false
+        };
+      }
+    } else {
+      if (!providers[providerId]) {
+        providers[providerId] = {
+          name: providerId,
+          base_url: raw.base_url || "",
+          api_key: raw.api_key || "",
+          builtin: false,
+          models: {}
+        };
+      } else {
+        providers[providerId].api_key = raw.api_key || "";
+        if (raw.base_url) {
+          providers[providerId].base_url = raw.base_url;
+        }
+      }
+    }
+    let activeModel = providerId === "custom" ? raw.custom_model : raw.model;
+    const provModels = providers[providerId].models || {};
+    if (!activeModel || !provModels[activeModel]) {
+      activeModel = Object.keys(provModels)[0] || "";
+    }
+    return {
+      providers: providers,
+      active_provider: providerId,
+      active_model: activeModel,
+      temperature: raw.temperature !== undefined ? raw.temperature : base.temperature,
+      max_tokens: raw.max_tokens !== undefined ? raw.max_tokens : base.max_tokens,
+      reasoning: !!raw.reasoning,
+      theme: raw.theme || base.theme,
+      font_size: raw.font_size || base.font_size,
+      font_style: raw.font_style || base.font_style,
+      usage: raw.usage && typeof raw.usage === "object" ? raw.usage : {}
+    };
+  }
+  const merged = JSON.parse(JSON.stringify(base));
+  const keys = Object.keys(raw);
+  for (let i = 0; i < keys.length; i++) {
+    merged[keys[i]] = raw[keys[i]];
+  }
+  if (!merged.providers || typeof merged.providers !== "object") {
+    merged.providers = base.providers;
+  }
+  const providerIds = Object.keys(merged.providers);
+  if (!merged.active_provider || !merged.providers[merged.active_provider]) {
+    merged.active_provider = providerIds.length > 0 ? providerIds[0] : "deepseek";
+  }
+  const activeProv = merged.providers[merged.active_provider] || { models: {} };
+  const activeModels = activeProv.models || {};
+  if (!merged.active_model || !activeModels[merged.active_model]) {
+    merged.active_model = Object.keys(activeModels)[0] || "";
+  }
+  if (!merged.usage || typeof merged.usage !== "object") {
+    merged.usage = {};
+  }
+  return merged;
+}
+
+function wire() {
+  byId("provider").addEventListener("change", onProviderChange);
   byId("modelSelect").addEventListener("change", collect);
-  byId("customModel").addEventListener("input", collect);
-  byId("customBase").addEventListener("input", collect);
-  byId("apiKey").addEventListener("input", collect);
+  byId("temperature").addEventListener("input", function () {
+    byId("temperatureValue").textContent = this.value;
+    collect();
+  });
+  byId("maxTokens").addEventListener("input", collect);
+  byId("reasoning").addEventListener("change", collect);
   byId("theme").addEventListener("change", collect);
   byId("fontStyle").addEventListener("change", collect);
   byId("fontSize").addEventListener("input", function () {
@@ -2231,21 +3565,23 @@ function wire() {
   });
   byId("period").addEventListener("change", updateStats);
   byId("resetBtn").addEventListener("click", resetAll);
+  byId("addProviderBtn").addEventListener("click", function () {
+    byId("addProviderForm").style.display = "flex";
+    byId("addProviderBtn").style.display = "none";
+  });
+  byId("pOk").addEventListener("click", addProvider);
+  byId("pCancel").addEventListener("click", function () {
+    byId("addProviderForm").style.display = "none";
+    byId("addProviderBtn").style.display = "";
+    clearInvalid(byId("pName"));
+    clearInvalid(byId("pBaseUrl"));
+    byId("pError").textContent = "";
+  });
 }
 
 document.addEventListener("DOMContentLoaded", function () {
   const stored = window.orca.getConfig();
-  cfg = {};
-  const defaultKeys = Object.keys(DEFAULTS);
-  for (let i = 0; i < defaultKeys.length; i++) {
-    cfg[defaultKeys[i]] = DEFAULTS[defaultKeys[i]];
-  }
-  if (stored && typeof stored === "object") {
-    const storedKeys = Object.keys(stored);
-    for (let j = 0; j < storedKeys.length; j++) {
-      cfg[storedKeys[j]] = stored[j];
-    }
-  }
+  cfg = normalizeConfig(stored);
   fillForm();
   wire();
 });
@@ -2292,12 +3628,90 @@ class _ChatEngine:
         return data
 
     def _normalize_config(self, data: dict) -> dict:
-        """Приводит произвольный словарь настроек к валидной схеме."""
+        """Приводит произвольный словарь настроек к валидной схеме.
+
+        Мигрирует старую схему (provider/base_url/model/api_key/...), мержит
+        с DEFAULT_CONFIG, гарантирует наличие builtin-моделей у встроенных
+        провайдеров и сохраняет пользовательские провайдеры и модели.
+        """
+        if not isinstance(data, dict):
+            data = {}
+        if "provider" in data and "providers" not in data:
+            data = self._migrate_legacy_config(data)
         merged = DEFAULT_CONFIG.copy()
-        if isinstance(data, dict):
-            merged.update(data)
-        if merged.get("provider") not in ("deepseek", "openrouter", "custom"):
-            merged["provider"] = "deepseek"
+        merged.update(data)
+        # Провайдеры: builtin-модели гарантированы, пользовательские сохранены.
+        providers = merged.get("providers")
+        if not isinstance(providers, dict):
+            providers = {}
+        normalized_providers: dict[str, dict[str, Any]] = {}
+        for pid, pdef in DEFAULT_PROVIDERS.items():
+            existing = providers.get(pid)
+            if isinstance(existing, dict):
+                merged_p = dict(pdef)
+                for key, value in existing.items():
+                    if key != "models":
+                        merged_p[key] = value
+                models: dict[str, dict[str, Any]] = {}
+                for mid, mdef in pdef.get("models", {}).items():
+                    models[mid] = dict(mdef)
+                existing_models = existing.get("models")
+                if isinstance(existing_models, dict):
+                    for mid, mdef in existing_models.items():
+                        if isinstance(mdef, dict):
+                            models[mid] = dict(mdef)
+                merged_p["models"] = models
+                normalized_providers[pid] = merged_p
+            else:
+                normalized_providers[pid] = json.loads(json.dumps(pdef))
+        for pid, pdef in providers.items():
+            if pid in DEFAULT_PROVIDERS or not isinstance(pdef, dict):
+                continue
+            user_models: dict[str, dict[str, Any]] = {}
+            for mid, mdef in pdef.get("models", {}).items():
+                if isinstance(mdef, dict):
+                    user_models[mid] = dict(mdef)
+            normalized_providers[pid] = {
+                "name": str(pdef.get("name", pid)),
+                "base_url": str(pdef.get("base_url", "")),
+                "api_key": str(pdef.get("api_key", "")),
+                "builtin": False,
+                "models": user_models,
+            }
+        merged["providers"] = normalized_providers
+        # Активный провайдер и модель.
+        active_provider = str(merged.get("active_provider", "deepseek"))
+        if active_provider not in normalized_providers:
+            active_provider = "deepseek"
+        merged["active_provider"] = active_provider
+        prov = normalized_providers.get(active_provider, {})
+        models = prov.get("models", {})
+        active_model = str(merged.get("active_model", ""))
+        if active_model not in models:
+            active_model = next(iter(models), "")
+        merged["active_model"] = active_model
+        # Температура: float 0.0–2.0.
+        try:
+            temperature = float(merged.get("temperature", 0.7))
+        except (TypeError, ValueError):
+            temperature = 0.7
+        if temperature < 0.0 or temperature > 2.0:
+            temperature = 0.7
+        merged["temperature"] = temperature
+        # Максимум токенов: int 1–100000.
+        try:
+            max_tokens = int(merged.get("max_tokens", 4096))
+        except (TypeError, ValueError):
+            max_tokens = 4096
+        if max_tokens < 1 or max_tokens > 100000:
+            max_tokens = 4096
+        merged["max_tokens"] = max_tokens
+        # Расширенное мышление: bool.
+        reasoning = merged.get("reasoning", False)
+        if isinstance(reasoning, str):
+            reasoning = reasoning.strip().lower() in ("1", "true", "yes", "on")
+        merged["reasoning"] = bool(reasoning)
+        # Оформление.
         if merged.get("theme") not in ("auto", "light", "dark"):
             merged["theme"] = "auto"
         if merged.get("font_style") not in ("system", "mono", "serif"):
@@ -2312,6 +3726,51 @@ class _ChatEngine:
         usage = merged.get("usage")
         merged["usage"] = dict(usage) if isinstance(usage, dict) else {}
         return merged
+
+    def _migrate_legacy_config(self, data: dict) -> dict:
+        """Преобразует старую схему конфигурации в новую."""
+        providers = json.loads(json.dumps(DEFAULT_PROVIDERS))
+        provider = str(data.get("provider", "deepseek"))
+        if provider not in providers:
+            provider = "deepseek"
+        if provider == "custom":
+            custom_base = str(data.get("custom_base_url", ""))
+            custom_model = str(data.get("custom_model", ""))
+            providers["custom"]["base_url"] = custom_base
+            providers["custom"]["api_key"] = str(data.get("api_key", ""))
+            if custom_model:
+                providers["custom"]["models"] = {
+                    custom_model: {"name": custom_model, "builtin": False}
+                }
+            active_provider = "custom"
+            active_model = custom_model
+        else:
+            providers[provider]["api_key"] = str(data.get("api_key", ""))
+            active_provider = provider
+            active_model = str(data.get("model", ""))
+        return {
+            "providers": providers,
+            "active_provider": active_provider,
+            "active_model": active_model,
+            "theme": data.get("theme", "auto"),
+            "font_size": data.get("font_size", 14),
+            "font_style": data.get("font_style", "system"),
+            "usage": data.get("usage", {}),
+        }
+
+    def _sync_config(self) -> None:
+        """Перечитывает конфигурацию из capability и обновляет память.
+
+        Не пишет на диск: правки, внесённые в настройках слайсера, должны
+        остаться нетронутыми, а память — синхронизированной с ними.
+        """
+        with self._persist_lock:
+            try:
+                raw = self._read_raw_config()
+            except Exception as exc:
+                _LOGGER.error("Не удалось перечитать конфигурацию: %s", exc)
+                return
+            self._config = self._normalize_config(raw)
 
     def load_config(self) -> dict:
         """Возвращает копию текущей конфигурации."""
@@ -2497,6 +3956,7 @@ class _ChatEngine:
 
     def handle_message(self, message: dict) -> None:
         """Разбирает входящее сообщение из UI и направляет в соответствующий хендлер."""
+        self._sync_config()
         msg_type = message.get("type", "")
         if msg_type == "get_state":
             self._handle_get_state()
@@ -2528,6 +3988,18 @@ class _ChatEngine:
             self._handle_get_usage(message)
         elif msg_type == "attach_file":
             self._handle_attach_file(message)
+        elif msg_type == "set_model":
+            self._handle_set_model(message)
+        elif msg_type == "add_provider":
+            self._handle_add_provider(message)
+        elif msg_type == "update_provider":
+            self._handle_update_provider(message)
+        elif msg_type == "delete_provider":
+            self._handle_delete_provider(message)
+        elif msg_type == "add_model":
+            self._handle_add_model(message)
+        elif msg_type == "delete_model":
+            self._handle_delete_model(message)
         else:
             _LOGGER.warning("Неизвестный тип сообщения из UI: %s", msg_type)
 
@@ -2537,6 +4009,19 @@ class _ChatEngine:
         """Отправляет полное состояние интерфейса."""
         self._send_state()
 
+    def _settings_snapshot(self) -> dict[str, Any]:
+        """Возвращает настройки для UI: общие ключи + ключ активного провайдера.
+
+        Ключи остальных провайдеров в UI не отправляются — только активного,
+        чтобы форма настроек могла предзаполнить поле API-ключа.
+        """
+        settings = {key: self._config[key] for key in SETTINGS_KEYS}
+        provider_id = str(self._config.get("active_provider", "deepseek"))
+        providers = self._config.get("providers", {})
+        prov = providers.get(provider_id)
+        settings["api_key"] = str(prov.get("api_key", "")) if isinstance(prov, dict) else ""
+        return settings
+
     def _send_state(self) -> None:
         """Формирует и отправляет полный снимок состояния в UI."""
         chat = self._active_chat()
@@ -2545,15 +4030,41 @@ class _ChatEngine:
                 "type": "state",
                 "chats": self._chats,
                 "active": self._active,
-                "settings": {
-                    key: self._config[key]
-                    for key in ("provider", "model", "theme", "font_size", "font_style")
-                },
+                "settings": self._settings_snapshot(),
+                "providers": self._providers_snapshot(),
+                "commands": [{"cmd": cmd, "desc": desc} for cmd, desc in COMMANDS],
                 "context_flags": chat["context_flags"],
                 "context_tokens": self._ctx_tokens,
                 "status": "печатает…" if self._gen else "",
             }
         )
+
+    def _providers_snapshot(self) -> list[dict[str, Any]]:
+        """Возвращает список провайдеров для UI без ключей и URL."""
+        result: list[dict[str, Any]] = []
+        providers = self._config.get("providers", {})
+        for pid, pdef in providers.items():
+            if not isinstance(pdef, dict):
+                continue
+            models: list[dict[str, Any]] = []
+            for mid, mdef in pdef.get("models", {}).items():
+                if isinstance(mdef, dict):
+                    models.append(
+                        {
+                            "id": mid,
+                            "name": str(mdef.get("name", mid)),
+                            "builtin": bool(mdef.get("builtin", False)),
+                        }
+                    )
+            result.append(
+                {
+                    "id": pid,
+                    "name": str(pdef.get("name", pid)),
+                    "builtin": bool(pdef.get("builtin", False)),
+                    "models": models,
+                }
+            )
+        return result
 
     def _handle_chat(self, message: dict) -> None:
         """Обрабатывает отправку или редактирование сообщения пользователя."""
@@ -2695,23 +4206,40 @@ class _ChatEngine:
         self._start_generation(chat["id"], last_user["text"], last_user["id"])
 
     def _handle_save_settings(self, message: dict) -> None:
-        """Сохраняет настройки, присланные из UI."""
+        """Сохраняет настройки, присланные из UI.
+
+        Принимает новую схему (active_provider/active_model/api_key/...) и
+        старую (provider/model/custom_*) для обратной совместимости с текущим JS.
+        """
         settings = message.get("settings", {})
         if not isinstance(settings, dict):
             return
         for key in (
-            "provider",
-            "base_url",
-            "model",
-            "api_key",
-            "custom_base_url",
-            "custom_model",
+            "active_provider",
+            "active_model",
+            "temperature",
+            "max_tokens",
+            "reasoning",
             "theme",
             "font_size",
             "font_style",
         ):
             if key in settings:
                 self._config[key] = settings[key]
+        # Обратная совместимость со старой схемой из текущего JS.
+        if "provider" in settings:
+            self._config["active_provider"] = settings["provider"]
+        if "model" in settings:
+            self._config["active_model"] = settings["model"]
+        if settings.get("custom_model"):
+            self._config["active_model"] = settings["custom_model"]
+        if "custom_base_url" in settings:
+            providers = self._config.setdefault("providers", {})
+            providers.setdefault("custom", {})["base_url"] = settings["custom_base_url"]
+        if "api_key" in settings:
+            provider_id = str(self._config.get("active_provider", "deepseek"))
+            providers = self._config.setdefault("providers", {})
+            providers.setdefault(provider_id, {})["api_key"] = str(settings["api_key"])
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._post_settings()
@@ -2729,10 +4257,7 @@ class _ChatEngine:
         self._post(
             {
                 "type": "settings",
-                "settings": {
-                    key: self._config[key]
-                    for key in ("provider", "model", "theme", "font_size", "font_style")
-                },
+                "settings": self._settings_snapshot(),
             }
         )
 
@@ -2774,6 +4299,195 @@ class _ChatEngine:
                 return
             self._pending_attachment = {"file": {"name": name, "text": data}}
         self._post({"type": "toast", "text": "Вложение добавлено.", "kind": "ok"})
+
+    # ===== Управление провайдерами и моделями =====
+
+    def _handle_set_model(self, message: dict) -> None:
+        """Устанавливает активного провайдера и модель."""
+        provider = str(message.get("provider", ""))
+        model = str(message.get("model", ""))
+        providers = self._config.get("providers", {})
+        if provider not in providers:
+            self._post(
+                {"type": "toast", "text": "Провайдер не найден: " + provider, "kind": "err"}
+            )
+            return
+        if model not in providers[provider].get("models", {}):
+            self._post(
+                {"type": "toast", "text": "Модель не найдена: " + model, "kind": "err"}
+            )
+            return
+        self._config["active_provider"] = provider
+        self._config["active_model"] = model
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Модель выбрана: " + model, "kind": "ok"})
+
+    def _handle_add_provider(self, message: dict) -> None:
+        """Создаёт пользовательского провайдера."""
+        name = str(message.get("name", "")).strip()
+        if not name:
+            self._post(
+                {"type": "toast", "text": "Укажите название провайдера.", "kind": "err"}
+            )
+            return
+        base_url = str(message.get("base_url", "")).strip()
+        api_key = str(message.get("api_key", "")).strip()
+        pid = self._slugify(name) + "_" + self._random_suffix()
+        providers = self._config.setdefault("providers", {})
+        providers[pid] = {
+            "name": name,
+            "base_url": base_url,
+            "api_key": api_key,
+            "builtin": False,
+            "models": {},
+        }
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Провайдер добавлен: " + name, "kind": "ok"})
+
+    def _handle_update_provider(self, message: dict) -> None:
+        """Обновляет поля пользовательского провайдера."""
+        pid = str(message.get("id", ""))
+        providers = self._config.get("providers", {})
+        prov = providers.get(pid)
+        if not isinstance(prov, dict):
+            self._post(
+                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+            )
+            return
+        if message.get("name") is not None:
+            prov["name"] = str(message["name"]).strip() or prov.get("name", pid)
+        if message.get("base_url") is not None:
+            prov["base_url"] = str(message["base_url"]).strip()
+        if message.get("api_key") is not None:
+            prov["api_key"] = str(message["api_key"]).strip()
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Провайдер обновлён.", "kind": "ok"})
+
+    def _handle_delete_provider(self, message: dict) -> None:
+        """Удаляет пользовательского провайдера, встроенные — под защитой."""
+        pid = str(message.get("id", ""))
+        providers = self._config.get("providers", {})
+        prov = providers.get(pid)
+        if not isinstance(prov, dict):
+            self._post(
+                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+            )
+            return
+        if prov.get("builtin"):
+            self._post(
+                {
+                    "type": "toast",
+                    "text": "Встроенный провайдер нельзя удалить.",
+                    "kind": "err",
+                }
+            )
+            return
+        del providers[pid]
+        if self._config.get("active_provider") == pid:
+            self._config["active_provider"] = "deepseek"
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Провайдер удалён.", "kind": "ok"})
+
+    def _handle_add_model(self, message: dict) -> None:
+        """Добавляет пользовательскую модель в провайдер."""
+        provider = str(message.get("provider", ""))
+        model_id = str(message.get("model_id", "")).strip()
+        if not model_id:
+            self._post(
+                {"type": "toast", "text": "Укажите идентификатор модели.", "kind": "err"}
+            )
+            return
+        name = str(message.get("name", "")).strip() or model_id
+        providers = self._config.get("providers", {})
+        prov = providers.get(provider)
+        if not isinstance(prov, dict):
+            self._post(
+                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+            )
+            return
+        models = prov.setdefault("models", {})
+        if model_id in models:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": "Модель уже существует: " + model_id,
+                    "kind": "err",
+                }
+            )
+            return
+        entry: dict[str, Any] = {"name": name, "builtin": False}
+        if message.get("base_url") is not None:
+            entry["base_url"] = str(message["base_url"]).strip()
+        if message.get("api_key") is not None:
+            entry["api_key"] = str(message["api_key"]).strip()
+        models[model_id] = entry
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Модель добавлена: " + model_id, "kind": "ok"})
+
+    def _handle_delete_model(self, message: dict) -> None:
+        """Удаляет пользовательскую модель, встроенные — под защитой."""
+        provider = str(message.get("provider", ""))
+        model_id = str(message.get("model_id", ""))
+        providers = self._config.get("providers", {})
+        prov = providers.get(provider)
+        if not isinstance(prov, dict):
+            self._post(
+                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+            )
+            return
+        models = prov.get("models", {})
+        mdef = models.get(model_id)
+        if not isinstance(mdef, dict):
+            self._post(
+                {"type": "toast", "text": "Модель не найдена.", "kind": "err"}
+            )
+            return
+        if mdef.get("builtin"):
+            self._post(
+                {
+                    "type": "toast",
+                    "text": "Встроенную модель нельзя удалить.",
+                    "kind": "err",
+                }
+            )
+            return
+        del models[model_id]
+        if (
+            self._config.get("active_provider") == provider
+            and self._config.get("active_model") == model_id
+        ):
+            self._config["active_model"] = next(iter(models), "")
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Модель удалена.", "kind": "ok"})
+
+    @staticmethod
+    def _slugify(text: str) -> str:
+        """Преобразует название в идентификатор-слаг."""
+        result: list[str] = []
+        for ch in text.lower():
+            if ch.isalnum() or ch in "-_":
+                result.append(ch)
+            elif ch.isspace():
+                result.append("-")
+        slug = "".join(result).strip("-")
+        return slug or "provider"
+
+    @staticmethod
+    def _random_suffix() -> str:
+        """Случайный короткий суффикс для идентификатора провайдера."""
+        return "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=4))
 
     # ===== Отправка payload в UI =====
 
@@ -2901,8 +4615,25 @@ class _ChatEngine:
                 + str(file_info.get("text", ""))
             )
         images = self._collect_context_images(chat)
-        if images and self._config.get("provider") != "deepseek":
+        provider = str(self._config.get("active_provider", "deepseek"))
+        if images and provider == "anthropic":
+            # Нативный Messages API: изображения как base64-блоки.
             content: list[dict[str, Any]] = [{"type": "text", "text": user_content}]
+            for img in images:
+                b64 = img.split(",", 1)[1] if "," in img else img
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": b64,
+                        },
+                    }
+                )
+            messages.append({"role": "user", "content": content})
+        elif images and provider != "deepseek":
+            content = [{"type": "text", "text": user_content}]
             content.extend(
                 {"type": "image_url", "image_url": {"url": img}} for img in images
             )
@@ -2948,28 +4679,129 @@ class _ChatEngine:
         result.reverse()
         return result
 
+    def _active_api_credentials(self) -> tuple[str, str, str, str]:
+        """Возвращает (provider_id, base_url, api_key, model) активного провайдера.
+
+        Учитывает переопределение base_url/api_key на уровне выбранной модели.
+        """
+        cfg = self._config
+        provider_id = str(cfg.get("active_provider", "deepseek"))
+        providers = cfg.get("providers", {})
+        prov = providers.get(provider_id)
+        if not isinstance(prov, dict):
+            prov = {}
+        base_url = str(prov.get("base_url", ""))
+        api_key = str(prov.get("api_key", ""))
+        model = str(cfg.get("active_model", ""))
+        mdef = prov.get("models", {}).get(model)
+        if isinstance(mdef, dict):
+            if mdef.get("base_url"):
+                base_url = str(mdef["base_url"])
+            if mdef.get("api_key"):
+                api_key = str(mdef["api_key"])
+        return provider_id, base_url, api_key, model
+
     def _call_api(self, messages: list[dict[str, Any]], chat_id: int) -> str:
         """Выполняет запрос к API провайдера и возвращает полный текст ответа."""
-        cfg = self._config
-        if cfg.get("provider") != "custom":
-            base_url = str(cfg.get("base_url", ""))
-            model = str(cfg.get("model", ""))
-        else:
-            base_url = str(cfg.get("custom_base_url", ""))
-            model = str(cfg.get("custom_model", ""))
-        if not cfg.get("api_key"):
+        self._sync_config()
+        provider_id, base_url, api_key, model = self._active_api_credentials()
+        if not api_key:
             raise ApiError("Пожалуйста, укажите API-ключ в настройках.")
+        cfg = self._config
+        temperature = float(cfg.get("temperature", 0.7))
+        max_tokens = int(cfg.get("max_tokens", 4096))
+        reasoning = bool(cfg.get("reasoning", False))
+        if provider_id == "anthropic":
+            return self._call_anthropic(
+                messages,
+                chat_id,
+                base_url,
+                api_key,
+                model,
+                temperature,
+                max_tokens,
+                reasoning,
+            )
         url = base_url.rstrip("/") + "/chat/completions"
-        payload = {"model": model, "messages": messages, "stream": True}
+        payload: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if reasoning:
+            if provider_id == "openrouter":
+                payload["reasoning"] = {"effort": "high"}
+            elif provider_id == "openai":
+                payload["reasoning_effort"] = "high"
         request = urllib.request.Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
-            headers={**HTTP_HEADERS, "Authorization": "Bearer " + str(cfg["api_key"])},
+            headers={**HTTP_HEADERS, "Authorization": "Bearer " + api_key},
             method="POST",
         )
         try:
             with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
                 return self._read_sse(resp, chat_id)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")[:500]
+            raise ApiError("Ошибка API " + str(exc.code) + ": " + body) from exc
+        except urllib.error.URLError as exc:
+            raise NetworkError("Сетевая ошибка: " + str(exc.reason)) from exc
+        except TimeoutError as exc:
+            raise NetworkError("Превышен таймаут запроса.") from exc
+        except PermissionError as exc:
+            raise NetworkError(
+                "Сетевой доступ запрещён песочницей. Разрешите сеть для плагина."
+            ) from exc
+        except OSError as exc:
+            raise NetworkError("Ошибка соединения: " + str(exc)) from exc
+
+    def _call_anthropic(
+        self,
+        messages: list[dict[str, Any]],
+        chat_id: int,
+        base_url: str,
+        api_key: str,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        reasoning: bool,
+    ) -> str:
+        """Выполняет запрос к нативному Messages API Anthropic."""
+        system = ""
+        body_messages = messages
+        if messages and messages[0].get("role") == "system":
+            system = str(messages[0].get("content", ""))
+            body_messages = messages[1:]
+        url = base_url.rstrip("/") + "/messages"
+        payload: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": body_messages,
+            "temperature": temperature,
+            "stream": True,
+        }
+        if reasoning:
+            budget = min(4096, max(1024, max_tokens // 2))
+            payload["thinking"] = {"type": "enabled", "budget_tokens": budget}
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "OrcaSlicer/2.5.0",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        }
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
+                return self._read_sse_anthropic(resp, chat_id)
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")[:500]
             raise ApiError("Ошибка API " + str(exc.code) + ": " + body) from exc
@@ -3015,29 +4847,74 @@ class _ChatEngine:
             self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
         return acc
 
+    def _read_sse_anthropic(self, resp: Any, chat_id: int) -> str:
+        """Читает SSE-поток Messages API Anthropic и стримит текст в UI."""
+        acc = ""
+        sent = ""
+        last_post = 0.0
+        for raw in resp:
+            if not self._gen:
+                break
+            line = raw.decode("utf-8", errors="replace").strip()
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if not data:
+                continue
+            try:
+                event = json.loads(data)
+            except ValueError:
+                continue
+            if event.get("type") != "content_block_delta":
+                continue
+            delta = event.get("delta", {})
+            text = delta.get("text", "")
+            if not text:
+                continue
+            acc += text
+            now = time.monotonic()
+            if now - last_post >= STREAM_THROTTLE:
+                self._post({"type": "delta", "chat_id": chat_id, "text": text})
+                last_post = now
+                sent += text
+        if acc and sent != acc:
+            self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
+        return acc
+
     def _test_key_worker(self) -> None:
         """Проверяет API-ключ фоновым запросом к провайдеру."""
-        cfg = self._config
-        if not cfg.get("api_key"):
+        self._sync_config()
+        provider_id, base_url, api_key, model = self._active_api_credentials()
+        if not api_key:
             self._post({"type": "key_test", "ok": False, "text": "API-ключ не указан."})
             return
-        if cfg.get("provider") != "custom":
-            base_url = str(cfg.get("base_url", ""))
-            model = str(cfg.get("model", ""))
+        if provider_id == "anthropic":
+            url = base_url.rstrip("/") + "/messages"
+            payload = {
+                "model": model,
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "ping"}],
+                "stream": False,
+            }
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "OrcaSlicer/2.5.0",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            }
         else:
-            base_url = str(cfg.get("custom_base_url", ""))
-            model = str(cfg.get("custom_model", ""))
-        url = base_url.rstrip("/") + "/chat/completions"
-        payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": "ping"}],
-            "max_tokens": 1,
-            "stream": False,
-        }
+            url = base_url.rstrip("/") + "/chat/completions"
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 1,
+                "stream": False,
+            }
+            headers = {**HTTP_HEADERS, "Authorization": "Bearer " + api_key}
         request = urllib.request.Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
-            headers={**HTTP_HEADERS, "Authorization": "Bearer " + str(cfg["api_key"])},
+            headers=headers,
             method="POST",
         )
         try:
@@ -3177,61 +5054,60 @@ class _ChatEngine:
         return value
 
     def _collect_preset_data(self) -> dict[str, Any]:
-        """Собирает данные активных пресетов печати."""
+        """Собирает данные активных пресетов печати через preset_bundle.
+
+        Имя пресета берётся из коллекции (printers/prints/filaments),
+        значения полей — через full_config_value с fallback на объединённый конфиг.
+        """
         out: dict[str, Any] = {"printer": {}, "filament": {}, "print": {}}
         try:
             bundle = orca.host.preset_bundle()
         except RuntimeError:
             return out
-        candidates = {
-            "printer": (
-                "name",
-                "model",
-                "vendor",
-                "bed_size",
-                "nozzle_diameter",
-                "nozzle_type",
-                "firmware",
-            ),
-            "filament": (
-                "name",
-                "material",
-                "density",
-                "diameter",
-                "temperature",
-                "bed_temperature",
-                "chamber_temperature",
-            ),
-            "print": (
-                "layer_height",
-                "infill",
-                "spiral_vase",
-                "speed",
-                "temperature",
-                "fan_speed",
-                "brim_width",
-            ),
-        }
-        for key, fields in candidates.items():
+        has_full_value = callable(getattr(bundle, "full_config_value", None))
+        for key, (collection_attr, fields) in PRESET_SECTIONS.items():
+            section: dict[str, Any] = {}
             try:
-                section = getattr(bundle, key, None)
-                if section is None:
-                    continue
-                out[key] = self._extract_preset_fields(section, fields)
+                collection = getattr(bundle, collection_attr, None)
+                if collection is not None:
+                    name = self._safe_get(collection, "get_selected_preset_name")
+                    if name:
+                        section["name"] = str(name)
             except (AttributeError, RuntimeError):
-                continue
+                pass
+            for field in fields:
+                value: Any = None
+                if has_full_value:
+                    try:
+                        value = bundle.full_config_value(field)
+                    except (RuntimeError, TypeError, ValueError):
+                        value = None
+                    value = getattr(value, "value", value)
+                if value in (None, ""):
+                    value = self._fallback_preset_value(bundle, field)
+                if value not in (None, ""):
+                    section[field] = value
+            out[key] = section
         return out
 
-    def _extract_preset_fields(
-        self, section: Any, candidates: tuple[str, ...]
-    ) -> dict[str, Any]:
-        """Извлекает доступные поля пресета, сохраняя простые типы."""
-        result: dict[str, Any] = {}
-        for field in candidates:
-            value = self._safe_get(section, field)
-            if isinstance(value, (str, int, float, bool, tuple, list)):
-                result[field] = value
-        return result
+    def _fallback_preset_value(self, bundle: Any, key: str) -> Any:
+        """Ищет значение ключа через объединённый конфиг пресетов."""
+        for attr in ("full_config", "full_fff_config"):
+            config = self._safe_get(bundle, attr)
+            if config is None:
+                continue
+            for accessor in ("opt_string", "get", "opt", "at", "option"):
+                fn = getattr(config, accessor, None)
+                if not callable(fn):
+                    continue
+                try:
+                    value = fn(key)
+                except (TypeError, RuntimeError, ValueError):
+                    continue
+                value = getattr(value, "value", value)
+                if value not in (None, ""):
+                    return value
+        return None
 
     def _build_system_prompt(self, ctx: dict[str, Any]) -> str:
         """Собирает системный промпт с данными контекста слайсера."""
@@ -3292,16 +5168,9 @@ class _ChatEngine:
 
     def _cmd_help(self) -> None:
         """Выводит список доступных команд."""
-        lines = [
-            "Доступные команды:",
-            "/context — полный дамп контекста слайсера",
-            "/clear — очистить историю чата",
-            "/model — отчёт о модели на столе",
-            "/printer — сводка профилей печати",
-            "/stats — статистика использования",
-            "/help — этот список",
-            "/reset — сбросить настройки к заводским",
-        ]
+        lines = ["Доступные команды:"]
+        for cmd, desc in COMMANDS:
+            lines.append(cmd + " — " + desc)
         self._append_assistant("\n".join(lines))
 
     def _cmd_model(self) -> None:
