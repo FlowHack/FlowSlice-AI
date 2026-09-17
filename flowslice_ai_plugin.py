@@ -4948,15 +4948,25 @@ class _ChatEngine:
             model = orca.host.model()
             for obj in model.objects():
                 for vol in obj.volumes():
-                    mesh = vol.mesh()
+                    mesh = self._safe_get(vol, "mesh")
+                    if mesh is None:
+                        continue
+                    bbox = self._safe_get(mesh, "bounding_box")
+                    if bbox is not None:
+                        size = getattr(bbox, "size", bbox)
+                        if isinstance(size, (tuple, list)) and len(size) >= 3:
+                            local_bbox = tuple(round(float(v), 1) for v in size[:3])
+                        else:
+                            local_bbox = ()
+                    else:
+                        local_bbox = ()
+                    volume = self._safe_get(mesh, "volume")
                     entry: dict[str, Any] = {
-                        "name": vol.name(),
-                        "local_bbox_mm": tuple(
-                            round(v, 1) for v in mesh.bounding_box().size
-                        ),
-                        "volume_cm3": round(mesh.volume() / 1000.0, 2),
-                        "manifold": mesh.is_manifold(),
-                        "triangles": mesh.triangle_count(),
+                        "name": self._safe_get(vol, "name") or "",
+                        "local_bbox_mm": local_bbox,
+                        "volume_cm3": round(volume / 1000.0, 2) if volume else 0.0,
+                        "manifold": bool(self._safe_get(mesh, "is_manifold")),
+                        "triangles": self._safe_get(mesh, "triangle_count") or 0,
                     }
                     if _HAS_NUMPY:
                         entry.update(self._world_stats(obj, vol, mesh))
@@ -4964,7 +4974,8 @@ class _ChatEngine:
                         entry["coords"] = "local"
                         entry.update(self._local_stats(obj))
                     data["objects"].append(entry)
-        except RuntimeError:
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.warning("Не удалось собрать данные модели: %s", exc)
             data["objects"] = []
         return data
 
@@ -4973,20 +4984,27 @@ class _ChatEngine:
         assert _np is not None
         stats: dict[str, Any] = {"instances": []}
         try:
-            verts = mesh.vertices()
-            tris = mesh.triangles()
-            vol_matrix = vol.matrix()
-            instances = obj.instances()
+            verts = self._safe_get(mesh, "vertices")
+            tris = self._safe_get(mesh, "triangles")
+            vol_matrix = self._safe_get(vol, "matrix")
+            if verts is None or tris is None or vol_matrix is None:
+                return stats
+            verts = _np.asarray(verts, dtype=_np.float64)
+            tris = _np.asarray(tris)
+            instances = self._safe_get(obj, "instances")
             if isinstance(instances, (list, tuple)):
                 inst_list = instances
             else:
-                inst_list = [obj.instance(i) for i in range(int(instances))]
+                inst_fn = getattr(obj, "instance", None)
+                if not callable(inst_fn):
+                    return stats
+                inst_list = [inst_fn(i) for i in range(int(instances))]
             for index, inst in enumerate(inst_list):
-                inst_matrix = inst.matrix()
+                inst_matrix = self._safe_get(inst, "matrix")
+                if inst_matrix is None:
+                    continue
                 world = (
-                    _np.column_stack(
-                        (verts.astype(_np.float64), _np.ones(len(verts)))
-                    )
+                    _np.column_stack((verts, _np.ones(len(verts))))
                     @ (inst_matrix @ vol_matrix).T
                 )[:, :3]
                 bbox_min = world.min(axis=0)
@@ -5006,10 +5024,10 @@ class _ChatEngine:
                             round(v, 1) for v in (bbox_max - bbox_min)
                         ),
                         "surface_area_cm2": round(area / 100.0, 2),
-                        "mirrored": bool(inst.is_left_handed()),
+                        "mirrored": bool(self._safe_get(inst, "is_left_handed")),
                     }
                 )
-        except (ImportError, RuntimeError, ValueError):
+        except (ImportError, RuntimeError, ValueError, TypeError):
             stats = {}
         return stats
 
@@ -5017,11 +5035,14 @@ class _ChatEngine:
         """Собирает локальные характеристики экземпляров без numpy."""
         stats: dict[str, Any] = {"instances": []}
         try:
-            instances = obj.instances()
+            instances = self._safe_get(obj, "instances")
             if isinstance(instances, (list, tuple)):
                 inst_list = instances
             else:
-                inst_list = [obj.instance(i) for i in range(int(instances))]
+                inst_fn = getattr(obj, "instance", None)
+                if not callable(inst_fn):
+                    return stats
+                inst_list = [inst_fn(i) for i in range(int(instances))]
             for index, inst in enumerate(inst_list):
                 stats["instances"].append(
                     {
@@ -5137,7 +5158,11 @@ class _ChatEngine:
 
     def _estimate_context_tokens(self, flags: dict[str, Any]) -> int:
         """Оценивает число токенов контекста по флагам."""
-        ctx = self._collect_context(flags)
+        try:
+            ctx = self._collect_context(flags)
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.warning("Не удалось собрать контекст слайсера: %s", exc)
+            ctx = {}
         return self._estimate_tokens(json.dumps(ctx, ensure_ascii=False))
 
     # ===== Команды =====
