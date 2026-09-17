@@ -71,9 +71,22 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://api.deepseek.com/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "deepseek-chat": {"name": "DeepSeek V4 Flash", "builtin": True},
-            "deepseek-reasoner": {"name": "DeepSeek V4 Pro", "builtin": True},
+            "deepseek-chat": {
+                "name": "DeepSeek V4 Flash",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "deepseek-reasoner": {
+                "name": "DeepSeek V4 Pro",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "openrouter": {
@@ -81,12 +94,43 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "deepseek/deepseek-chat-v3-0324": {"name": "DeepSeek V3 (0324)", "builtin": True},
-            "anthropic/claude-sonnet-4-5": {"name": "Claude Sonnet 4.5", "builtin": True},
-            "openai/gpt-5.1": {"name": "GPT-5.1", "builtin": True},
-            "google/gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "builtin": True},
-            "meta-llama/llama-3.3-70b-instruct:free": {"name": "Llama 3.3 70B (free)", "builtin": True},
+            "deepseek/deepseek-chat-v3-0324": {
+                "name": "DeepSeek V3 (0324)",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "anthropic/claude-sonnet-4-5": {
+                "name": "Claude Sonnet 4.5",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "openai/gpt-5.1": {
+                "name": "GPT-5.1",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "google/gemini-2.5-flash": {
+                "name": "Gemini 2.5 Flash",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "meta-llama/llama-3.3-70b-instruct:free": {
+                "name": "Llama 3.3 70B (free)",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "google": {
@@ -94,10 +138,29 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "builtin": True},
-            "gemini-2.5-pro": {"name": "Gemini 2.5 Pro", "builtin": True},
-            "gemini-2.5-flash-lite": {"name": "Gemini 2.5 Flash Lite", "builtin": True},
+            "gemini-2.5-flash": {
+                "name": "Gemini 2.5 Flash",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "gemini-2.5-pro": {
+                "name": "Gemini 2.5 Pro",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "gemini-2.5-flash-lite": {
+                "name": "Gemini 2.5 Flash Lite",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "anthropic": {
@@ -105,10 +168,29 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://api.anthropic.com/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "anthropic",
         "models": {
-            "claude-opus-4-8": {"name": "Claude Opus 4.8", "builtin": True},
-            "claude-sonnet-4-6": {"name": "Claude Sonnet 4.6", "builtin": True},
-            "claude-haiku-4-5": {"name": "Claude Haiku 4.5", "builtin": True},
+            "claude-opus-4-8": {
+                "name": "Claude Opus 4.8",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "claude-sonnet-4-6": {
+                "name": "Claude Sonnet 4.6",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "claude-haiku-4-5": {
+                "name": "Claude Haiku 4.5",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "openai": {
@@ -116,10 +198,29 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://api.openai.com/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "gpt-5.1": {"name": "GPT-5.1", "builtin": True},
-            "gpt-5-mini": {"name": "GPT-5 Mini", "builtin": True},
-            "gpt-4o": {"name": "GPT-4o", "builtin": True},
+            "gpt-5.1": {
+                "name": "GPT-5.1",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "gpt-5-mini": {
+                "name": "GPT-5 Mini",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "gpt-4o": {
+                "name": "GPT-4o",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "groq": {
@@ -127,10 +228,29 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://api.groq.com/openai/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "llama-3.3-70b-versatile": {"name": "Llama 3.3 70B Versatile", "builtin": True},
-            "llama-3.1-8b-instant": {"name": "Llama 3.1 8B Instant", "builtin": True},
-            "deepseek-r1-distill-llama-70b": {"name": "DeepSeek R1 Distill 70B", "builtin": True},
+            "llama-3.3-70b-versatile": {
+                "name": "Llama 3.3 70B Versatile",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "llama-3.1-8b-instant": {
+                "name": "Llama 3.1 8B Instant",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "deepseek-r1-distill-llama-70b": {
+                "name": "DeepSeek R1 Distill 70B",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "glm": {
@@ -138,10 +258,29 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://open.bigmodel.cn/api/paas/v4",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "glm-4.6": {"name": "GLM-4.6", "builtin": True},
-            "glm-4.5": {"name": "GLM-4.5", "builtin": True},
-            "glm-4-flash": {"name": "GLM-4-Flash", "builtin": True},
+            "glm-4.6": {
+                "name": "GLM-4.6",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "glm-4.5": {
+                "name": "GLM-4.5",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "glm-4-flash": {
+                "name": "GLM-4-Flash",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "cerebras": {
@@ -149,9 +288,22 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://api.cerebras.ai/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "llama3.3-70b": {"name": "Llama 3.3 70B", "builtin": True},
-            "llama-3.1-8b": {"name": "Llama 3.1 8B", "builtin": True},
+            "llama3.3-70b": {
+                "name": "Llama 3.3 70B",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "llama-3.1-8b": {
+                "name": "Llama 3.1 8B",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "mistral": {
@@ -159,9 +311,22 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://api.mistral.ai/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "mistral-large-latest": {"name": "Mistral Large", "builtin": True},
-            "mistral-small-latest": {"name": "Mistral Small", "builtin": True},
+            "mistral-large-latest": {
+                "name": "Mistral Large",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "mistral-small-latest": {
+                "name": "Mistral Small",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "xai": {
@@ -169,9 +334,22 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "https://api.x.ai/v1",
         "api_key": "",
         "builtin": True,
+        "scheme": "openai",
         "models": {
-            "grok-3": {"name": "Grok 3", "builtin": True},
-            "grok-3-mini": {"name": "Grok 3 Mini", "builtin": True},
+            "grok-3": {
+                "name": "Grok 3",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "grok-3-mini": {
+                "name": "Grok 3 Mini",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
         },
     },
     "custom": {
@@ -179,6 +357,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "",
         "api_key": "",
         "builtin": False,
+        "scheme": "openai",
         "models": {},
     },
 }
@@ -187,6 +366,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "providers": json.loads(json.dumps(DEFAULT_PROVIDERS)),
     "active_provider": "deepseek",
     "active_model": "deepseek-chat",
+    "default_model": "deepseek::deepseek-chat",
+    "notes": "",
     "theme": "auto",
     "font_size": 14,
     "font_style": "system",
@@ -200,6 +381,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
 SETTINGS_KEYS: tuple[str, ...] = (
     "active_provider",
     "active_model",
+    "default_model",
+    "notes",
     "temperature",
     "max_tokens",
     "reasoning",
@@ -227,18 +410,33 @@ PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
             "printer_model",
             "nozzle_diameter",
             "printable_height",
+            "printable_width",
+            "printable_depth",
             "printer_technology",
+            "bed_shape",
+            "bed_length",
+            "bed_width",
+            "max_print_height",
+            "heated_bed",
+            "heated_chamber",
+            "chamber_temperature",
+            "notes",
         ),
     ),
     "filament": (
         "filaments",
         (
             "filament_type",
+            "filament_vendor",
+            "filament_density",
+            "filament_cost",
             "filament_flow_ratio",
+            "filament_flow_ratio_initial_layer",
             "nozzle_temperature",
             "nozzle_temperature_initial_layer",
             "bed_temperature",
             "chamber_temperature",
+            "notes",
         ),
     ),
     "print": (
@@ -246,15 +444,19 @@ PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
         (
             "layer_height",
             "initial_layer_print_height",
+            "line_width",
+            "wall_loops",
             "sparse_infill_density",
             "sparse_infill_pattern",
-            "wall_loops",
             "enable_support",
             "support_type",
             "default_print_speed",
             "outer_wall_speed",
             "travel_speed",
             "brim_type",
+            "brim_width",
+            "ironing_type",
+            "notes",
         ),
     ),
 }
@@ -678,6 +880,8 @@ select option {
 }
 .msg-assistant .msg-bubble {
   background: var(--orca-input);
+  border: 1px solid var(--orca-border);
+  border-left: 3px solid var(--orca-accent);
   border-bottom-left-radius: 2px;
 }
 .msg-error .msg-bubble {
@@ -685,10 +889,14 @@ select option {
   background: var(--orca-input);
 }
 .msg-system .msg-bubble {
-  background: transparent;
+  background: var(--orca-input);
+  border: 1px dashed var(--orca-border);
   color: var(--orca-muted);
   font-size: 12px;
-  padding: 2px 8px;
+  font-family: Consolas, monospace;
+  padding: 6px 10px;
+  max-width: 100%;
+  text-align: left;
 }
 .msg-time {
   font-size: 10px;
@@ -925,7 +1133,7 @@ select option {
 }
 .input-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
 }
 .input-row textarea {
@@ -986,6 +1194,8 @@ select option {
   width: 420px;
   max-width: 92vw;
   max-height: 88vh;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   background: var(--orca-bg);
   border: 1px solid var(--orca-border);
@@ -1301,11 +1511,252 @@ select option {
   font-weight: 700;
   flex-shrink: 0;
 }
+.mp-star {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--orca-muted);
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.mp-star:hover {
+  color: var(--orca-accent);
+}
+.mp-star.active {
+  color: var(--orca-accent);
+}
 .mp-empty {
   padding: 14px 10px;
   font-size: 12px;
   color: var(--orca-muted);
   text-align: center;
+}
+
+/* ===== Кастомный дропдаун с поиском ===== */
+.dd-wrap {
+  position: relative;
+}
+.dd-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  border: 1px solid var(--orca-border);
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--orca-font);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.dd-btn:hover {
+  border-color: var(--orca-accent);
+}
+.dd-btn-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dd-caret {
+  color: var(--orca-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.dd-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--orca-bg);
+  border: 1px solid var(--orca-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.dd-search {
+  margin: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  font-family: var(--orca-font);
+  font-size: 13px;
+}
+.dd-search:focus {
+  outline: none;
+  border-color: var(--orca-accent);
+}
+.dd-list {
+  overflow-y: auto;
+  padding: 4px;
+}
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.dd-item:hover {
+  background: var(--orca-input);
+}
+.dd-item.active {
+  background: var(--orca-input);
+  box-shadow: inset 2px 0 0 var(--orca-accent);
+}
+.dd-item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dd-check {
+  color: var(--orca-accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.dd-empty {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--orca-muted);
+  text-align: center;
+}
+.dd-default-badge {
+  font-size: 10px;
+  color: var(--orca-muted);
+  border: 1px dashed var(--orca-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mini-btn {
+  border: 1px solid var(--orca-border);
+  background: transparent;
+  color: var(--orca-muted);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.mini-btn:hover {
+  border-color: var(--orca-accent);
+  color: var(--orca-accent);
+}
+.settings-scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 2px;
+}
+.per-model-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.per-model-controls input[type="range"],
+.per-model-controls input[type="number"] {
+  flex: 1;
+  min-width: 0;
+}
+.provider-model-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  background: var(--orca-input);
+}
+.provider-model-row:hover {
+  border-color: var(--orca-accent);
+}
+.provider-model-row.active {
+  box-shadow: inset 2px 0 0 var(--orca-accent);
+}
+.provider-model-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-model-id {
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: var(--orca-muted);
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-model-del {
+  border: none;
+  background: transparent;
+  color: var(--orca-muted);
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.provider-model-del:hover {
+  color: var(--orca-accent);
+}
+#addModelForm input[type="text"],
+#addModelForm input[type="password"],
+#addModelForm input[type="number"] {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  font-family: var(--orca-font);
+  font-size: 13px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+#addModelForm input:focus {
+  outline: none;
+  border-color: var(--orca-accent);
+}
+#addModelForm .dd-wrap {
+  margin-bottom: 8px;
+}
+#addModelForm label {
+  display: block;
+  font-size: 12px;
+  color: var(--orca-muted);
+  margin-bottom: 5px;
+}
+#addModelForm .check-row {
+  margin-bottom: 8px;
+}
+#addModelForm .modal-actions {
+  margin-top: 4px;
+}
+details.field summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--orca-muted);
+  margin-bottom: 8px;
+}
+details.field summary:hover {
+  color: var(--orca-accent);
 }
 </style>
 </head>
@@ -1378,64 +1829,110 @@ select option {
       <span>Настройки</span>
       <button type="button" id="modalClose" class="icon-btn" title="Закрыть">✕</button>
     </div>
-    <div class="field">
-      <label for="setProvider">Провайдер</label>
-      <select id="setProvider"></select>
-    </div>
-    <div class="field" id="setModelWrap">
-      <label for="setModel">Модель</label>
-      <select id="setModel"></select>
-    </div>
-    <div class="field">
-      <label for="setApiKey">API-ключ</label>
-      <div class="key-row">
-        <input type="password" id="setApiKey" autocomplete="off">
-        <button type="button" id="setApiKeyEye" class="eye-btn" title="Показать ключ">👁</button>
-        <button type="button" id="testKeyBtn" class="ghost-btn">Проверить ключ</button>
+    <div class="settings-scroll">
+      <div class="field">
+        <label>Провайдер</label>
+        <div class="dd-wrap" id="setProviderDD"></div>
       </div>
-    </div>
-    <div class="field">
-      <label for="setTemperature">Температура: <span id="setTemperatureValue" class="range-value">0.7</span></label>
-      <input type="range" id="setTemperature" min="0" max="2" step="0.1" value="0.7">
-    </div>
-    <div class="field">
-      <label for="setMaxTokens">Максимум токенов</label>
-      <input type="number" id="setMaxTokens" min="1" max="100000" step="1" value="4096">
-    </div>
-    <div class="field">
-      <div class="check-row">
-        <input type="checkbox" id="setReasoning">
-        <label for="setReasoning">Расширенное мышление</label>
+      <div class="field">
+        <label for="setApiKey">API-ключ (провайдера)</label>
+        <div class="key-row">
+          <input type="password" id="setApiKey" autocomplete="off">
+          <button type="button" id="setApiKeyEye" class="eye-btn" title="Показать ключ">👁</button>
+          <button type="button" id="testKeyBtn" class="ghost-btn">Проверить ключ</button>
+        </div>
       </div>
-    </div>
-    <div class="field">
-      <label for="setTheme">Тема</label>
-      <select id="setTheme">
-        <option value="auto">Авто</option>
-        <option value="light">Светлая</option>
-        <option value="dark">Тёмная</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="setFontSize">Размер шрифта: <span id="setFontSizeValue">14</span> px</label>
-      <input type="range" id="setFontSize" min="10" max="20" step="1" value="14">
-    </div>
-    <div class="field">
-      <label for="setFontStyle">Стиль шрифта</label>
-      <select id="setFontStyle">
-        <option value="system">Системный</option>
-        <option value="mono">Моноширинный</option>
-        <option value="serif">С засечками</option>
-      </select>
-    </div>
-    <div class="usage-row">
-      <select id="setPeriod">
-        <option value="day">День</option>
-        <option value="week">Неделя</option>
-        <option value="month">Месяц</option>
-        <option value="all">Всё время</option>
-      </select>
-      <span id="setUsage">Сообщения: 0 · Токены: 0</span>
+      <div class="field" id="customUrlWrap" style="display:none">
+        <label for="setBaseUrl">Базовый URL API</label>
+        <input type="text" id="setBaseUrl" autocomplete="off">
+        <label for="setSchemeDD" style="margin-top:8px">Схема API</label>
+        <div class="dd-wrap" id="setSchemeDD"></div>
+      </div>
+      <div class="field">
+        <label>Модель</label>
+        <div class="dd-wrap" id="setModelDD"></div>
+      </div>
+      <div class="field" id="modelSettingsBlock">
+        <label>Настройки модели: <span id="modelSettingsLabel">—</span></label>
+        <div class="per-model-controls" style="margin-bottom:6px">
+          <label for="setTemperature" style="margin:0;white-space:nowrap">Температура: <span id="setTemperatureValue" class="range-value">0.7</span></label>
+          <input type="range" id="setTemperature" min="0" max="2" step="0.1" value="0.7">
+          <span class="dd-default-badge" id="setTemperatureBadge" style="display:none">общий</span>
+          <button type="button" id="resetTemperature" class="mini-btn" title="Сбросить к общему">↺</button>
+        </div>
+        <div class="per-model-controls" style="margin-bottom:6px">
+          <label for="setMaxTokens" style="margin:0;white-space:nowrap">Максимум токенов</label>
+          <input type="number" id="setMaxTokens" min="1" max="100000" step="1" value="4096">
+          <span class="dd-default-badge" id="setMaxTokensBadge" style="display:none">общий</span>
+          <button type="button" id="resetMaxTokens" class="mini-btn" title="Сбросить к общему">↺</button>
+        </div>
+        <div class="per-model-controls">
+          <div class="check-row" style="margin:0">
+            <input type="checkbox" id="setReasoning">
+            <label for="setReasoning">Расширенное мышление</label>
+          </div>
+          <span class="dd-default-badge" id="setReasoningBadge" style="display:none">общий</span>
+          <button type="button" id="resetReasoning" class="mini-btn" title="Сбросить к общему">↺</button>
+        </div>
+      </div>
+      <div class="field" id="providerModelsBlock">
+        <label>Модели провайдера</label>
+        <div id="providerModelsList"></div>
+        <button type="button" id="addModelBtn" class="ghost-btn">+ Добавить модель</button>
+        <div id="addModelForm" style="display:none;margin-top:8px">
+          <input type="text" id="amSystemName" placeholder="Название в системе (id)">
+          <input type="text" id="amLabel" placeholder="Удобное название">
+          <div id="amCustomFields">
+            <input type="text" id="amBaseUrl" placeholder="Базовый URL API">
+            <input type="password" id="amApiKey" placeholder="API-ключ">
+            <label for="amSchemeDD">Схема API</label>
+            <div class="dd-wrap" id="amSchemeDD"></div>
+          </div>
+          <label for="amTemperature">Температура: <span id="amTemperatureValue" class="range-value">0.7</span></label>
+          <input type="range" id="amTemperature" min="0" max="2" step="0.1" value="0.7">
+          <label for="amMaxTokens">Максимум токенов</label>
+          <input type="number" id="amMaxTokens" min="1" max="100000" step="1" value="4096">
+          <div class="check-row">
+            <input type="checkbox" id="amReasoning">
+            <label for="amReasoning">Расширенное мышление</label>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="amSubmit" class="primary-btn">Добавить</button>
+            <button type="button" id="amCancel" class="ghost-btn">Отмена</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="setNotes">Заметки для контекста (видны агенту)</label>
+        <textarea id="setNotes" rows="3" placeholder="Например: температура PETG откалибрована по температурной башне — не предлагай калибровку"></textarea>
+      </div>
+      <details class="field">
+        <summary>Общие значения по умолчанию</summary>
+        <label for="setGlobalTemperature">Температура: <span id="setGlobalTemperatureValue" class="range-value">0.7</span></label>
+        <input type="range" id="setGlobalTemperature" min="0" max="2" step="0.1" value="0.7">
+        <label for="setGlobalMaxTokens">Максимум токенов</label>
+        <input type="number" id="setGlobalMaxTokens" min="1" max="100000" step="1" value="4096">
+        <div class="check-row">
+          <input type="checkbox" id="setGlobalReasoning">
+          <label for="setGlobalReasoning">Расширенное мышление</label>
+        </div>
+      </details>
+      <div class="field">
+        <label>Тема</label>
+        <div class="dd-wrap" id="setThemeDD"></div>
+      </div>
+      <div class="field">
+        <label for="setFontSize">Размер шрифта: <span id="setFontSizeValue">14</span> px</label>
+        <input type="range" id="setFontSize" min="10" max="20" step="1" value="14">
+      </div>
+      <div class="field">
+        <label>Стиль шрифта</label>
+        <div class="dd-wrap" id="setFontStyleDD"></div>
+      </div>
+      <div class="usage-row">
+        <div class="dd-wrap" id="setPeriodDD" style="width:150px"></div>
+        <span id="setUsage">Сообщения: 0 · Токены: 0</span>
+      </div>
     </div>
     <div class="modal-actions">
       <button type="button" id="exportBtn" class="ghost-btn">Экспорт чата</button>
@@ -1578,6 +2075,20 @@ select option {
     return null;
   }
 
+  function modelById(providerId, modelId) {
+    var provider = providerById(providerId);
+    if (!provider) {
+      return null;
+    }
+    var models = provider.models || [];
+    for (var i = 0; i < models.length; i++) {
+      if (models[i].id === modelId) {
+        return models[i];
+      }
+    }
+    return null;
+  }
+
   function renderHeader() {
     var s = state.settings || {};
     var provider = providerById(s.active_provider);
@@ -1672,11 +2183,22 @@ select option {
       for (var k = 0; k < groupItems.length; k++) {
         var item = groupItems[k];
         var isActive = prov.id === activeProvider && item.id === activeModel;
+        var isDefault = (prov.id + "::" + item.id) === (s.default_model || "");
         var row = el("div", "mp-item" + (isActive ? " active" : ""));
         row.setAttribute("data-provider", prov.id);
         row.setAttribute("data-model", item.id);
         row.appendChild(el("span", "mp-item-name", item.name || item.id));
         row.appendChild(el("code", "mp-item-id", item.id));
+        var star = el("button", "mp-star" + (isDefault ? " active" : ""), isDefault ? "★" : "☆");
+        star.type = "button";
+        star.title = "Сделать моделью по умолчанию";
+        (function (pid, mid) {
+          star.addEventListener("click", function (e) {
+            e.stopPropagation();
+            post({ type: "set_default_model", provider: pid, model: mid });
+          });
+        })(prov.id, item.id);
+        row.appendChild(star);
         if (isActive) {
           row.appendChild(el("span", "mp-check", "✓"));
         }
@@ -2257,79 +2779,353 @@ select option {
   }
 
   /* ===== Модалка настроек ===== */
-  function renderProviderSelect() {
-    var select = byId("setProvider");
-    select.innerHTML = "";
-    var providers = state.providers || [];
-    for (var i = 0; i < providers.length; i++) {
-      var option = document.createElement("option");
-      option.value = providers[i].id;
-      option.textContent = providers[i].name || providers[i].id;
-      select.appendChild(option);
-    }
-  }
+  var setProviderDD = null;
+  var setModelDD = null;
+  var setSchemeDD = null;
+  var setThemeDD = null;
+  var setFontStyleDD = null;
+  var setPeriodDD = null;
+  var amSchemeDD = null;
+  var perModelDirty = false; // флаг: per-model настройки изменены вручную
 
-  function renderModelSelect() {
-    var providerId = byId("setProvider").value;
-    var provider = providerById(providerId);
-    var select = byId("setModel");
-    select.innerHTML = "";
-    var models = (provider && provider.models) || [];
-    for (var i = 0; i < models.length; i++) {
-      var option = document.createElement("option");
-      option.value = models[i].id;
-      option.textContent = models[i].name || models[i].id;
-      select.appendChild(option);
-    }
-    var s = state.settings || {};
-    var matched = false;
-    for (var j = 0; j < models.length; j++) {
-      if (models[j].id === s.active_model) {
-        matched = true;
+  function makeDropdown(containerId, options, selected, onSelect, placeholder) {
+    var wrap = byId(containerId);
+    wrap.className = "dd-wrap";
+    wrap.innerHTML = "";
+    var btn = el("button", "dd-btn");
+    btn.type = "button";
+    var btnLabel = el("span", "dd-btn-label", "");
+    var caret = el("span", "dd-caret", "▾");
+    btn.appendChild(btnLabel);
+    btn.appendChild(caret);
+    var popup = el("div", "dd-popup");
+    popup.style.display = "none";
+    var search = el("input", "dd-search");
+    search.type = "text";
+    search.placeholder = placeholder || "Поиск…";
+    var list = el("div", "dd-list");
+    popup.appendChild(search);
+    popup.appendChild(list);
+    wrap.appendChild(btn);
+    wrap.appendChild(popup);
+
+    var current = null;
+    var opts = [];
+    var open = false;
+
+    function renderList() {
+      list.innerHTML = "";
+      var q = search.value.trim().toLowerCase();
+      var shown = 0;
+      for (var i = 0; i < opts.length; i++) {
+        var o = opts[i];
+        var hay = ((o.label || "") + " " + (o.value || "")).toLowerCase();
+        if (q && hay.indexOf(q) === -1) {
+          continue;
+        }
+        var item = el("div", "dd-item" + (o.value === current ? " active" : ""));
+        item.appendChild(el("span", "dd-item-label", o.label));
+        if (o.value === current) {
+          item.appendChild(el("span", "dd-check", "✓"));
+        }
+        (function (val) {
+          item.addEventListener("click", function () {
+            setSelected(val);
+            close();
+            if (onSelect) {
+              onSelect(val);
+            }
+          });
+        })(o.value);
+        list.appendChild(item);
+        shown++;
+      }
+      if (shown === 0) {
+        list.appendChild(el("div", "dd-empty", "Ничего не найдено"));
       }
     }
-    select.value = matched ? s.active_model : (models.length > 0 ? models[0].id : "");
+
+    function openPopup() {
+      open = true;
+      popup.style.display = "flex";
+      search.value = "";
+      renderList();
+      search.focus();
+    }
+
+    function close() {
+      open = false;
+      popup.style.display = "none";
+    }
+
+    function setSelected(value) {
+      current = value;
+      var found = null;
+      for (var i = 0; i < opts.length; i++) {
+        if (opts[i].value === value) {
+          found = opts[i];
+          break;
+        }
+      }
+      btnLabel.textContent = found ? found.label : (value || "—");
+      renderList();
+    }
+
+    function setOptions(newOpts) {
+      opts = newOpts || [];
+      if (current !== null) {
+        var still = false;
+        for (var i = 0; i < opts.length; i++) {
+          if (opts[i].value === current) {
+            still = true;
+            break;
+          }
+        }
+        if (!still) {
+          current = null;
+        }
+      }
+      if (current === null && opts.length > 0) {
+        current = opts[0].value;
+      }
+      setSelected(current);
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (open) {
+        close();
+      } else {
+        openPopup();
+      }
+    });
+    search.addEventListener("input", renderList);
+    document.addEventListener("click", function (e) {
+      if (!wrap.contains(e.target)) {
+        close();
+      }
+    });
+
+    setOptions(options);
+    if (selected !== undefined && selected !== null) {
+      setSelected(selected);
+    }
+
+    return {
+      setOptions: setOptions,
+      setSelected: setSelected,
+      getSelected: function () {
+        return current;
+      }
+    };
+  }
+
+  function initSettingsDropdowns() {
+    setProviderDD = makeDropdown("setProviderDD", [], "", onProviderChange, "Поиск провайдера…");
+    setModelDD = makeDropdown("setModelDD", [], "", onModelChange, "Поиск модели…");
+    setSchemeDD = makeDropdown("setSchemeDD", [
+      { value: "openai", label: "OpenAI-совместимая" },
+      { value: "anthropic", label: "Anthropic (нативный)" }
+    ], "openai", null, "Поиск схемы…");
+    setThemeDD = makeDropdown("setThemeDD", [
+      { value: "auto", label: "Авто" },
+      { value: "light", label: "Светлая" },
+      { value: "dark", label: "Тёмная" }
+    ], "auto", null, "Поиск темы…");
+    setFontStyleDD = makeDropdown("setFontStyleDD", [
+      { value: "system", label: "Системный" },
+      { value: "mono", label: "Моноширинный" },
+      { value: "serif", label: "С засечками" }
+    ], "system", null, "Поиск стиля…");
+    setPeriodDD = makeDropdown("setPeriodDD", [
+      { value: "all", label: "Всё время" },
+      { value: "today", label: "Сегодня" },
+      { value: "week", label: "Неделя" },
+      { value: "month", label: "Месяц" }
+    ], "all", function (val) {
+      post({ type: "get_usage", period: val });
+    }, "Поиск периода…");
+    amSchemeDD = makeDropdown("amSchemeDD", [
+      { value: "openai", label: "OpenAI-совместимая" },
+      { value: "anthropic", label: "Anthropic (нативный)" }
+    ], "openai", null, "Поиск схемы…");
+  }
+
+  function onProviderChange() {
+    var provider = providerById(setProviderDD.getSelected());
+    if (!provider) {
+      return;
+    }
+    // Ключ теперь per-provider: берём из выбранного провайдера.
+    byId("setApiKey").value = provider.api_key || "";
+    var customWrap = byId("customUrlWrap");
+    if (provider.builtin) {
+      customWrap.style.display = "none";
+    } else {
+      customWrap.style.display = "block";
+      byId("setBaseUrl").value = provider.base_url || "";
+      setSchemeDD.setSelected(provider.scheme || "openai");
+    }
+    var models = provider.models || [];
+    setModelDD.setOptions(models.map(function (m) {
+      return { value: m.id, label: m.name || m.id };
+    }));
+    var s = state.settings || {};
+    var matched = false;
+    for (var i = 0; i < models.length; i++) {
+      if (models[i].id === s.active_model) {
+        matched = true;
+        break;
+      }
+    }
+    setModelDD.setSelected(matched ? s.active_model : (models.length > 0 ? models[0].id : ""));
+    onModelChange();
+  }
+
+  function onModelChange() {
+    var model = modelById(setProviderDD.getSelected(), setModelDD.getSelected());
+    if (!model) {
+      return;
+    }
+    byId("modelSettingsLabel").textContent = model.name || model.id;
+    var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
+    var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 4096;
+    var gReas = !!state.settings.reasoning;
+    var hasTemp = model.temperature !== null && model.temperature !== undefined;
+    var hasMax = model.max_tokens !== null && model.max_tokens !== undefined;
+    var hasReas = model.reasoning !== null && model.reasoning !== undefined;
+    byId("setTemperature").value = String(hasTemp ? model.temperature : gTemp);
+    byId("setTemperatureValue").textContent = String(hasTemp ? model.temperature : gTemp);
+    byId("setTemperatureBadge").style.display = hasTemp ? "none" : "inline-block";
+    byId("setMaxTokens").value = String(hasMax ? model.max_tokens : gMax);
+    byId("setMaxTokensBadge").style.display = hasMax ? "none" : "inline-block";
+    byId("setReasoning").checked = hasReas ? !!model.reasoning : gReas;
+    byId("setReasoningBadge").style.display = hasReas ? "none" : "inline-block";
+    perModelDirty = false;
+    renderProviderModels();
+  }
+
+  function renderProviderModels() {
+    var list = byId("providerModelsList");
+    list.innerHTML = "";
+    var provider = providerById(setProviderDD.getSelected());
+    if (!provider) {
+      return;
+    }
+    var models = provider.models || [];
+    var activeModel = setModelDD.getSelected();
+    for (var i = 0; i < models.length; i++) {
+      var m = models[i];
+      var row = el("div", "provider-model-row" + (m.id === activeModel ? " active" : ""));
+      row.appendChild(el("span", "provider-model-name", m.name || m.id));
+      row.appendChild(el("code", "provider-model-id", m.id));
+      if (!m.builtin) {
+        var delBtn = el("button", "provider-model-del", "✕");
+        delBtn.type = "button";
+        delBtn.title = "Удалить модель";
+        (function (mid) {
+          delBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            post({ type: "delete_model", provider: provider.id, model_id: mid });
+          });
+        })(m.id);
+        row.appendChild(delBtn);
+      }
+      (function (mid) {
+        row.addEventListener("click", function () {
+          setModelDD.setSelected(mid);
+          onModelChange();
+        });
+      })(m.id);
+      list.appendChild(row);
+    }
   }
 
   function fillSettingsForm() {
     var s = state.settings || {};
-    renderProviderSelect();
-    byId("setProvider").value = s.active_provider || (state.providers[0] ? state.providers[0].id : "");
-    renderModelSelect();
-    byId("setApiKey").value = s.api_key || "";
-    byId("setTemperature").value = String(s.temperature !== undefined ? s.temperature : 0.7);
-    byId("setTemperatureValue").textContent = String(s.temperature !== undefined ? s.temperature : 0.7);
-    byId("setMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 4096);
-    byId("setReasoning").checked = !!s.reasoning;
-    byId("setTheme").value = s.theme || "auto";
+    setProviderDD.setOptions((state.providers || []).map(function (p) {
+      return { value: p.id, label: p.name || p.id };
+    }));
+    setProviderDD.setSelected(s.active_provider || (state.providers[0] ? state.providers[0].id : ""));
+    onProviderChange();
+    byId("setNotes").value = s.notes || "";
+    byId("setGlobalTemperature").value = String(s.temperature !== undefined ? s.temperature : 0.7);
+    byId("setGlobalTemperatureValue").textContent = byId("setGlobalTemperature").value;
+    byId("setGlobalMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 4096);
+    byId("setGlobalReasoning").checked = !!s.reasoning;
+    setThemeDD.setSelected(s.theme || "auto");
+    setFontStyleDD.setSelected(s.font_style || "system");
+    setPeriodDD.setSelected("all");
     byId("setFontSize").value = String(s.font_size || 14);
     byId("setFontSizeValue").textContent = String(s.font_size || 14);
-    byId("setFontStyle").value = s.font_style || "system";
   }
 
   function openSettings() {
     fillSettingsForm();
     byId("settingsModal").style.display = "flex";
-    post({ type: "get_usage", period: byId("setPeriod").value });
+    post({ type: "get_usage", period: setPeriodDD.getSelected() });
   }
 
   function closeSettings() {
     byId("settingsModal").style.display = "none";
   }
 
+  function resetPerModelField(field) {
+    var provider = setProviderDD.getSelected();
+    var model = setModelDD.getSelected();
+    var payload = { type: "update_model", provider: provider, model_id: model };
+    payload[field] = null;
+    post(payload);
+    // Показываем глобальное значение и бейдж «общий».
+    if (field === "temperature") {
+      var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
+      byId("setTemperature").value = String(gTemp);
+      byId("setTemperatureValue").textContent = String(gTemp);
+      byId("setTemperatureBadge").style.display = "inline-block";
+    } else if (field === "max_tokens") {
+      var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 4096;
+      byId("setMaxTokens").value = String(gMax);
+      byId("setMaxTokensBadge").style.display = "inline-block";
+    } else if (field === "reasoning") {
+      byId("setReasoning").checked = !!state.settings.reasoning;
+      byId("setReasoningBadge").style.display = "inline-block";
+    }
+    perModelDirty = false;
+  }
+
   function saveSettings() {
     var settings = {
-      active_provider: byId("setProvider").value,
-      active_model: byId("setModel").value,
+      active_provider: setProviderDD.getSelected(),
+      active_model: setModelDD.getSelected(),
       api_key: byId("setApiKey").value,
-      temperature: parseFloat(byId("setTemperature").value),
-      max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
-      reasoning: byId("setReasoning").checked,
-      theme: byId("setTheme").value,
+      notes: byId("setNotes").value,
+      temperature: parseFloat(byId("setGlobalTemperature").value),
+      max_tokens: parseInt(byId("setGlobalMaxTokens").value, 10) || 4096,
+      reasoning: byId("setGlobalReasoning").checked,
+      theme: setThemeDD.getSelected(),
       font_size: parseInt(byId("setFontSize").value, 10) || 14,
-      font_style: byId("setFontStyle").value
+      font_style: setFontStyleDD.getSelected()
     };
     post({ type: "save_settings", settings: settings });
+    if (perModelDirty) {
+      post({
+        type: "update_model",
+        provider: setProviderDD.getSelected(),
+        model_id: setModelDD.getSelected(),
+        temperature: parseFloat(byId("setTemperature").value),
+        max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
+        reasoning: byId("setReasoning").checked
+      });
+    }
+    var provider = providerById(setProviderDD.getSelected());
+    if (provider && !provider.builtin) {
+      post({
+        type: "update_provider",
+        id: provider.id,
+        base_url: byId("setBaseUrl").value,
+        scheme: setSchemeDD.getSelected()
+      });
+    }
     closeSettings();
   }
 
@@ -2512,7 +3308,7 @@ select option {
       post({ type: "reset_settings" });
     });
     byId("testKeyBtn").addEventListener("click", function () {
-      post({ type: "test_key" });
+      post({ type: "test_key", key: byId("setApiKey").value });
     });
     byId("setApiKeyEye").addEventListener("click", function () {
       var keyInput = byId("setApiKey");
@@ -2523,11 +3319,63 @@ select option {
     });
     byId("setTemperature").addEventListener("input", function () {
       byId("setTemperatureValue").textContent = this.value;
+      perModelDirty = true;
+      byId("setTemperatureBadge").style.display = "none";
+    });
+    byId("setMaxTokens").addEventListener("input", function () {
+      perModelDirty = true;
+      byId("setMaxTokensBadge").style.display = "none";
+    });
+    byId("setReasoning").addEventListener("change", function () {
+      perModelDirty = true;
+      byId("setReasoningBadge").style.display = "none";
+    });
+    byId("resetTemperature").addEventListener("click", function () {
+      resetPerModelField("temperature");
+    });
+    byId("resetMaxTokens").addEventListener("click", function () {
+      resetPerModelField("max_tokens");
+    });
+    byId("resetReasoning").addEventListener("click", function () {
+      resetPerModelField("reasoning");
+    });
+    byId("setGlobalTemperature").addEventListener("input", function () {
+      byId("setGlobalTemperatureValue").textContent = this.value;
+    });
+    byId("setFontSize").addEventListener("input", function () {
+      byId("setFontSizeValue").textContent = this.value;
     });
     byId("exportBtn").addEventListener("click", exportChat);
-    byId("setProvider").addEventListener("change", renderModelSelect);
-    byId("setPeriod").addEventListener("change", function () {
-      post({ type: "get_usage", period: this.value });
+    byId("addModelBtn").addEventListener("click", function () {
+      var provider = providerById(setProviderDD.getSelected());
+      byId("amCustomFields").style.display = (provider && !provider.builtin) ? "block" : "none";
+      byId("addModelForm").style.display = "block";
+    });
+    byId("amCancel").addEventListener("click", function () {
+      byId("addModelForm").style.display = "none";
+    });
+    byId("amSubmit").addEventListener("click", function () {
+      var provider = setProviderDD.getSelected();
+      var prov = providerById(provider);
+      var payload = {
+        type: "add_model",
+        provider: provider,
+        model_id: byId("amSystemName").value.trim(),
+        label: byId("amLabel").value.trim(),
+        temperature: parseFloat(byId("amTemperature").value),
+        max_tokens: parseInt(byId("amMaxTokens").value, 10) || 4096,
+        reasoning: byId("amReasoning").checked
+      };
+      if (prov && !prov.builtin) {
+        payload.base_url = byId("amBaseUrl").value.trim();
+        payload.api_key = byId("amApiKey").value.trim();
+        payload.scheme = amSchemeDD.getSelected();
+      }
+      post(payload);
+      byId("addModelForm").style.display = "none";
+    });
+    byId("amTemperature").addEventListener("input", function () {
+      byId("amTemperatureValue").textContent = this.value;
     });
     byId("searchInput").addEventListener("input", renderSidebar);
     byId("messages").addEventListener("scroll", onMessagesScroll);
@@ -2555,6 +3403,7 @@ select option {
     if (window.orca && typeof window.orca.onMessage === "function") {
       window.orca.onMessage(onMessage);
     }
+    initSettingsDropdowns();
     post({ type: "get_state" });
   }
 
@@ -2569,1030 +3418,24 @@ _CONFIG_PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Настройки FlowSlice AI</title>
+<title>FlowSlice AI</title>
 <style>
-:root {
-  --accent: #d9534f;
-  --accent-fg: #ffffff;
-}
-* {
-  box-sizing: border-box;
-}
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-body {
-  padding: 16px;
-  background: var(--orca-bg, #1e1e1e);
-  color: var(--orca-fg, #e6e6e6);
-  font-family: var(--orca-font, sans-serif);
-  font-size: 14px;
-  color-scheme: dark light;
-}
-h1 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.subtitle {
-  margin: 0 0 16px 0;
-  color: var(--orca-muted, #8a8a8a);
-  font-size: 12px;
-}
-.card {
-  border: 1px solid var(--orca-border, #3a3a3a);
-  border-radius: 8px;
-  padding: 14px;
-  margin-bottom: 12px;
-}
-.card-title {
-  margin: 0 0 10px 0;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--orca-muted, #8a8a8a);
-}
-.field {
-  margin-bottom: 12px;
-}
-.field:last-child {
-  margin-bottom: 0;
-}
-.field label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: var(--orca-muted, #8a8a8a);
-}
-input[type="text"],
-input[type="password"],
-input[type="number"],
-select {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--orca-border, #3a3a3a);
-  border-radius: 6px;
-  background: var(--orca-input, #2a2a2a);
-  color: var(--orca-fg, #e6e6e6);
-  font-family: var(--orca-font, sans-serif);
-  font-size: 14px;
-}
-select option {
-  background: var(--orca-input, #2a2a2a);
-  color: var(--orca-fg, #e6e6e6);
-}
-input:focus,
-select:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent);
-}
-input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent);
-  margin: 0;
-}
-.key-row {
-  display: flex;
-  gap: 6px;
-}
-.key-row input {
-  flex: 1;
-}
-.eye-btn {
-  border: 1px solid var(--orca-border, #3a3a3a);
-  background: transparent;
-  color: var(--orca-muted, #8a8a8a);
-  border-radius: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  white-space: nowrap;
-}
-.eye-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.check-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.check-row label {
-  margin: 0;
-  cursor: pointer;
-}
-.range-value {
-  color: var(--accent);
-  font-weight: 600;
-}
-.row {
-  display: flex;
-  gap: 12px;
-}
-.row > .field {
-  flex: 1;
-}
-.stats {
-  display: flex;
-  gap: 12px;
-  margin-top: 4px;
-}
-.stat {
-  flex: 1;
-  border: 1px solid var(--orca-border);
-  border-radius: 8px;
-  padding: 10px;
-  text-align: center;
-}
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-}
-.stat-label {
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--orca-muted);
-}
-button.danger {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--accent);
-  font-family: var(--orca-font);
-  font-size: 14px;
-  cursor: pointer;
-}
-button.danger:hover {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.footnote {
-  margin-top: 16px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--orca-muted);
-}
-
-/* ===== Управление провайдерами ===== */
-.provider-card {
-  border: 1px solid var(--orca-border, #3a3a3a);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 10px;
-}
-.provider-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.provider-name {
-  font-weight: 600;
-  font-size: 14px;
-}
-.badge {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.badge-builtin {
-  background: var(--orca-input, #2a2a2a);
-  color: var(--orca-muted, #8a8a8a);
-  border: 1px solid var(--orca-border, #3a3a3a);
-}
-.badge-custom {
-  background: rgba(217, 83, 79, 0.12);
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-.models-title {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--orca-muted, #8a8a8a);
-  margin: 10px 0 6px;
-}
-.model-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: 6px;
-}
-.model-row:hover {
-  background: var(--orca-input, #2a2a2a);
-}
-.model-name {
-  flex: 1;
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.model-id {
-  font-family: Consolas, monospace;
-  font-size: 12px;
-  color: var(--orca-muted, #8a8a8a);
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.model-del {
-  border: none;
-  background: transparent;
-  color: var(--orca-muted, #8a8a8a);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-.model-del:hover {
-  color: var(--accent);
-  background: rgba(217, 83, 79, 0.1);
-}
-.ghost-btn {
-  border: 1px solid var(--orca-border, #3a3a3a);
-  background: transparent;
-  color: var(--orca-fg, #e6e6e6);
-  border-radius: 6px;
-  padding: 7px 12px;
-  cursor: pointer;
-  font-family: var(--orca-font, sans-serif);
-  font-size: 13px;
-}
-.ghost-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.primary-btn {
-  border: none;
-  background: var(--accent);
-  color: var(--accent-fg);
-  border-radius: 6px;
-  padding: 7px 14px;
-  cursor: pointer;
-  font-family: var(--orca-font, sans-serif);
-  font-size: 13px;
-}
-.primary-btn:hover {
-  filter: brightness(1.1);
-}
-.inline-form {
-  border: 1px dashed var(--orca-border, #3a3a3a);
-  border-radius: 8px;
-  padding: 10px;
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.form-actions {
-  display: flex;
-  gap: 8px;
-}
-.form-error {
-  color: var(--accent);
-  font-size: 12px;
-  min-height: 0;
-}
-input.invalid {
-  border-color: var(--accent);
-}
-.prov-del {
-  margin-top: 10px;
-}
-.add-provider-wrap {
-  margin-top: 4px;
-}
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; color: var(--orca-fg, #222); background: var(--orca-bg, #fff); }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  p { font-size: 13px; line-height: 1.5; color: var(--orca-muted, #666); max-width: 560px; }
+  code { background: var(--orca-input, #f0f0f0); padding: 1px 5px; border-radius: 4px; }
 </style>
 </head>
 <body>
-<h1>FlowSlice AI</h1>
-<p class="subtitle">Настройки ассистента инженера 3D-печати</p>
-
-<div class="card">
-  <p class="card-title">Активная модель</p>
-  <div class="row">
-    <div class="field">
-      <label for="provider">Провайдер</label>
-      <select id="provider"></select>
-    </div>
-    <div class="field">
-      <label for="modelSelect">Модель</label>
-      <select id="modelSelect"></select>
-    </div>
-  </div>
-  <div class="field">
-    <label for="temperature">Температура: <span id="temperatureValue" class="range-value">0.7</span></label>
-    <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
-  </div>
-  <div class="field">
-    <label for="maxTokens">Максимум токенов</label>
-    <input type="number" id="maxTokens" min="1" max="100000" step="1" value="4096">
-  </div>
-  <div class="field">
-    <div class="check-row">
-      <input type="checkbox" id="reasoning">
-      <label for="reasoning">Расширенное мышление</label>
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <p class="card-title">Провайдеры</p>
-  <div id="providersList"></div>
-  <div class="add-provider-wrap">
-    <button type="button" class="ghost-btn" id="addProviderBtn">+ Добавить провайдера</button>
-  </div>
-  <div class="inline-form" id="addProviderForm" style="display:none">
-    <input type="text" id="pName" placeholder="Название провайдера">
-    <input type="text" id="pBaseUrl" placeholder="Base URL (https://…/v1)">
-    <input type="password" id="pApiKey" placeholder="API-ключ" autocomplete="off">
-    <div class="form-error" id="pError"></div>
-    <div class="form-actions">
-      <button type="button" class="primary-btn" id="pOk">Добавить</button>
-      <button type="button" class="ghost-btn" id="pCancel">Отмена</button>
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <p class="card-title">Оформление</p>
-  <div class="row">
-    <div class="field">
-      <label for="theme">Тема</label>
-      <select id="theme">
-        <option value="auto">Авто</option>
-        <option value="light">Светлая</option>
-        <option value="dark">Тёмная</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="fontStyle">Стиль шрифта</label>
-      <select id="fontStyle">
-        <option value="system">Системный</option>
-        <option value="mono">Моноширинный</option>
-        <option value="serif">С засечками</option>
-      </select>
-    </div>
-  </div>
-  <div class="field">
-    <label for="fontSize">Размер шрифта: <span id="fontSizeValue">14</span></label>
-    <input type="range" id="fontSize" min="10" max="20" step="1" value="14">
-  </div>
-</div>
-
-<div class="card">
-  <p class="card-title">Статистика использования</p>
-  <div class="field">
-    <label for="period">Период</label>
-    <select id="period">
-      <option value="day">День</option>
-      <option value="week">Неделя</option>
-      <option value="month">Месяц</option>
-      <option value="all">Всё время</option>
-    </select>
-  </div>
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value" id="statMsgs">0</div>
-      <div class="stat-label">Сообщения</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="statTokens">0</div>
-      <div class="stat-label">Токены</div>
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <button type="button" class="danger" id="resetBtn">Сбросить настройки</button>
-</div>
-
-<p class="footnote">FlowSlice AI v0.1.0</p>
-
-<script>
-const DEFAULTS = __DEFAULTS_JSON__;
-
-let cfg = {};
-
-function byId(id) {
-  return document.getElementById(id);
-}
-
-function pad2(value) {
-  return (value < 10 ? "0" : "") + String(value);
-}
-
-function todayKey() {
-  const now = new Date();
-  return String(now.getFullYear()) + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate());
-}
-
-function monthKey() {
-  const now = new Date();
-  return String(now.getFullYear()) + "-" + pad2(now.getMonth() + 1);
-}
-
-function parseDayKey(key) {
-  const parts = String(key).split("-");
-  if (parts.length !== 3) {
-    return null;
-  }
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const day = parseInt(parts[2], 10);
-  if (!year || !month || !day) {
-    return null;
-  }
-  return new Date(year, month - 1, day);
-}
-
-function sumUsage(period) {
-  const usage = cfg.usage && typeof cfg.usage === "object" ? cfg.usage : {};
-  const keys = Object.keys(usage);
-  const now = new Date();
-  const today = todayKey();
-  const currentMonth = monthKey();
-  let msgs = 0;
-  let tokens = 0;
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    let include = false;
-    if (period === "day") {
-      include = key === today;
-    } else if (period === "month") {
-      include = key.indexOf(currentMonth) === 0;
-    } else if (period === "week") {
-      const parsed = parseDayKey(key);
-      if (parsed) {
-        const diff = (now.getTime() - parsed.getTime()) / 86400000;
-        include = diff >= 0 && diff < 7;
-      }
-    } else {
-      include = true;
-    }
-    if (include) {
-      const item = usage[key] || {};
-      msgs += Number(item.msgs) || 0;
-      tokens += Number(item.tokens) || 0;
-    }
-  }
-  return { msgs: msgs, tokens: tokens };
-}
-
-function updateStats() {
-  const result = sumUsage(byId("period").value);
-  byId("statMsgs").textContent = String(result.msgs);
-  byId("statTokens").textContent = String(result.tokens);
-}
-
-function providerById(pid) {
-  const providers = cfg.providers && typeof cfg.providers === "object" ? cfg.providers : {};
-  return providers[pid] || null;
-}
-
-/* ===== Управление провайдерами ===== */
-
-function mk(tag, cls, text) {
-  const node = document.createElement(tag);
-  if (cls) {
-    node.className = cls;
-  }
-  if (text !== undefined && text !== null) {
-    node.textContent = text;
-  }
-  return node;
-}
-
-function markInvalid(input) {
-  input.classList.add("invalid");
-}
-
-function clearInvalid(input) {
-  input.classList.remove("invalid");
-}
-
-function slugify(text) {
-  const out = [];
-  for (const ch of String(text).toLowerCase()) {
-    if (/[a-z0-9_-]/.test(ch)) {
-      out.push(ch);
-    } else if (/\\s/.test(ch)) {
-      out.push("-");
-    }
-  }
-  const slug = out.join("").replace(/^-+|-+$/g, "");
-  return slug || "provider";
-}
-
-function randSuffix() {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let s = "";
-  for (let i = 0; i < 4; i++) {
-    s += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return s;
-}
-
-function modelRow(pid, mid, mdef) {
-  const row = mk("div", "model-row");
-  row.setAttribute("data-mid", mid);
-  row.appendChild(mk("span", "model-name", mdef.name || mid));
-  row.appendChild(mk("code", "model-id", mid));
-  if (!mdef.builtin) {
-    const delBtn = mk("button", "model-del", "✕");
-    delBtn.type = "button";
-    delBtn.title = "Удалить модель";
-    delBtn.setAttribute("data-mid", mid);
-    delBtn.addEventListener("click", function () {
-      const providers = cfg.providers || {};
-      const prov = providers[pid];
-      if (!prov) {
-        return;
-      }
-      const models = prov.models || {};
-      delete models[mid];
-      if (cfg.active_provider === pid && cfg.active_model === mid) {
-        const rest = Object.keys(models);
-        cfg.active_model = rest.length > 0 ? rest[0] : "";
-      }
-      renderProviders();
-      renderModelSelect();
-      collect();
-    });
-    row.appendChild(delBtn);
-  }
-  return row;
-}
-
-function addModel(pid, nameInput, idInput, baseUrlInput, apiKeyInput, errEl) {
-  const name = nameInput.value.trim();
-  const modelId = idInput.value.trim();
-  const providers = cfg.providers || {};
-  const prov = providers[pid];
-  if (!prov) {
-    return false;
-  }
-  const models = prov.models && typeof prov.models === "object" ? prov.models : {};
-  clearInvalid(nameInput);
-  clearInvalid(idInput);
-  if (baseUrlInput) {
-    clearInvalid(baseUrlInput);
-  }
-  errEl.textContent = "";
-  let ok = true;
-  if (!modelId) {
-    markInvalid(idInput);
-    errEl.textContent = "Укажите идентификатор модели.";
-    ok = false;
-  } else if (models[modelId]) {
-    markInvalid(idInput);
-    errEl.textContent = "Модель с таким model_id уже существует.";
-    ok = false;
-  }
-  if (!name) {
-    markInvalid(nameInput);
-    errEl.textContent = (errEl.textContent ? errEl.textContent + " " : "") + "Укажите имя модели.";
-    ok = false;
-  }
-  if (!prov.builtin && baseUrlInput && !baseUrlInput.value.trim()) {
-    markInvalid(baseUrlInput);
-    errEl.textContent = (errEl.textContent ? errEl.textContent + " " : "") + "Укажите Base URL.";
-    ok = false;
-  }
-  if (!ok) {
-    return false;
-  }
-  const entry = { name: name, builtin: false };
-  if (baseUrlInput && baseUrlInput.value.trim()) {
-    entry.base_url = baseUrlInput.value.trim();
-  }
-  if (apiKeyInput && apiKeyInput.value.trim()) {
-    entry.api_key = apiKeyInput.value.trim();
-  }
-  models[modelId] = entry;
-  renderProviders();
-  renderModelSelect();
-  collect();
-  return true;
-}
-
-function providerCard(pid, prov) {
-  const card = mk("div", "provider-card");
-  card.setAttribute("data-pid", pid);
-  const head = mk("div", "provider-head");
-  head.appendChild(mk("span", "provider-name", prov.name || pid));
-  head.appendChild(mk(
-    "span",
-    "badge " + (prov.builtin ? "badge-builtin" : "badge-custom"),
-    prov.builtin ? "встроенный" : "пользовательский"
-  ));
-  card.appendChild(head);
-
-  const urlField = mk("div", "field");
-  urlField.appendChild(mk("label", "", "Base URL"));
-  const urlInput = mk("input", "prov-base-url");
-  urlInput.type = "text";
-  urlInput.value = prov.base_url || "";
-  urlInput.addEventListener("input", function () {
-    prov.base_url = urlInput.value;
-    collect();
-  });
-  urlField.appendChild(urlInput);
-  card.appendChild(urlField);
-
-  const keyField = mk("div", "field");
-  keyField.appendChild(mk("label", "", "API-ключ"));
-  const keyRow = mk("div", "key-row");
-  const keyInput = mk("input", "prov-api-key");
-  keyInput.type = "password";
-  keyInput.autocomplete = "off";
-  keyInput.value = prov.api_key || "";
-  keyInput.addEventListener("input", function () {
-    prov.api_key = keyInput.value;
-    collect();
-  });
-  const eyeBtn = mk("button", "eye-btn", "👁");
-  eyeBtn.type = "button";
-  eyeBtn.title = "Показать ключ";
-  eyeBtn.addEventListener("click", function () {
-    const masked = keyInput.type === "password";
-    keyInput.type = masked ? "text" : "password";
-    this.textContent = masked ? "🙈" : "👁";
-    this.title = masked ? "Скрыть ключ" : "Показать ключ";
-  });
-  keyRow.appendChild(keyInput);
-  keyRow.appendChild(eyeBtn);
-  keyField.appendChild(keyRow);
-  card.appendChild(keyField);
-
-  card.appendChild(mk("div", "models-title", "Модели"));
-  const models = prov.models && typeof prov.models === "object" ? prov.models : {};
-  const mids = Object.keys(models).sort();
-  for (let j = 0; j < mids.length; j++) {
-    card.appendChild(modelRow(pid, mids[j], models[mids[j]]));
-  }
-
-  const addBtn = mk("button", "ghost-btn add-model-btn", "+ Добавить модель");
-  addBtn.type = "button";
-  addBtn.addEventListener("click", function () {
-    form.style.display = "flex";
-    addBtn.style.display = "none";
-  });
-  card.appendChild(addBtn);
-
-  const form = mk("div", "inline-form add-model-form");
-  form.style.display = "none";
-  const mName = mk("input", "m-name");
-  mName.type = "text";
-  mName.placeholder = "Имя модели";
-  const mId = mk("input", "m-id");
-  mId.type = "text";
-  mId.placeholder = "model_id (идентификатор API)";
-  form.appendChild(mName);
-  form.appendChild(mId);
-  let mBaseUrl = null;
-  let mApiKey = null;
-  if (!prov.builtin) {
-    mBaseUrl = mk("input", "m-base-url");
-    mBaseUrl.type = "text";
-    mBaseUrl.placeholder = "Base URL (override)";
-    mApiKey = mk("input", "m-api-key");
-    mApiKey.type = "password";
-    mApiKey.placeholder = "API-ключ (override)";
-    form.appendChild(mBaseUrl);
-    form.appendChild(mApiKey);
-  }
-  const err = mk("div", "form-error");
-  form.appendChild(err);
-  const actions = mk("div", "form-actions");
-  const okBtn = mk("button", "primary-btn", "Добавить");
-  okBtn.type = "button";
-  okBtn.addEventListener("click", function () {
-    addModel(pid, mName, mId, mBaseUrl, mApiKey, err);
-  });
-  const cancelBtn = mk("button", "ghost-btn", "Отмена");
-  cancelBtn.type = "button";
-  cancelBtn.addEventListener("click", function () {
-    form.style.display = "none";
-    addBtn.style.display = "";
-    clearInvalid(mName);
-    clearInvalid(mId);
-    if (mBaseUrl) {
-      clearInvalid(mBaseUrl);
-    }
-    err.textContent = "";
-  });
-  actions.appendChild(okBtn);
-  actions.appendChild(cancelBtn);
-  form.appendChild(actions);
-  card.appendChild(form);
-
-  if (!prov.builtin) {
-    const delBtn = mk("button", "danger prov-del", "Удалить провайдера");
-    delBtn.type = "button";
-    delBtn.addEventListener("click", function () {
-      if (window.confirm("Удалить провайдера «" + (prov.name || pid) + "»?")) {
-        const providers = cfg.providers || {};
-        delete providers[pid];
-        if (cfg.active_provider === pid) {
-          const rest = Object.keys(providers);
-          cfg.active_provider = rest.length > 0 ? rest[0] : "";
-        }
-        renderProviders();
-        renderProviderSelect();
-        renderModelSelect();
-        collect();
-      }
-    });
-    card.appendChild(delBtn);
-  }
-  return card;
-}
-
-function renderProviders() {
-  const container = byId("providersList");
-  container.innerHTML = "";
-  const providers = cfg.providers && typeof cfg.providers === "object" ? cfg.providers : {};
-  const ids = Object.keys(providers).sort();
-  for (let i = 0; i < ids.length; i++) {
-    container.appendChild(providerCard(ids[i], providers[ids[i]]));
-  }
-}
-
-function addProvider() {
-  const nameInput = byId("pName");
-  const urlInput = byId("pBaseUrl");
-  const keyInput = byId("pApiKey");
-  const errEl = byId("pError");
-  const name = nameInput.value.trim();
-  const baseUrl = urlInput.value.trim();
-  clearInvalid(nameInput);
-  clearInvalid(urlInput);
-  errEl.textContent = "";
-  let ok = true;
-  if (!name) {
-    markInvalid(nameInput);
-    errEl.textContent = "Укажите название провайдера.";
-    ok = false;
-  }
-  if (!baseUrl) {
-    markInvalid(urlInput);
-    errEl.textContent = (errEl.textContent ? errEl.textContent + " " : "") + "Укажите Base URL.";
-    ok = false;
-  }
-  if (!ok) {
-    return;
-  }
-  const pid = slugify(name) + "_" + randSuffix();
-  if (!cfg.providers || typeof cfg.providers !== "object") {
-    cfg.providers = {};
-  }
-  cfg.providers[pid] = {
-    name: name,
-    base_url: baseUrl,
-    api_key: keyInput.value.trim(),
-    builtin: false,
-    models: {}
-  };
-  byId("addProviderForm").style.display = "none";
-  byId("addProviderBtn").style.display = "";
-  nameInput.value = "";
-  urlInput.value = "";
-  keyInput.value = "";
-  renderProviders();
-  renderProviderSelect();
-  collect();
-}
-
-function renderProviderSelect() {
-  const select = byId("provider");
-  select.innerHTML = "";
-  const providers = cfg.providers && typeof cfg.providers === "object" ? cfg.providers : {};
-  const ids = Object.keys(providers);
-  for (let i = 0; i < ids.length; i++) {
-    const option = document.createElement("option");
-    option.value = ids[i];
-    option.textContent = providers[ids[i]].name || ids[i];
-    select.appendChild(option);
-  }
-  if (cfg.active_provider && providers[cfg.active_provider]) {
-    select.value = cfg.active_provider;
-  } else if (ids.length > 0) {
-    select.value = ids[0];
-  }
-}
-
-function renderModelSelect() {
-  const provider = providerById(byId("provider").value) || { models: {} };
-  const models = provider.models && typeof provider.models === "object" ? provider.models : {};
-  const select = byId("modelSelect");
-  select.innerHTML = "";
-  const ids = Object.keys(models);
-  for (let i = 0; i < ids.length; i++) {
-    const option = document.createElement("option");
-    option.value = ids[i];
-    option.textContent = models[ids[i]].name || ids[i];
-    select.appendChild(option);
-  }
-  if (cfg.active_model && models[cfg.active_model]) {
-    select.value = cfg.active_model;
-  } else if (ids.length > 0) {
-    select.value = ids[0];
-  }
-}
-
-function fillForm() {
-  renderProviderSelect();
-  renderModelSelect();
-  renderProviders();
-  byId("temperature").value = String(cfg.temperature !== undefined ? cfg.temperature : DEFAULTS.temperature);
-  byId("temperatureValue").textContent = String(cfg.temperature !== undefined ? cfg.temperature : DEFAULTS.temperature);
-  byId("maxTokens").value = String(cfg.max_tokens !== undefined ? cfg.max_tokens : DEFAULTS.max_tokens);
-  byId("reasoning").checked = !!cfg.reasoning;
-  byId("theme").value = cfg.theme || DEFAULTS.theme;
-  byId("fontSize").value = String(cfg.font_size || DEFAULTS.font_size);
-  byId("fontSizeValue").textContent = String(cfg.font_size || DEFAULTS.font_size);
-  byId("fontStyle").value = cfg.font_style || DEFAULTS.font_style;
-  updateStats();
-}
-
-function collect() {
-  const providerId = byId("provider").value;
-  cfg.active_provider = providerId;
-  cfg.active_model = byId("modelSelect").value;
-  cfg.temperature = parseFloat(byId("temperature").value);
-  cfg.max_tokens = parseInt(byId("maxTokens").value, 10) || DEFAULTS.max_tokens;
-  cfg.reasoning = byId("reasoning").checked;
-  cfg.theme = byId("theme").value;
-  cfg.font_size = parseInt(byId("fontSize").value, 10) || DEFAULTS.font_size;
-  cfg.font_style = byId("fontStyle").value;
-  if (!cfg.usage || typeof cfg.usage !== "object") {
-    cfg.usage = {};
-  }
-  window.orca.saveConfig(cfg);
-}
-
-function onProviderChange() {
-  cfg.active_provider = byId("provider").value;
-  renderModelSelect();
-  collect();
-}
-
-function resetAll() {
-  cfg = normalizeConfig(JSON.parse(JSON.stringify(DEFAULTS)));
-  fillForm();
-  window.orca.saveConfig(cfg);
-}
-
-/* Нормализация конфигурации: поддержка новой и старой (provider/model/...)
-   схем, чтобы страница настроек не падала на устаревших данных. */
-function normalizeConfig(raw) {
-  const base = JSON.parse(JSON.stringify(DEFAULTS));
-  if (!raw || typeof raw !== "object") {
-    return base;
-  }
-  if (!raw.providers || typeof raw.providers !== "object") {
-    const providerId = raw.provider || base.active_provider;
-    const providers = {};
-    const baseProviders = base.providers || {};
-    const baseIds = Object.keys(baseProviders);
-    for (let i = 0; i < baseIds.length; i++) {
-      providers[baseIds[i]] = JSON.parse(JSON.stringify(baseProviders[baseIds[i]]));
-    }
-    if (providerId === "custom") {
-      providers["custom"] = {
-        name: "Custom",
-        base_url: raw.custom_base_url || "",
-        api_key: raw.api_key || "",
-        builtin: false,
-        models: {}
-      };
-      if (raw.custom_model) {
-        providers["custom"].models[raw.custom_model] = {
-          name: raw.custom_model,
-          builtin: false
-        };
-      }
-    } else {
-      if (!providers[providerId]) {
-        providers[providerId] = {
-          name: providerId,
-          base_url: raw.base_url || "",
-          api_key: raw.api_key || "",
-          builtin: false,
-          models: {}
-        };
-      } else {
-        providers[providerId].api_key = raw.api_key || "";
-        if (raw.base_url) {
-          providers[providerId].base_url = raw.base_url;
-        }
-      }
-    }
-    let activeModel = providerId === "custom" ? raw.custom_model : raw.model;
-    const provModels = providers[providerId].models || {};
-    if (!activeModel || !provModels[activeModel]) {
-      activeModel = Object.keys(provModels)[0] || "";
-    }
-    return {
-      providers: providers,
-      active_provider: providerId,
-      active_model: activeModel,
-      temperature: raw.temperature !== undefined ? raw.temperature : base.temperature,
-      max_tokens: raw.max_tokens !== undefined ? raw.max_tokens : base.max_tokens,
-      reasoning: !!raw.reasoning,
-      theme: raw.theme || base.theme,
-      font_size: raw.font_size || base.font_size,
-      font_style: raw.font_style || base.font_style,
-      usage: raw.usage && typeof raw.usage === "object" ? raw.usage : {}
-    };
-  }
-  const merged = JSON.parse(JSON.stringify(base));
-  const keys = Object.keys(raw);
-  for (let i = 0; i < keys.length; i++) {
-    merged[keys[i]] = raw[keys[i]];
-  }
-  if (!merged.providers || typeof merged.providers !== "object") {
-    merged.providers = base.providers;
-  }
-  const providerIds = Object.keys(merged.providers);
-  if (!merged.active_provider || !merged.providers[merged.active_provider]) {
-    merged.active_provider = providerIds.length > 0 ? providerIds[0] : "deepseek";
-  }
-  const activeProv = merged.providers[merged.active_provider] || { models: {} };
-  const activeModels = activeProv.models || {};
-  if (!merged.active_model || !activeModels[merged.active_model]) {
-    merged.active_model = Object.keys(activeModels)[0] || "";
-  }
-  if (!merged.usage || typeof merged.usage !== "object") {
-    merged.usage = {};
-  }
-  return merged;
-}
-
-function wire() {
-  byId("provider").addEventListener("change", onProviderChange);
-  byId("modelSelect").addEventListener("change", collect);
-  byId("temperature").addEventListener("input", function () {
-    byId("temperatureValue").textContent = this.value;
-    collect();
-  });
-  byId("maxTokens").addEventListener("input", collect);
-  byId("reasoning").addEventListener("change", collect);
-  byId("theme").addEventListener("change", collect);
-  byId("fontStyle").addEventListener("change", collect);
-  byId("fontSize").addEventListener("input", function () {
-    byId("fontSizeValue").textContent = this.value;
-    collect();
-  });
-  byId("period").addEventListener("change", updateStats);
-  byId("resetBtn").addEventListener("click", resetAll);
-  byId("addProviderBtn").addEventListener("click", function () {
-    byId("addProviderForm").style.display = "flex";
-    byId("addProviderBtn").style.display = "none";
-  });
-  byId("pOk").addEventListener("click", addProvider);
-  byId("pCancel").addEventListener("click", function () {
-    byId("addProviderForm").style.display = "none";
-    byId("addProviderBtn").style.display = "";
-    clearInvalid(byId("pName"));
-    clearInvalid(byId("pBaseUrl"));
-    byId("pError").textContent = "";
-  });
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-  const stored = window.orca.getConfig();
-  cfg = normalizeConfig(stored);
-  fillForm();
-  wire();
-});
-</script>
+  <h1>FlowSlice AI</h1>
+  <p>Все настройки плагина управляются через кнопку «Настройки» (шестерёнка) на вкладке FlowSlice AI: провайдеры, модели, API-ключи, температура, заметки для контекста и оформление.</p>
+  <p>Эта страница намеренно не содержит полей — настройки хранятся в конфигурации плагина и редактируются только на вкладке.</p>
 </body>
-</html>"""
+</html>
+"""
 
 
-CONFIG_PAGE = _CONFIG_PAGE_TEMPLATE.replace(
-    "__DEFAULTS_JSON__", json.dumps(DEFAULT_CONFIG)
-)
+CONFIG_PAGE = _CONFIG_PAGE_TEMPLATE
 
 
 class _ChatEngine:
@@ -3679,6 +3522,45 @@ class _ChatEngine:
                 "models": user_models,
             }
         merged["providers"] = normalized_providers
+        # Per-model настройки и схема API: нормализация для всех провайдеров.
+        for pid, pdef in normalized_providers.items():
+            pdef["scheme"] = (
+                "anthropic" if str(pdef.get("scheme", "openai")) == "anthropic" else "openai"
+            )
+            for mid, mdef in pdef.get("models", {}).items():
+                if not isinstance(mdef, dict):
+                    continue
+                temperature = mdef.get("temperature")
+                if temperature is not None:
+                    try:
+                        temperature = float(temperature)
+                    except (TypeError, ValueError):
+                        temperature = None
+                    if temperature is not None and (temperature < 0.0 or temperature > 2.0):
+                        temperature = None
+                mdef["temperature"] = temperature
+                max_tokens = mdef.get("max_tokens")
+                if max_tokens is not None:
+                    try:
+                        max_tokens = int(max_tokens)
+                    except (TypeError, ValueError):
+                        max_tokens = None
+                    if max_tokens is not None and (max_tokens < 1 or max_tokens > 100000):
+                        max_tokens = None
+                mdef["max_tokens"] = max_tokens
+                reasoning = mdef.get("reasoning")
+                if reasoning is not None:
+                    if isinstance(reasoning, str):
+                        reasoning = reasoning.strip().lower() in ("1", "true", "yes", "on")
+                    reasoning = bool(reasoning)
+                mdef["reasoning"] = reasoning
+                # Схема модели: нормализуется только у пользовательских провайдеров.
+                if not pdef.get("builtin", False):
+                    mdef["scheme"] = (
+                        "anthropic"
+                        if str(mdef.get("scheme", "openai")) == "anthropic"
+                        else "openai"
+                    )
         # Активный провайдер и модель.
         active_provider = str(merged.get("active_provider", "deepseek"))
         if active_provider not in normalized_providers:
@@ -3690,6 +3572,20 @@ class _ChatEngine:
         if active_model not in models:
             active_model = next(iter(models), "")
         merged["active_model"] = active_model
+        # Модель по умолчанию для новых чатов: "provider::model".
+        default_model = str(merged.get("default_model", "")).strip()
+        if "::" in default_model:
+            d_provider, d_model = default_model.split("::", 1)
+            d_prov = normalized_providers.get(d_provider)
+            if not isinstance(d_prov, dict) or d_model not in d_prov.get("models", {}):
+                default_model = ""
+        else:
+            default_model = ""
+        if not default_model:
+            default_model = active_provider + "::" + active_model
+        merged["default_model"] = default_model
+        # Заметки пользователя для контекста.
+        merged["notes"] = str(merged.get("notes", ""))
         # Температура: float 0.0–2.0.
         try:
             temperature = float(merged.get("temperature", 0.7))
@@ -3752,6 +3648,8 @@ class _ChatEngine:
             "providers": providers,
             "active_provider": active_provider,
             "active_model": active_model,
+            "default_model": active_provider + "::" + active_model,
+            "notes": "",
             "theme": data.get("theme", "auto"),
             "font_size": data.get("font_size", 14),
             "font_style": data.get("font_style", "system"),
@@ -3887,6 +3785,14 @@ class _ChatEngine:
         self._chats.append(chat)
         self._active = chat["id"]
         self._ctx_tokens = self._estimate_context_tokens(chat["context_flags"])
+        # Новый чат стартует на модели по умолчанию (конфиг уже нормализован).
+        default_model = str(self._config.get("default_model", ""))
+        if "::" in default_model:
+            d_provider, d_model = default_model.split("::", 1)
+            providers = self._config.get("providers", {})
+            if d_provider in providers and d_model in providers[d_provider].get("models", {}):
+                self._config["active_provider"] = d_provider
+                self._config["active_model"] = d_model
         self._save_chats()
         return chat
 
@@ -3983,13 +3889,15 @@ class _ChatEngine:
         elif msg_type == "reset_settings":
             self._handle_reset_settings()
         elif msg_type == "test_key":
-            self._handle_test_key()
+            self._handle_test_key(message)
         elif msg_type == "get_usage":
             self._handle_get_usage(message)
         elif msg_type == "attach_file":
             self._handle_attach_file(message)
         elif msg_type == "set_model":
             self._handle_set_model(message)
+        elif msg_type == "set_default_model":
+            self._handle_set_default_model(message)
         elif msg_type == "add_provider":
             self._handle_add_provider(message)
         elif msg_type == "update_provider":
@@ -3998,6 +3906,8 @@ class _ChatEngine:
             self._handle_delete_provider(message)
         elif msg_type == "add_model":
             self._handle_add_model(message)
+        elif msg_type == "update_model":
+            self._handle_update_model(message)
         elif msg_type == "delete_model":
             self._handle_delete_model(message)
         else:
@@ -4040,7 +3950,11 @@ class _ChatEngine:
         )
 
     def _providers_snapshot(self) -> list[dict[str, Any]]:
-        """Возвращает список провайдеров для UI без ключей и URL."""
+        """Возвращает список провайдеров для UI.
+
+        Ключи и URL отправляются в UI: это локальный webview, а не внешний
+        канал, поэтому секреты доступны форме настроек для предзаполнения.
+        """
         result: list[dict[str, Any]] = []
         providers = self._config.get("providers", {})
         for pid, pdef in providers.items():
@@ -4049,21 +3963,30 @@ class _ChatEngine:
             models: list[dict[str, Any]] = []
             for mid, mdef in pdef.get("models", {}).items():
                 if isinstance(mdef, dict):
-                    models.append(
-                        {
-                            "id": mid,
-                            "name": str(mdef.get("name", mid)),
-                            "builtin": bool(mdef.get("builtin", False)),
-                        }
-                    )
-            result.append(
-                {
-                    "id": pid,
-                    "name": str(pdef.get("name", pid)),
-                    "builtin": bool(pdef.get("builtin", False)),
-                    "models": models,
-                }
-            )
+                    entry: dict[str, Any] = {
+                        "id": mid,
+                        "name": str(mdef.get("name", mid)),
+                        "builtin": bool(mdef.get("builtin", False)),
+                        "temperature": mdef.get("temperature"),
+                        "max_tokens": mdef.get("max_tokens"),
+                        "reasoning": mdef.get("reasoning"),
+                        "scheme": str(mdef.get("scheme") or pdef.get("scheme") or "openai"),
+                    }
+                    if not mdef.get("builtin", False):
+                        entry["base_url"] = str(mdef.get("base_url", ""))
+                        entry["api_key"] = str(mdef.get("api_key", ""))
+                    models.append(entry)
+            prov_entry: dict[str, Any] = {
+                "id": pid,
+                "name": str(pdef.get("name", pid)),
+                "builtin": bool(pdef.get("builtin", False)),
+                "scheme": str(pdef.get("scheme", "openai")),
+                "api_key": str(pdef.get("api_key", "")),
+                "models": models,
+            }
+            if not pdef.get("builtin", False):
+                prov_entry["base_url"] = str(pdef.get("base_url", ""))
+            result.append(prov_entry)
         return result
 
     def _handle_chat(self, message: dict) -> None:
@@ -4217,6 +4140,8 @@ class _ChatEngine:
         for key in (
             "active_provider",
             "active_model",
+            "default_model",
+            "notes",
             "temperature",
             "max_tokens",
             "reasoning",
@@ -4261,9 +4186,16 @@ class _ChatEngine:
             }
         )
 
-    def _handle_test_key(self) -> None:
-        """Запускает проверку API-ключа в фоновом потоке."""
-        threading.Thread(target=self._test_key_worker, daemon=True).start()
+    def _handle_test_key(self, message: dict) -> None:
+        """Запускает проверку API-ключа в фоновом потоке.
+
+        Если в сообщении передан ключ (поле "key"), проверяется именно он,
+        иначе — ключ активного провайдера.
+        """
+        key = message.get("key")
+        if not isinstance(key, str) or not key.strip():
+            key = None
+        threading.Thread(target=self._test_key_worker, args=(key,), daemon=True).start()
 
     def _handle_get_usage(self, message: dict) -> None:
         """Отправляет статистику использования за выбранный период."""
@@ -4324,6 +4256,20 @@ class _ChatEngine:
         self._send_state()
         self._post({"type": "toast", "text": "Модель выбрана: " + model, "kind": "ok"})
 
+    def _handle_set_default_model(self, message: dict) -> None:
+        """Устанавливает модель по умолчанию для новых чатов."""
+        provider = str(message.get("provider", ""))
+        model = str(message.get("model", ""))
+        providers = self._config.get("providers", {})
+        if provider not in providers or model not in providers[provider].get("models", {}):
+            self._post({"type": "toast", "text": "Модель не найдена.", "kind": "err"})
+            return
+        self._config["default_model"] = provider + "::" + model
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Модель по умолчанию: " + model, "kind": "ok"})
+
     def _handle_add_provider(self, message: dict) -> None:
         """Создаёт пользовательского провайдера."""
         name = str(message.get("name", "")).strip()
@@ -4341,6 +4287,7 @@ class _ChatEngine:
             "base_url": base_url,
             "api_key": api_key,
             "builtin": False,
+            "scheme": "anthropic" if str(message.get("scheme", "openai")) == "anthropic" else "openai",
             "models": {},
         }
         self._config = self._normalize_config(self._config)
@@ -4364,6 +4311,10 @@ class _ChatEngine:
             prov["base_url"] = str(message["base_url"]).strip()
         if message.get("api_key") is not None:
             prov["api_key"] = str(message["api_key"]).strip()
+        if message.get("scheme") is not None:
+            prov["scheme"] = (
+                "anthropic" if str(message["scheme"]) == "anthropic" else "openai"
+            )
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
@@ -4424,15 +4375,126 @@ class _ChatEngine:
             )
             return
         entry: dict[str, Any] = {"name": name, "builtin": False}
-        if message.get("base_url") is not None:
-            entry["base_url"] = str(message["base_url"]).strip()
-        if message.get("api_key") is not None:
-            entry["api_key"] = str(message["api_key"]).strip()
+        label = str(message.get("label", "")).strip()
+        if label:
+            entry["name"] = label
+        # Per-model настройки: None → не записываем (наследуется глобальное).
+        temperature = message.get("temperature")
+        if temperature is not None:
+            try:
+                temperature = float(temperature)
+            except (TypeError, ValueError):
+                temperature = None
+            if temperature is not None and (temperature < 0.0 or temperature > 2.0):
+                temperature = None
+            if temperature is not None:
+                entry["temperature"] = temperature
+        max_tokens = message.get("max_tokens")
+        if max_tokens is not None:
+            try:
+                max_tokens = int(max_tokens)
+            except (TypeError, ValueError):
+                max_tokens = None
+            if max_tokens is not None and (max_tokens < 1 or max_tokens > 100000):
+                max_tokens = None
+            if max_tokens is not None:
+                entry["max_tokens"] = max_tokens
+        reasoning = message.get("reasoning")
+        if reasoning is not None:
+            if isinstance(reasoning, str):
+                reasoning = reasoning.strip().lower() in ("1", "true", "yes", "on")
+            entry["reasoning"] = bool(reasoning)
+        # URL/ключ/схема — только для пользовательских провайдеров.
+        if not prov.get("builtin", False):
+            if message.get("base_url") is not None:
+                entry["base_url"] = str(message["base_url"]).strip()
+            if message.get("api_key") is not None:
+                entry["api_key"] = str(message["api_key"]).strip()
+            if message.get("scheme") is not None:
+                entry["scheme"] = (
+                    "anthropic" if str(message["scheme"]) == "anthropic" else "openai"
+                )
         models[model_id] = entry
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
         self._post({"type": "toast", "text": "Модель добавлена: " + model_id, "kind": "ok"})
+
+    def _handle_update_model(self, message: dict) -> None:
+        """Обновляет поля пользовательской модели.
+
+        Принимает provider, model_id и опционально name, temperature,
+        max_tokens, reasoning, base_url, api_key, scheme. URL/ключ/схему
+        можно менять только у не-встроенных моделей.
+        """
+        provider = str(message.get("provider", ""))
+        model_id = str(message.get("model_id", ""))
+        providers = self._config.get("providers", {})
+        prov = providers.get(provider)
+        if not isinstance(prov, dict):
+            self._post({"type": "toast", "text": "Провайдер не найден.", "kind": "err"})
+            return
+        models = prov.get("models", {})
+        mdef = models.get(model_id)
+        if not isinstance(mdef, dict):
+            self._post({"type": "toast", "text": "Модель не найдена.", "kind": "err"})
+            return
+        if message.get("name") is not None:
+            new_name = str(message["name"]).strip()
+            if new_name:
+                mdef["name"] = new_name
+        temperature = message.get("temperature")
+        if "temperature" in message:
+            try:
+                temperature = float(temperature) if temperature is not None else None
+            except (TypeError, ValueError):
+                temperature = None
+            if temperature is not None and (temperature < 0.0 or temperature > 2.0):
+                temperature = None
+            mdef["temperature"] = temperature
+        max_tokens = message.get("max_tokens")
+        if "max_tokens" in message:
+            try:
+                max_tokens = int(max_tokens) if max_tokens is not None else None
+            except (TypeError, ValueError):
+                max_tokens = None
+            if max_tokens is not None and (max_tokens < 1 or max_tokens > 100000):
+                max_tokens = None
+            mdef["max_tokens"] = max_tokens
+        reasoning = message.get("reasoning")
+        if "reasoning" in message:
+            if reasoning is None:
+                mdef["reasoning"] = None
+            else:
+                if isinstance(reasoning, str):
+                    reasoning = reasoning.strip().lower() in ("1", "true", "yes", "on")
+                mdef["reasoning"] = bool(reasoning)
+        if mdef.get("builtin", False):
+            if any(
+                message.get(key) is not None
+                for key in ("base_url", "api_key", "scheme")
+            ):
+                self._post(
+                    {
+                        "type": "toast",
+                        "text": "У встроенной модели нельзя менять URL/ключ/схему.",
+                        "kind": "err",
+                    }
+                )
+                return
+        else:
+            if message.get("base_url") is not None:
+                mdef["base_url"] = str(message["base_url"]).strip()
+            if message.get("api_key") is not None:
+                mdef["api_key"] = str(message["api_key"]).strip()
+            if message.get("scheme") is not None:
+                mdef["scheme"] = (
+                    "anthropic" if str(message["scheme"]) == "anthropic" else "openai"
+                )
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": "Модель обновлена: " + model_id, "kind": "ok"})
 
     def _handle_delete_model(self, message: dict) -> None:
         """Удаляет пользовательскую модель, встроенные — под защитой."""
@@ -4615,8 +4677,8 @@ class _ChatEngine:
                 + str(file_info.get("text", ""))
             )
         images = self._collect_context_images(chat)
-        provider = str(self._config.get("active_provider", "deepseek"))
-        if images and provider == "anthropic":
+        scheme = self._active_scheme()
+        if images and scheme == "anthropic":
             # Нативный Messages API: изображения как base64-блоки.
             content: list[dict[str, Any]] = [{"type": "text", "text": user_content}]
             for img in images:
@@ -4632,7 +4694,7 @@ class _ChatEngine:
                     }
                 )
             messages.append({"role": "user", "content": content})
-        elif images and provider != "deepseek":
+        elif images and scheme != "openai":
             content = [{"type": "text", "text": user_content}]
             content.extend(
                 {"type": "image_url", "image_url": {"url": img}} for img in images
@@ -4679,10 +4741,11 @@ class _ChatEngine:
         result.reverse()
         return result
 
-    def _active_api_credentials(self) -> tuple[str, str, str, str]:
-        """Возвращает (provider_id, base_url, api_key, model) активного провайдера.
+    def _active_api_credentials(self) -> tuple[str, str, str, str, str]:
+        """Возвращает (provider_id, base_url, api_key, model, scheme).
 
         Учитывает переопределение base_url/api_key на уровне выбранной модели.
+        Схема API: per-model, затем провайдер, затем "openai".
         """
         cfg = self._config
         provider_id = str(cfg.get("active_provider", "deepseek"))
@@ -4699,19 +4762,41 @@ class _ChatEngine:
                 base_url = str(mdef["base_url"])
             if mdef.get("api_key"):
                 api_key = str(mdef["api_key"])
-        return provider_id, base_url, api_key, model
+        scheme = str(mdef.get("scheme") or prov.get("scheme") or "openai")
+        return provider_id, base_url, api_key, model, scheme
+
+    def _active_scheme(self) -> str:
+        """Возвращает схему API активной модели без повторной синхронизации."""
+        cfg = self._config
+        provider_id = str(cfg.get("active_provider", "deepseek"))
+        prov = cfg.get("providers", {}).get(provider_id)
+        if not isinstance(prov, dict):
+            return "openai"
+        mdef = prov.get("models", {}).get(str(cfg.get("active_model", "")))
+        if isinstance(mdef, dict):
+            return str(mdef.get("scheme") or prov.get("scheme") or "openai")
+        return str(prov.get("scheme") or "openai")
 
     def _call_api(self, messages: list[dict[str, Any]], chat_id: int) -> str:
         """Выполняет запрос к API провайдера и возвращает полный текст ответа."""
         self._sync_config()
-        provider_id, base_url, api_key, model = self._active_api_credentials()
+        provider_id, base_url, api_key, model, scheme = self._active_api_credentials()
         if not api_key:
             raise ApiError("Пожалуйста, укажите API-ключ в настройках.")
         cfg = self._config
-        temperature = float(cfg.get("temperature", 0.7))
-        max_tokens = int(cfg.get("max_tokens", 4096))
-        reasoning = bool(cfg.get("reasoning", False))
-        if provider_id == "anthropic":
+        # Per-model настройки: None → наследуем глобальные значения.
+        prov = cfg.get("providers", {}).get(provider_id)
+        mdef = prov.get("models", {}).get(model) if isinstance(prov, dict) else {}
+        temperature = mdef.get("temperature")
+        if temperature is None:
+            temperature = float(cfg.get("temperature", 0.7))
+        max_tokens = mdef.get("max_tokens")
+        if max_tokens is None:
+            max_tokens = int(cfg.get("max_tokens", 4096))
+        reasoning = mdef.get("reasoning")
+        if reasoning is None:
+            reasoning = bool(cfg.get("reasoning", False))
+        if scheme == "anthropic":
             return self._call_anthropic(
                 messages,
                 chat_id,
@@ -4881,14 +4966,19 @@ class _ChatEngine:
             self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
         return acc
 
-    def _test_key_worker(self) -> None:
-        """Проверяет API-ключ фоновым запросом к провайдеру."""
+    def _test_key_worker(self, key: str | None = None) -> None:
+        """Проверяет API-ключ фоновым запросом к провайдеру.
+
+        Если передан непустой ключ, он имеет приоритет над сохранённым.
+        """
         self._sync_config()
-        provider_id, base_url, api_key, model = self._active_api_credentials()
+        _, base_url, api_key, model, scheme = self._active_api_credentials()
+        if key and key.strip():
+            api_key = key.strip()
         if not api_key:
             self._post({"type": "key_test", "ok": False, "text": "API-ключ не указан."})
             return
-        if provider_id == "anthropic":
+        if scheme == "anthropic":
             url = base_url.rstrip("/") + "/messages"
             payload = {
                 "model": model,
@@ -5074,6 +5164,25 @@ class _ChatEngine:
                 value = None
         return value
 
+    @staticmethod
+    def _json_safe(value: Any) -> Any:
+        """Приводит значение к JSON-сериализуемому примитиву.
+
+        None/bool/int/float/str возвращаются как есть; list/tuple и dict
+        обрабатываются рекурсивно с ограничением размера; прочие объекты
+        превращаются в строку (до 500 символов).
+        """
+        if value is None or isinstance(value, (bool, int, float, str)):
+            return value
+        if isinstance(value, (list, tuple)):
+            return [_ChatEngine._json_safe(item) for item in list(value)[:50]]
+        if isinstance(value, dict):
+            return {
+                str(key): _ChatEngine._json_safe(item)
+                for key, item in list(value.items())[:50]
+            }
+        return str(value)[:500]
+
     def _collect_preset_data(self) -> dict[str, Any]:
         """Собирает данные активных пресетов печати через preset_bundle.
 
@@ -5107,7 +5216,7 @@ class _ChatEngine:
                 if value in (None, ""):
                     value = self._fallback_preset_value(bundle, field)
                 if value not in (None, ""):
-                    section[field] = value
+                    section[field] = self._json_safe(value)
             out[key] = section
         return out
 
@@ -5133,6 +5242,12 @@ class _ChatEngine:
     def _build_system_prompt(self, ctx: dict[str, Any]) -> str:
         """Собирает системный промпт с данными контекста слайсера."""
         parts = [SYSTEM_PROMPT]
+        notes = str(self._config.get("notes", "")).strip()
+        if notes:
+            parts.append(
+                "Заметки пользователя (важная информация, учитывай её при ответах):\n"
+                + notes
+            )
         if ctx.get("model"):
             parts.append(
                 "Данные модели со стола:\n"
@@ -5196,14 +5311,14 @@ class _ChatEngine:
         lines = ["Доступные команды:"]
         for cmd, desc in COMMANDS:
             lines.append(cmd + " — " + desc)
-        self._append_assistant("\n".join(lines))
+        self._append_system("\n".join(lines))
 
     def _cmd_model(self) -> None:
         """Формирует отчёт о модели на столе."""
         data = self._collect_model_data()
         objects = data.get("objects", [])
         if not objects:
-            self._append_assistant("Модель на столе отсутствует или недоступна.")
+            self._append_system("Модель на столе отсутствует или недоступна.")
             return
         lines = ["Отчёт о модели на столе:"]
         for obj in objects:
@@ -5220,7 +5335,7 @@ class _ChatEngine:
                 if inst.get("mirrored"):
                     line += " — ЗЕРКАЛЬНЫЙ экземпляр"
                 lines.append(line)
-        self._append_assistant("\n".join(lines))
+        self._append_system("\n".join(lines))
 
     def _cmd_printer(self) -> None:
         """Формирует сводку профилей печати."""
@@ -5239,12 +5354,12 @@ class _ChatEngine:
             lines.append("• " + label + ":")
             for field, value in section.items():
                 lines.append("  " + str(field) + ": " + str(value))
-        self._append_assistant("\n".join(lines))
+        self._append_system("\n".join(lines))
 
     def _cmd_stats(self) -> None:
         """Выводит статистику использования ассистента."""
         snap = self._usage_snapshot("all")
-        self._append_assistant(
+        self._append_system(
             "Сообщений: " + str(snap["msgs"]) + ", Токенов: " + str(snap["tokens"])
         )
 
@@ -5271,7 +5386,7 @@ class _ChatEngine:
         lines.append(
             "Оценка токенов контекста: " + str(self._estimate_context_tokens(flags))
         )
-        self._append_assistant("\n".join(lines))
+        self._append_system("\n".join(lines))
 
     def _confirm_command(self, cmd: str) -> bool:
         """Реализует двухшаговое подтверждение деструктивной команды."""
