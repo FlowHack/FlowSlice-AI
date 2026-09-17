@@ -1,3 +1,16 @@
+AGENTS.md
+opencode*
+.opencode*
+AI_DEV_LOG.md
+.aider*
+aider*
+*.log
+litellm*
+TZ.md
+
+example/
+docs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
