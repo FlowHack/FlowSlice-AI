@@ -1,4 +1,8 @@
-"""Стаб orca.host для локального QA."""
+"""Стаб orca.host для локального QA.
+
+Повторяет реальный API: orca.host — модуль с функциями model(),
+preset_bundle(), plater() и подмодулем ui.
+"""
 
 from typing import Any
 
@@ -17,20 +21,16 @@ class ui:
         return None
 
 
-class host:
-    """Стаб orca.host."""
+def model() -> Any:
+    """Снимок модели на столе."""
+    raise NotImplementedError
 
-    @staticmethod
-    def model() -> Any:
-        """Снимок модели на столе."""
-        return None
 
-    @staticmethod
-    def preset_bundle() -> Any:
-        """Снимок пресетов."""
-        return None
+def preset_bundle() -> Any:
+    """Снимок пресетов."""
+    raise NotImplementedError
 
-    @staticmethod
-    def plater() -> Any:
-        """Снимок платера."""
-        return None
+
+def plater() -> Any:
+    """Снимок платера."""
+    raise NotImplementedError

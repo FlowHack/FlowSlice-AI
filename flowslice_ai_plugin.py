@@ -17,13 +17,17 @@
 # pylint: disable=too-many-lines
 # HTML_PAGE — большая встроенная строка, из-за неё модуль превышает лимит строк.
 
+import datetime
 import importlib
 import json
 import logging
 import pathlib
 import sys
 import threading
+import time
 from typing import Any
+import urllib.error
+import urllib.request
 
 import orca
 
@@ -98,6 +102,15 @@ CONTEXT_OPTIONS = ("filament", "printer", "print", "model", "history")
 STORAGE_DIR = pathlib.Path(__file__).resolve().parent
 CHATS_FILE = STORAGE_DIR / "chats.json"
 ICON_FILE = STORAGE_DIR / "tab_icon.svg"
+
+# Собственный строгий геометрический знак: стилизованный поток/капля с крестом.
+_TAB_ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 2.5c2.8 3.4 4.5 5.9 4.5 8.2a4.5 4.5 0 0 1-9 0c0-2.3 1.7-4.8 4.5-8.2z"/>
+    <path d="M10 10.5v3.2"/>
+    <path d="M8.2 12.1h3.6"/>
+  </g>
+</svg>"""
 
 
 class FlowSliceError(Exception):
@@ -2154,17 +2167,24 @@ CONFIG_PAGE = _CONFIG_PAGE_TEMPLATE.replace(
 
 
 class _ChatEngine:
-    """Движок плагина: общая логика без наследования от capability.
-
-    На этапе E1 хранит только слой конфигурации, на последующих этапах
-    дополняется работой с сетью, контекстом и историей чатов.
-    """
+    """Движок плагина: конфигурация, чаты, генерация и контекст слайсера."""
 
     def __init__(self, cap: Any) -> None:
-        """Сохраняет ссылку на capability и загружает конфигурацию."""
+        """Сохраняет ссылку на capability, загружает конфигурацию и историю чатов."""
         self._cap = cap
         self._persist_lock = threading.Lock()
         self._config = self._normalize_config(self._read_raw_config())
+        self._chats: list[dict[str, Any]] = []
+        self._active = 0
+        self._next_id = 1
+        self._msg_counter = 1
+        self._gen = False
+        self._gen_chat_id: int | None = None
+        self._ctx_tokens = 0
+        self._post_sink: Any = None
+        self._pending_attachment: dict[str, Any] | None = None
+        self._pending_confirm: str | None = None
+        self._load_chats()
 
     def _read_raw_config(self) -> dict:
         """Читает и разбирает сырую JSON-конфигурацию capability."""
@@ -2225,6 +2245,1070 @@ class _ChatEngine:
                 _LOGGER.error("Не удалось сохранить конфигурацию по умолчанию: %s", exc)
         return dict(self._config)
 
+    def set_post_sink(self, sink: Any) -> None:
+        """Устанавливает callable для доставки payload в UI."""
+        self._post_sink = sink
+
+    # ===== Персист истории чатов =====
+
+    def _load_chats(self) -> None:
+        """Загружает историю чатов из файла, при ошибке создаёт пустое состояние."""
+        data: dict[str, Any] = {}
+        try:
+            raw = json.loads(CHATS_FILE.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                data = raw
+        except (OSError, ValueError, TypeError) as exc:
+            _LOGGER.warning("Не удалось загрузить историю чатов: %s", exc)
+        chats = data.get("chats", [])
+        self._chats = list(chats) if isinstance(chats, list) else []
+        self._active = self._as_int(data.get("active"), 0)
+        self._next_id = self._as_int(data.get("next_id"), 1)
+        self._msg_counter = self._as_int(data.get("next_msg_id"), 1)
+        if not self._chats:
+            self._create_chat()
+
+    def _save_chats(self) -> None:
+        """Сохраняет историю чатов в файл под блокировкой."""
+        payload = {
+            "chats": self._chats,
+            "active": self._active,
+            "next_id": self._next_id,
+            "next_msg_id": self._msg_counter,
+        }
+        with self._persist_lock:
+            try:
+                CHATS_FILE.write_text(
+                    json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+                )
+            except OSError as exc:
+                _LOGGER.error("Не удалось сохранить историю чатов: %s", exc)
+
+    @staticmethod
+    def _as_int(value: Any, default: int) -> int:
+        """Приводит значение к целому числу с запасным значением."""
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    # ===== Мультичат =====
+
+    def _create_chat(self) -> dict[str, Any]:
+        """Создаёт новый чат и делает его активным."""
+        chat = {
+            "id": self._next_id,
+            "title": "Новый чат",
+            "updated": time.time(),
+            "pinned": False,
+            "context_flags": {key: True for key in CONTEXT_OPTIONS},
+            "msgs": [],
+        }
+        self._next_id += 1
+        self._chats.append(chat)
+        self._active = chat["id"]
+        self._ctx_tokens = self._estimate_context_tokens(chat["context_flags"])
+        self._save_chats()
+        return chat
+
+    def _chat_by_id(self, chat_id: Any) -> dict[str, Any] | None:
+        """Возвращает чат по идентификатору либо None."""
+        for chat in self._chats:
+            if chat.get("id") == chat_id:
+                return chat
+        return None
+
+    def _active_chat(self) -> dict[str, Any]:
+        """Возвращает активный чат, создавая его при необходимости."""
+        chat = self._chat_by_id(self._active)
+        if chat is None:
+            chat = self._create_chat()
+        return chat
+
+    def _next_msg_id(self) -> int:
+        """Возвращает следующий идентификатор сообщения и инкрементирует счётчик."""
+        msg_id = self._msg_counter
+        self._msg_counter += 1
+        return msg_id
+
+    def _trim_chat(self, chat: dict[str, Any]) -> None:
+        """Обрезает историю чата до максимального числа сообщений."""
+        msgs = chat.get("msgs", [])
+        if len(msgs) > MAX_CHAT_MESSAGES:
+            del msgs[: len(msgs) - MAX_CHAT_MESSAGES]
+
+    def _auto_title(self, text: str) -> str:
+        """Формирует заголовок чата из первого сообщения."""
+        return " ".join(text.split())[:40]
+
+    def _append_assistant(self, text: str) -> None:
+        """Добавляет сообщение ассистента в активный чат и обновляет UI."""
+        chat = self._active_chat()
+        chat["msgs"].append(
+            {
+                "id": self._next_msg_id(),
+                "role": "assistant",
+                "text": text,
+                "ts": time.time(),
+            }
+        )
+        chat["updated"] = time.time()
+        self._trim_chat(chat)
+        self._save_chats()
+        self._send_state()
+
+    def _append_system(self, text: str) -> None:
+        """Добавляет системное сообщение в активный чат и обновляет UI."""
+        chat = self._active_chat()
+        chat["msgs"].append(
+            {
+                "id": self._next_msg_id(),
+                "role": "system",
+                "text": text,
+                "ts": time.time(),
+            }
+        )
+        chat["updated"] = time.time()
+        self._trim_chat(chat)
+        self._save_chats()
+        self._send_state()
+
+    # ===== Диспетчер сообщений =====
+
+    def handle_message(self, message: dict) -> None:
+        """Разбирает входящее сообщение из UI и направляет в соответствующий хендлер."""
+        msg_type = message.get("type", "")
+        if msg_type == "get_state":
+            self._handle_get_state()
+        elif msg_type == "chat":
+            self._handle_chat(message)
+        elif msg_type == "new_chat":
+            self._handle_new_chat()
+        elif msg_type == "pick_chat":
+            self._handle_pick_chat(message)
+        elif msg_type == "delete_chat":
+            self._handle_delete_chat(message)
+        elif msg_type == "rename_chat":
+            self._handle_rename_chat(message)
+        elif msg_type == "toggle_pin":
+            self._handle_toggle_pin(message)
+        elif msg_type == "stop":
+            self._handle_stop()
+        elif msg_type == "set_context_flags":
+            self._handle_context_flags(message)
+        elif msg_type == "regenerate":
+            self._handle_regenerate()
+        elif msg_type == "save_settings":
+            self._handle_save_settings(message)
+        elif msg_type == "reset_settings":
+            self._handle_reset_settings()
+        elif msg_type == "test_key":
+            self._handle_test_key()
+        elif msg_type == "get_usage":
+            self._handle_get_usage(message)
+        elif msg_type == "attach_file":
+            self._handle_attach_file(message)
+        else:
+            _LOGGER.warning("Неизвестный тип сообщения из UI: %s", msg_type)
+
+    # ===== Хендлеры =====
+
+    def _handle_get_state(self) -> None:
+        """Отправляет полное состояние интерфейса."""
+        self._send_state()
+
+    def _send_state(self) -> None:
+        """Формирует и отправляет полный снимок состояния в UI."""
+        chat = self._active_chat()
+        self._post(
+            {
+                "type": "state",
+                "chats": self._chats,
+                "active": self._active,
+                "settings": {
+                    key: self._config[key]
+                    for key in ("provider", "model", "theme", "font_size", "font_style")
+                },
+                "context_flags": chat["context_flags"],
+                "context_tokens": self._ctx_tokens,
+                "status": "печатает…" if self._gen else "",
+            }
+        )
+
+    def _handle_chat(self, message: dict) -> None:
+        """Обрабатывает отправку или редактирование сообщения пользователя."""
+        text = str(message.get("text", "")).strip()
+        if not text:
+            return
+        if self._gen:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": "Генерация уже идёт. Дождитесь завершения или нажмите «Стоп».",
+                    "kind": "err",
+                }
+            )
+            return
+        if text.startswith("/") and self._handle_command(text):
+            return
+        chat = self._active_chat()
+        edit_id = message.get("edit_id")
+        if edit_id is not None:
+            self._apply_edit(chat, edit_id, text)
+            return
+        user_msg = {
+            "id": self._next_msg_id(),
+            "role": "user",
+            "text": text,
+            "ts": time.time(),
+        }
+        if self._pending_attachment is not None:
+            user_msg.update(self._pending_attachment)
+            self._pending_attachment = None
+        chat["msgs"].append(user_msg)
+        if chat["title"] == "Новый чат":
+            chat["title"] = self._auto_title(text)
+        chat["updated"] = time.time()
+        self._trim_chat(chat)
+        self._save_chats()
+        self._start_generation(chat["id"], text, user_msg["id"])
+
+    def _apply_edit(self, chat: dict[str, Any], edit_id: Any, text: str) -> None:
+        """Заменяет текст отредактированного сообщения и перезапускает генерацию."""
+        msgs = chat["msgs"]
+        for index, msg in enumerate(msgs):
+            if msg.get("id") == edit_id:
+                msg["text"] = text
+                del msgs[index + 1 :]
+                chat["updated"] = time.time()
+                self._save_chats()
+                self._start_generation(chat["id"], text, edit_id)
+                return
+        _LOGGER.warning("Не найдено сообщение для редактирования: %s", edit_id)
+
+    def _handle_new_chat(self) -> None:
+        """Создаёт новый чат и обновляет интерфейс."""
+        self._create_chat()
+        self._send_state()
+
+    def _handle_pick_chat(self, message: dict) -> None:
+        """Переключает активный чат по идентификатору."""
+        chat_id = message.get("id")
+        if self._chat_by_id(chat_id) is not None:
+            self._active = chat_id
+            self._send_state()
+
+    def _handle_delete_chat(self, message: dict) -> None:
+        """Удаляет чат и корректирует активный идентификатор."""
+        chat_id = message.get("id")
+        self._chats = [chat for chat in self._chats if chat.get("id") != chat_id]
+        if self._active == chat_id:
+            self._active = self._chats[0]["id"] if self._chats else 0
+        if not self._chats:
+            self._create_chat()
+        self._save_chats()
+        self._send_state()
+
+    def _handle_rename_chat(self, message: dict) -> None:
+        """Переименовывает чат по идентификатору."""
+        chat = self._chat_by_id(message.get("id"))
+        if chat is None:
+            return
+        title = str(message.get("title", "")).strip()[:60]
+        chat["title"] = title or "Новый чат"
+        self._save_chats()
+        self._send_state()
+
+    def _handle_toggle_pin(self, message: dict) -> None:
+        """Переключает закрепление чата."""
+        chat = self._chat_by_id(message.get("id"))
+        if chat is None:
+            return
+        chat["pinned"] = not chat.get("pinned", False)
+        self._save_chats()
+        self._send_state()
+
+    def _handle_stop(self) -> None:
+        """Останавливает текущую генерацию."""
+        self._gen = False
+        self._post({"type": "status", "text": ""})
+
+    def _handle_context_flags(self, message: dict) -> None:
+        """Обновляет флаги контекста активного чата."""
+        flags = message.get("flags", {})
+        if not isinstance(flags, dict):
+            return
+        chat = self._active_chat()
+        chat["context_flags"] = {
+            key: bool(flags.get(key, value))
+            for key, value in chat["context_flags"].items()
+        }
+        self._ctx_tokens = self._estimate_context_tokens(chat["context_flags"])
+        self._save_chats()
+        self._send_state()
+
+    def _handle_regenerate(self) -> None:
+        """Перегенерирует последний ответ ассистента."""
+        if self._gen:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": "Генерация уже идёт. Дождитесь завершения или нажмите «Стоп».",
+                    "kind": "err",
+                }
+            )
+            return
+        chat = self._active_chat()
+        msgs = chat["msgs"]
+        last_user = None
+        for msg in reversed(msgs):
+            if msg.get("role") == "user":
+                last_user = msg
+                break
+        if last_user is None:
+            return
+        index = msgs.index(last_user)
+        del msgs[index + 1 :]
+        self._save_chats()
+        self._start_generation(chat["id"], last_user["text"], last_user["id"])
+
+    def _handle_save_settings(self, message: dict) -> None:
+        """Сохраняет настройки, присланные из UI."""
+        settings = message.get("settings", {})
+        if not isinstance(settings, dict):
+            return
+        for key in (
+            "provider",
+            "base_url",
+            "model",
+            "api_key",
+            "custom_base_url",
+            "custom_model",
+            "theme",
+            "font_size",
+            "font_style",
+        ):
+            if key in settings:
+                self._config[key] = settings[key]
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._post_settings()
+        self._post({"type": "toast", "text": "Настройки сохранены.", "kind": "ok"})
+
+    def _handle_reset_settings(self) -> None:
+        """Сбрасывает настройки к заводским значениям."""
+        self._config = self._normalize_config(DEFAULT_CONFIG.copy())
+        self._cap.save_config(json.dumps(self._config))
+        self._post_settings()
+        self._post({"type": "toast", "text": "Настройки сброшены к заводским.", "kind": "ok"})
+
+    def _post_settings(self) -> None:
+        """Отправляет актуальные настройки в UI."""
+        self._post(
+            {
+                "type": "settings",
+                "settings": {
+                    key: self._config[key]
+                    for key in ("provider", "model", "theme", "font_size", "font_style")
+                },
+            }
+        )
+
+    def _handle_test_key(self) -> None:
+        """Запускает проверку API-ключа в фоновом потоке."""
+        threading.Thread(target=self._test_key_worker, daemon=True).start()
+
+    def _handle_get_usage(self, message: dict) -> None:
+        """Отправляет статистику использования за выбранный период."""
+        period = message.get("period", "all")
+        snap = self._usage_snapshot(period)
+        self._post({"type": "usage", **snap})
+
+    def _handle_attach_file(self, message: dict) -> None:
+        """Сохраняет вложение для следующего сообщения."""
+        kind = message.get("kind")
+        name = str(message.get("name", "файл"))
+        data = message.get("data", "")
+        if kind == "image":
+            if len(data) > MAX_IMAGE_B64:
+                self._post(
+                    {
+                        "type": "toast",
+                        "text": "Изображение слишком большое (лимит 6 МБ).",
+                        "kind": "err",
+                    }
+                )
+                return
+            self._pending_attachment = {"image": data}
+        else:
+            if len(data) > MAX_FILE_CHARS:
+                self._post(
+                    {
+                        "type": "toast",
+                        "text": "Файл слишком большой (лимит 1 МБ).",
+                        "kind": "err",
+                    }
+                )
+                return
+            self._pending_attachment = {"file": {"name": name, "text": data}}
+        self._post({"type": "toast", "text": "Вложение добавлено.", "kind": "ok"})
+
+    # ===== Отправка payload в UI =====
+
+    def _post(self, payload: dict) -> None:
+        """Отправляет payload в UI через установленный sink."""
+        sink = self._post_sink
+        if sink is None:
+            return
+        try:
+            sink(payload)
+        except Exception as exc:
+            _LOGGER.error("Не удалось отправить payload в UI: %s", exc)
+
+    # ===== Генерация ответа =====
+
+    def _start_generation(self, chat_id: int, user_text: str, user_msg_id: int) -> None:
+        """Запускает генерацию ответа в фоновом потоке."""
+        if self._gen:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": "Генерация уже идёт. Дождитесь завершения или нажмите «Стоп».",
+                    "kind": "err",
+                }
+            )
+            return
+        self._gen = True
+        self._gen_chat_id = chat_id
+        threading.Thread(
+            target=self._worker, args=(chat_id, user_text, user_msg_id), daemon=True
+        ).start()
+
+    def _worker(self, chat_id: int, user_text: str, user_msg_id: int) -> None:
+        """Выполняет запрос к API в фоновом потоке и стримит ответ."""
+        chat = self._chat_by_id(chat_id)
+        if chat is None:
+            self._gen = False
+            self._gen_chat_id = None
+            return
+        msg_id = self._next_msg_id()
+        chat["msgs"].append(
+            {"id": msg_id, "role": "assistant", "text": "", "ts": time.time()}
+        )
+        self._save_chats()
+        self._post({"type": "status", "text": "печатает…"})
+        try:
+            messages = self._build_messages(chat, user_text)
+            full_text = self._call_api(messages, chat_id)
+            if not full_text.strip():
+                full_text = "Модель вернула пустой ответ."
+            msg = self._find_msg(chat, msg_id)
+            if msg is not None:
+                msg["text"] = full_text
+            self._post({"type": "reply", "chat_id": chat_id, "text": full_text, "ok": True})
+            self._record_usage(user_text, full_text)
+        except FlowSliceError as exc:
+            self._fail_generation(chat, chat_id, user_msg_id, msg_id, str(exc))
+        except Exception as exc:
+            _LOGGER.error("Необработанная ошибка генерации: %s", exc)
+            self._fail_generation(
+                chat, chat_id, user_msg_id, msg_id, "Внутренняя ошибка генерации."
+            )
+        finally:
+            self._gen = False
+            self._gen_chat_id = None
+            self._post({"type": "status", "text": ""})
+            self._save_chats()
+
+    def _fail_generation(
+        self,
+        chat: dict[str, Any],
+        chat_id: int,
+        user_msg_id: int,
+        msg_id: int,
+        text: str,
+    ) -> None:
+        """Помечает генерацию как ошибочную и уведомляет UI."""
+        self._remove_msg(chat, user_msg_id)
+        msg = self._find_msg(chat, msg_id)
+        if msg is not None:
+            msg["text"] = text
+            msg["error"] = True
+        self._post({"type": "reply", "chat_id": chat_id, "text": text, "ok": False})
+
+    def _find_msg(self, chat: dict[str, Any], msg_id: int) -> dict[str, Any] | None:
+        """Возвращает сообщение чата по идентификатору либо None."""
+        for msg in chat.get("msgs", []):
+            if msg.get("id") == msg_id:
+                return msg
+        return None
+
+    def _remove_msg(self, chat: dict[str, Any], msg_id: int) -> None:
+        """Удаляет сообщение из чата по идентификатору."""
+        msgs = chat.get("msgs", [])
+        for index, msg in enumerate(msgs):
+            if msg.get("id") == msg_id:
+                del msgs[index]
+                return
+
+    def _build_messages(self, chat: dict[str, Any], user_text: str) -> list[dict[str, Any]]:
+        """Собирает список сообщений для запроса к модели."""
+        flags = chat.get("context_flags", {})
+        ctx = self._collect_context(flags)
+        system = self._build_system_prompt(ctx)
+        if len(system) > MAX_CONTEXT_CHARS:
+            system = system[:MAX_CONTEXT_CHARS]
+        messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        if flags.get("history"):
+            messages.extend(self._history_messages(chat, MAX_CONTEXT_CHARS))
+        user_content = user_text
+        last_user = self._last_user_msg(chat)
+        if last_user is not None and last_user.get("file"):
+            file_info = last_user["file"]
+            user_content += (
+                "\n\n[Файл: " + str(file_info.get("name", "файл")) + "]\n"
+                + str(file_info.get("text", ""))
+            )
+        image = last_user.get("image") if last_user is not None else None
+        if image and self._config.get("provider") != "deepseek":
+            messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_content},
+                        {"type": "image_url", "image_url": {"url": image}},
+                    ],
+                }
+            )
+        else:
+            if image:
+                user_content += (
+                    "\n[Изображение прикреплено, но модель DeepSeek его не поддерживает]"
+                )
+            messages.append({"role": "user", "content": user_content})
+        return messages
+
+    def _last_user_msg(self, chat: dict[str, Any]) -> dict[str, Any] | None:
+        """Возвращает последнее сообщение пользователя в чате."""
+        for msg in reversed(chat.get("msgs", [])):
+            if msg.get("role") == "user":
+                return msg
+        return None
+
+    def _history_messages(self, chat: dict[str, Any], max_chars: int) -> list[dict[str, Any]]:
+        """Собирает историю сообщений для контекста, отбрасывая старые."""
+        msgs = chat.get("msgs", [])
+        last_user = self._last_user_msg(chat)
+        history = msgs
+        if last_user is not None:
+            history = msgs[: msgs.index(last_user)]
+        result: list[dict[str, Any]] = []
+        total = 0
+        for msg in reversed(history):
+            if msg.get("role") not in ("user", "assistant"):
+                continue
+            text = str(msg.get("text", ""))
+            if msg.get("image"):
+                text += " [фото]"
+            if msg.get("file"):
+                text += " [файл: " + str(msg.get("file", {}).get("name", "файл")) + "]"
+            if total + len(text) > max_chars:
+                break
+            result.append({"role": msg["role"], "content": text})
+            total += len(text)
+        result.reverse()
+        return result
+
+    def _call_api(self, messages: list[dict[str, Any]], chat_id: int) -> str:
+        """Выполняет запрос к API провайдера и возвращает полный текст ответа."""
+        cfg = self._config
+        if cfg.get("provider") != "custom":
+            base_url = str(cfg.get("base_url", ""))
+            model = str(cfg.get("model", ""))
+        else:
+            base_url = str(cfg.get("custom_base_url", ""))
+            model = str(cfg.get("custom_model", ""))
+        if not cfg.get("api_key"):
+            raise ApiError("Пожалуйста, укажите API-ключ в настройках.")
+        url = base_url.rstrip("/") + "/chat/completions"
+        payload = {"model": model, "messages": messages, "stream": True}
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={**HTTP_HEADERS, "Authorization": "Bearer " + str(cfg["api_key"])},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
+                return self._read_sse(resp, chat_id)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")[:500]
+            raise ApiError("Ошибка API " + str(exc.code) + ": " + body) from exc
+        except urllib.error.URLError as exc:
+            raise NetworkError("Сетевая ошибка: " + str(exc.reason)) from exc
+        except TimeoutError as exc:
+            raise NetworkError("Превышен таймаут запроса.") from exc
+        except PermissionError as exc:
+            raise NetworkError(
+                "Сетевой доступ запрещён песочницей. Разрешите сеть для плагина."
+            ) from exc
+        except OSError as exc:
+            raise NetworkError("Ошибка соединения: " + str(exc)) from exc
+
+    def _read_sse(self, resp: Any, chat_id: int) -> str:
+        """Читает SSE-поток ответа и отправляет инкрементальные куски в UI."""
+        acc = ""
+        sent = ""
+        last_post = 0.0
+        for raw in resp:
+            if not self._gen:
+                break
+            line = raw.decode("utf-8", errors="replace").strip()
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data)
+                delta = chunk["choices"][0]["delta"].get("content", "")
+            except (ValueError, KeyError, IndexError, TypeError):
+                continue
+            if not delta:
+                continue
+            acc += delta
+            now = time.monotonic()
+            if now - last_post >= STREAM_THROTTLE:
+                self._post({"type": "delta", "chat_id": chat_id, "text": delta})
+                last_post = now
+                sent += delta
+        if acc and sent != acc:
+            self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
+        return acc
+
+    def _test_key_worker(self) -> None:
+        """Проверяет API-ключ фоновым запросом к провайдеру."""
+        cfg = self._config
+        if not cfg.get("api_key"):
+            self._post({"type": "key_test", "ok": False, "text": "API-ключ не указан."})
+            return
+        if cfg.get("provider") != "custom":
+            base_url = str(cfg.get("base_url", ""))
+            model = str(cfg.get("model", ""))
+        else:
+            base_url = str(cfg.get("custom_base_url", ""))
+            model = str(cfg.get("custom_model", ""))
+        url = base_url.rstrip("/") + "/chat/completions"
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "ping"}],
+            "max_tokens": 1,
+            "stream": False,
+        }
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={**HTTP_HEADERS, "Authorization": "Bearer " + str(cfg["api_key"])},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as resp:
+                resp.read()
+            self._post({"type": "key_test", "ok": True, "text": "Ключ действителен."})
+        except urllib.error.HTTPError as exc:
+            self._post(
+                {"type": "key_test", "ok": False, "text": "Ошибка API " + str(exc.code) + "."}
+            )
+        except OSError as exc:
+            self._post(
+                {"type": "key_test", "ok": False, "text": "Сетевая ошибка: " + str(exc)}
+            )
+
+    # ===== Контекст слайсера =====
+
+    def _collect_context(self, flags: dict[str, Any]) -> dict[str, Any]:
+        """Собирает контекст слайсера по включённым флагам."""
+        ctx: dict[str, Any] = {}
+        if flags.get("model"):
+            ctx["model"] = self._collect_model_data()
+        if flags.get("filament") or flags.get("printer") or flags.get("print"):
+            ctx["presets"] = self._collect_preset_data()
+        return ctx
+
+    def _collect_model_data(self) -> dict[str, Any]:
+        """Собирает данные о модели на столе слайсера."""
+        data: dict[str, Any] = {"objects": [], "coords": "world"}
+        try:
+            model = orca.host.model()
+            for obj in model.objects():
+                for vol in obj.volumes():
+                    mesh = vol.mesh()
+                    entry: dict[str, Any] = {
+                        "name": vol.name(),
+                        "local_bbox_mm": tuple(
+                            round(v, 1) for v in mesh.bounding_box().size
+                        ),
+                        "volume_cm3": round(mesh.volume() / 1000.0, 2),
+                        "manifold": mesh.is_manifold(),
+                        "triangles": mesh.triangle_count(),
+                    }
+                    if _HAS_NUMPY:
+                        entry.update(self._world_stats(obj, vol, mesh))
+                    else:
+                        entry["coords"] = "local"
+                        entry.update(self._local_stats(obj))
+                    data["objects"].append(entry)
+        except RuntimeError:
+            data["objects"] = []
+        return data
+
+    def _world_stats(self, obj: Any, vol: Any, mesh: Any) -> dict[str, Any]:
+        """Считает мировые характеристики экземпляров через numpy."""
+        assert _np is not None
+        stats: dict[str, Any] = {"instances": []}
+        try:
+            verts = mesh.vertices()
+            tris = mesh.triangles()
+            vol_matrix = vol.matrix()
+            instances = obj.instances()
+            if isinstance(instances, (list, tuple)):
+                inst_list = instances
+            else:
+                inst_list = [obj.instance(i) for i in range(int(instances))]
+            for index, inst in enumerate(inst_list):
+                inst_matrix = inst.matrix()
+                world = (
+                    _np.column_stack(
+                        (verts.astype(_np.float64), _np.ones(len(verts)))
+                    )
+                    @ (inst_matrix @ vol_matrix).T
+                )[:, :3]
+                bbox_min = world.min(axis=0)
+                bbox_max = world.max(axis=0)
+                tri_pts = world[tris]
+                cross = _np.cross(
+                    tri_pts[:, 1] - tri_pts[:, 0], tri_pts[:, 2] - tri_pts[:, 0]
+                )
+                area = float(_np.sum(_np.linalg.norm(cross, axis=1) / 2.0))
+                stats["instances"].append(
+                    {
+                        "index": index,
+                        "position_mm": tuple(
+                            round(v, 1) for v in inst_matrix[:3, 3]
+                        ),
+                        "world_bbox_mm": tuple(
+                            round(v, 1) for v in (bbox_max - bbox_min)
+                        ),
+                        "surface_area_cm2": round(area / 100.0, 2),
+                        "mirrored": bool(inst.is_left_handed()),
+                    }
+                )
+        except (ImportError, RuntimeError, ValueError):
+            stats = {}
+        return stats
+
+    def _local_stats(self, obj: Any) -> dict[str, Any]:
+        """Собирает локальные характеристики экземпляров без numpy."""
+        stats: dict[str, Any] = {"instances": []}
+        try:
+            instances = obj.instances()
+            if isinstance(instances, (list, tuple)):
+                inst_list = instances
+            else:
+                inst_list = [obj.instance(i) for i in range(int(instances))]
+            for index, inst in enumerate(inst_list):
+                stats["instances"].append(
+                    {
+                        "index": index,
+                        "offset": tuple(
+                            round(v, 1) for v in self._safe_get(inst, "offset")
+                        ),
+                        "rotation": tuple(
+                            round(v, 1) for v in self._safe_get(inst, "rotation")
+                        ),
+                        "scaling_factor": tuple(
+                            round(v, 2) for v in self._safe_get(inst, "scaling_factor")
+                        ),
+                        "mirrored": bool(self._safe_get(inst, "mirror")),
+                    }
+                )
+        except (RuntimeError, ValueError, TypeError):
+            stats = {}
+        return stats
+
+    @staticmethod
+    def _safe_get(target: Any, name: str) -> Any:
+        """Безопасно читает атрибут или метод объекта."""
+        value = getattr(target, name, None)
+        if callable(value):
+            try:
+                value = value()
+            except (TypeError, RuntimeError):
+                value = None
+        return value
+
+    def _collect_preset_data(self) -> dict[str, Any]:
+        """Собирает данные активных пресетов печати."""
+        out: dict[str, Any] = {"printer": {}, "filament": {}, "print": {}}
+        try:
+            bundle = orca.host.preset_bundle()
+        except RuntimeError:
+            return out
+        candidates = {
+            "printer": (
+                "name",
+                "model",
+                "vendor",
+                "bed_size",
+                "nozzle_diameter",
+                "nozzle_type",
+                "firmware",
+            ),
+            "filament": (
+                "name",
+                "material",
+                "density",
+                "diameter",
+                "temperature",
+                "bed_temperature",
+                "chamber_temperature",
+            ),
+            "print": (
+                "layer_height",
+                "infill",
+                "spiral_vase",
+                "speed",
+                "temperature",
+                "fan_speed",
+                "brim_width",
+            ),
+        }
+        for key, fields in candidates.items():
+            try:
+                section = getattr(bundle, key, None)
+                if section is None:
+                    continue
+                out[key] = self._extract_preset_fields(section, fields)
+            except (AttributeError, RuntimeError):
+                continue
+        return out
+
+    def _extract_preset_fields(
+        self, section: Any, candidates: tuple[str, ...]
+    ) -> dict[str, Any]:
+        """Извлекает доступные поля пресета, сохраняя простые типы."""
+        result: dict[str, Any] = {}
+        for field in candidates:
+            value = self._safe_get(section, field)
+            if isinstance(value, (str, int, float, bool, tuple, list)):
+                result[field] = value
+        return result
+
+    def _build_system_prompt(self, ctx: dict[str, Any]) -> str:
+        """Собирает системный промпт с данными контекста слайсера."""
+        parts = [SYSTEM_PROMPT]
+        if ctx.get("model"):
+            parts.append(
+                "Данные модели со стола:\n"
+                + json.dumps(ctx["model"], ensure_ascii=False, indent=2)
+            )
+        if ctx.get("presets"):
+            parts.append(
+                "Профили печати:\n"
+                + json.dumps(ctx["presets"], ensure_ascii=False, indent=2)
+            )
+        parts.append(
+            "Окружение: Python "
+            + sys.version.split()[0]
+            + ", дата/время: "
+            + time.strftime("%Y-%m-%d %H:%M")
+        )
+        return "\n\n".join(parts)
+
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        """Грубо оценивает число токенов в тексте."""
+        return len(text) // 4
+
+    def _estimate_context_tokens(self, flags: dict[str, Any]) -> int:
+        """Оценивает число токенов контекста по флагам."""
+        ctx = self._collect_context(flags)
+        return self._estimate_tokens(json.dumps(ctx, ensure_ascii=False))
+
+    # ===== Команды =====
+
+    def _handle_command(self, text: str) -> bool:
+        """Обрабатывает служебные команды, начинающиеся со слэша."""
+        stripped = text.strip()
+        if not stripped:
+            return False
+        cmd = stripped.split()[0].lower()
+        if cmd == "/context":
+            self._cmd_context()
+        elif cmd == "/clear":
+            self._cmd_clear()
+        elif cmd == "/model":
+            self._cmd_model()
+        elif cmd == "/printer":
+            self._cmd_printer()
+        elif cmd == "/stats":
+            self._cmd_stats()
+        elif cmd == "/help":
+            self._cmd_help()
+        elif cmd == "/reset":
+            self._cmd_reset()
+        else:
+            return False
+        return True
+
+    def _cmd_help(self) -> None:
+        """Выводит список доступных команд."""
+        lines = [
+            "Доступные команды:",
+            "/context — полный дамп контекста слайсера",
+            "/clear — очистить историю чата",
+            "/model — отчёт о модели на столе",
+            "/printer — сводка профилей печати",
+            "/stats — статистика использования",
+            "/help — этот список",
+            "/reset — сбросить настройки к заводским",
+        ]
+        self._append_assistant("\n".join(lines))
+
+    def _cmd_model(self) -> None:
+        """Формирует отчёт о модели на столе."""
+        data = self._collect_model_data()
+        objects = data.get("objects", [])
+        if not objects:
+            self._append_assistant("Модель на столе отсутствует или недоступна.")
+            return
+        lines = ["Отчёт о модели на столе:"]
+        for obj in objects:
+            lines.append("• " + str(obj.get("name", "Без имени")))
+            lines.append("  Локальный bbox, мм: " + str(obj.get("local_bbox_mm", "—")))
+            lines.append("  Объём: " + str(obj.get("volume_cm3", "—")) + " см³")
+            lines.append(
+                "  Площадь поверхности: " + str(obj.get("surface_area_cm2", "—")) + " см²"
+            )
+            lines.append("  Треугольники: " + str(obj.get("triangles", "—")))
+            lines.append("  Manifold: " + ("да" if obj.get("manifold") else "нет"))
+            for inst in obj.get("instances", []):
+                line = "  Экземпляр " + str(inst.get("index", "—"))
+                if inst.get("mirrored"):
+                    line += " — ЗЕРКАЛЬНЫЙ экземпляр"
+                lines.append(line)
+        self._append_assistant("\n".join(lines))
+
+    def _cmd_printer(self) -> None:
+        """Формирует сводку профилей печати."""
+        data = self._collect_preset_data()
+        lines = ["Сводка профилей печати:"]
+        sections = (
+            ("printer", "Принтер"),
+            ("filament", "Пластик"),
+            ("print", "Настройки печати"),
+        )
+        for key, label in sections:
+            section = data.get(key, {})
+            if not section:
+                lines.append("• " + label + ": недоступно")
+                continue
+            lines.append("• " + label + ":")
+            for field, value in section.items():
+                lines.append("  " + str(field) + ": " + str(value))
+        self._append_assistant("\n".join(lines))
+
+    def _cmd_stats(self) -> None:
+        """Выводит статистику использования ассистента."""
+        snap = self._usage_snapshot("all")
+        self._append_assistant(
+            "Сообщений: " + str(snap["msgs"]) + ", Токенов: " + str(snap["tokens"])
+        )
+
+    def _cmd_context(self) -> None:
+        """Выводит полный дамп контекста слайсера."""
+        chat = self._active_chat()
+        flags = chat.get("context_flags", {})
+        ctx = self._collect_context(flags)
+        lines = ["Контекст слайсера:"]
+        lines.append("Системный промпт:")
+        lines.append(self._build_system_prompt(ctx))
+        lines.append("Чекбоксы контекста:")
+        for key, value in flags.items():
+            lines.append("  " + str(key) + ": " + ("вкл" if value else "выкл"))
+        lines.append("Данные контекста:")
+        lines.append(json.dumps(ctx, ensure_ascii=False, indent=2))
+        lines.append("История сообщений:")
+        history = self._history_messages(chat, MAX_CONTEXT_CHARS)
+        if history:
+            for item in history:
+                lines.append("  [" + item["role"] + "] " + item["content"][:200])
+        else:
+            lines.append("  (пусто)")
+        lines.append(
+            "Оценка токенов контекста: " + str(self._estimate_context_tokens(flags))
+        )
+        self._append_assistant("\n".join(lines))
+
+    def _confirm_command(self, cmd: str) -> bool:
+        """Реализует двухшаговое подтверждение деструктивной команды."""
+        if self._pending_confirm != cmd:
+            self._pending_confirm = cmd
+            self._append_system("Подтвердите: отправьте " + cmd + " ещё раз.")
+            return False
+        self._pending_confirm = None
+        return True
+
+    def _cmd_clear(self) -> None:
+        """Очищает историю чата с двухшаговым подтверждением."""
+        if not self._confirm_command("/clear"):
+            return
+        chat = self._active_chat()
+        chat["msgs"] = []
+        chat["title"] = "Новый чат"
+        chat["updated"] = time.time()
+        self._ctx_tokens = 0
+        self._save_chats()
+        self._append_system("История чата очищена.")
+
+    def _cmd_reset(self) -> None:
+        """Сбрасывает настройки с двухшаговым подтверждением."""
+        if not self._confirm_command("/reset"):
+            return
+        self._config = self._normalize_config(DEFAULT_CONFIG.copy())
+        self._cap.save_config(json.dumps(self._config))
+        self._append_system("Настройки сброшены к заводским.")
+
+    # ===== Статистика использования =====
+
+    def _record_usage(self, user_text: str, answer_text: str) -> None:
+        """Учитывает сообщение и токены в статистике использования."""
+        today = time.strftime("%Y-%m-%d")
+        usage = self._config.setdefault("usage", {})
+        day = usage.setdefault(today, {"msgs": 0, "tokens": 0})
+        day["msgs"] += 1
+        day["tokens"] += (len(user_text) + len(answer_text)) // 4
+        self._cap.save_config(json.dumps(self._config))
+
+    def _usage_snapshot(self, period: str) -> dict[str, Any]:
+        """Возвращает сводку использования за выбранный период."""
+        usage = self._config.get("usage", {})
+        today = time.strftime("%Y-%m-%d")
+        if period == "day":
+            keys = [today]
+        elif period == "week":
+            keys = [
+                (datetime.date.today() - datetime.timedelta(days=i)).isoformat()
+                for i in range(7)
+            ]
+        elif period == "month":
+            keys = [key for key in usage if key.startswith(today[:7])]
+        else:
+            keys = list(usage)
+        msgs = sum(usage.get(key, {}).get("msgs", 0) for key in keys)
+        tokens = sum(usage.get(key, {}).get("tokens", 0) for key in keys)
+        return {"period": period, "msgs": msgs, "tokens": tokens}
+
 
 class _ConfigMixin:
     """Общие методы конфигурации для вкладки и окна плагина."""
@@ -2256,12 +3340,25 @@ class _ConfigMixin:
         return CONFIG_PAGE
 
     def _ensure_engine(self) -> "_ChatEngine":
-        """Лениво создаёт общий движок плагина."""
+        """Лениво создаёт общий движок плагина и подключает sink."""
         engine = getattr(self, "_engine", None)
         if engine is None:
             engine = _ChatEngine(self)
+            engine.set_post_sink(self._make_post_sink())
             self._engine = engine
         return engine
+
+    def _make_post_sink(self) -> Any:
+        """Возвращает callable для доставки payload в UI."""
+        if _PAGES_BASE is not None and isinstance(self, _PAGES_BASE):
+            return getattr(self, "post_message", self._window_post)
+        return self._window_post
+
+    def _window_post(self, payload: dict) -> None:
+        """Отправляет payload в открытое окно ассистента."""
+        win = getattr(self, "_win", None)
+        if win is not None and win.is_open():
+            win.post(payload)
 
 
 if _PAGES_BASE is not None:
@@ -2279,13 +3376,17 @@ if _PAGES_BASE is not None:
             return HTML_PAGE
 
         def get_icon(self) -> str:
-            """Путь к файлу иконки вкладки (заглушка до этапа E4)."""
-            return ""
+            """Записывает иконку вкладки и возвращает путь к файлу."""
+            try:
+                ICON_FILE.write_text(_TAB_ICON_SVG, encoding="utf-8")
+                return str(ICON_FILE)
+            except OSError as exc:
+                _LOGGER.error("Не удалось записать иконку вкладки: %s", exc)
+                return ""
 
         def on_message(self, message: dict) -> None:
             """Обрабатывает сообщение из пользовательского интерфейса вкладки."""
-            self._ensure_engine()
-            _LOGGER.info("Получено сообщение из вкладки: %s", message)
+            self._ensure_engine().handle_message(message)
 
 
 if _SCRIPT_BASE is not None:
@@ -2315,8 +3416,7 @@ if _SCRIPT_BASE is not None:
 
         def _on_message(self, message: dict) -> None:
             """Обрабатывает сообщение из окна ассистента."""
-            self._ensure_engine()
-            _LOGGER.info("Получено сообщение из окна: %s", message)
+            self._ensure_engine().handle_message(message)
 
         def _on_close(self, *_args: Any) -> None:
             """Сбрасывает ссылку на закрытое окно."""
