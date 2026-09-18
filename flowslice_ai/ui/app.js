@@ -2354,6 +2354,7 @@
         state.providers = msg.providers || [];
         state.commands = msg.commands || [];
         state.context_flags = msg.context_flags || {};
+        state.context_modes = msg.context_modes || {};
         state.context_tokens = msg.context_tokens || 0;
         state.status = msg.status || "idle";
         renderState();
