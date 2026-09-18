@@ -1138,7 +1138,11 @@ select option {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  right: 0;
+  right: auto;
+  /* Список может быть шире кнопки, чтобы длинные подписи не обрезались. */
+  min-width: 100%;
+  width: max-content;
+  max-width: min(340px, calc(100vw - 24px));
   background: var(--orca-bg);
   border: 1px solid var(--orca-border);
   border-radius: 8px;
