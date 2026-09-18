@@ -38,6 +38,8 @@ class HandlersMixin:
             self._handle_pick_chat(message)
         elif msg_type == "delete_chat":
             self._handle_delete_chat(message)
+        elif msg_type == "clear_chats":
+            self._handle_clear_chats()
         elif msg_type == "rename_chat":
             self._handle_rename_chat(message)
         elif msg_type == "toggle_pin":
@@ -160,6 +162,14 @@ class HandlersMixin:
             self._active = self._chats[0]["id"] if self._chats else 0
         if not self._chats:
             self._create_chat()
+        self._save_chats()
+        self._send_state()
+
+    def _handle_clear_chats(self: "_ChatEngine") -> None:
+        """Удаляет всю историю чатов и создаёт новый пустой чат."""
+        self._chats = []
+        self._active = 0
+        self._create_chat()
         self._save_chats()
         self._send_state()
 

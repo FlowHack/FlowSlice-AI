@@ -75,3 +75,14 @@ def test_reset_custom_models_removes_custom(engine) -> None:
     assert all(pdef.get("builtin") for pdef in providers.values())
     for pid in DEFAULT_PROVIDERS:
         assert pid in providers
+
+
+def test_clear_chats_keeps_single_empty(engine) -> None:
+    """Очистка истории удаляет все чаты и оставляет один пустой активный."""
+    engine._create_chat()
+    engine._create_chat()
+    assert len(engine._chats) >= 2
+    engine._handle_clear_chats()
+    assert len(engine._chats) == 1
+    assert engine._chats[0]["msgs"] == []
+    assert engine._active == engine._chats[0]["id"]

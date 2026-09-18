@@ -17,6 +17,9 @@
       <input type="text" id="searchInput" class="sidebar-search" placeholder="Поиск чатов…" data-i18n-placeholder="sidebar.search">
     </div>
     <div class="chat-list" id="chatList"></div>
+    <div class="sidebar-footer">
+      <button type="button" id="clearChatsBtn" class="ghost-btn" data-i18n="sidebar.clear_all">Очистить историю чатов</button>
+    </div>
   </aside>
 
   <!-- Основная область -->
@@ -286,10 +289,12 @@
               <input type="text" id="ctAddLabel" placeholder="Удобное название" data-i18n-placeholder="settings.model_name">
               <div class="modal-actions">
                 <button type="button" id="ctAddSubmit" class="primary-btn" data-i18n="settings.add">Добавить</button>
-                <button type="button" id="ctAddCancel" class="ghost-btn" data-i18n="settings.cancel">Отмена</button>
               </div>
             </div>
           </div>
+        </div>
+        <div class="model-actions" id="ctProviderActions" style="display:none">
+          <button type="button" id="ctAddProviderBtn" class="ghost-btn" data-i18n="settings.add_provider">+ Добавить провайдера</button>
         </div>
       </div>
       <div id="tabGeneral" style="display:none">

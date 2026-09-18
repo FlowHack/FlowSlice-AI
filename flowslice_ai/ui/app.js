@@ -66,6 +66,8 @@
       "sidebar.empty": "No chats yet",
       "sidebar.rename_prompt": "Enter new chat name:",
       "sidebar.delete_confirm": "Delete chat \"{title}\"?",
+      "sidebar.clear_all": "Clear chat history",
+      "sidebar.clear_all_confirm": "Delete all chats? This cannot be undone.",
       "ctx.filament": "Filament",
       "ctx.printer": "Printer",
       "ctx.print": "Print settings",
@@ -103,6 +105,7 @@
       "settings.global_badge": "global",
       "settings.reset_to_global": "Reset to global",
       "settings.add_model": "+ Add model",
+      "settings.add_provider": "+ Add provider",
       "settings.add": "Add",
       "settings.cancel": "Cancel",
       "settings.delete_model": "Delete selected model",
@@ -222,6 +225,8 @@
       "sidebar.empty": "Чатов пока нет",
       "sidebar.rename_prompt": "Новое название чата:",
       "sidebar.delete_confirm": "Удалить чат «{title}»?",
+      "sidebar.clear_all": "Очистить историю чатов",
+      "sidebar.clear_all_confirm": "Удалить все чаты? Это действие нельзя отменить.",
       "ctx.filament": "Пластик",
       "ctx.printer": "Принтер",
       "ctx.print": "Настройки печати",
@@ -259,6 +264,7 @@
       "settings.global_badge": "общий",
       "settings.reset_to_global": "Сбросить к общему",
       "settings.add_model": "+ Добавить модель",
+      "settings.add_provider": "+ Добавить провайдера",
       "settings.add": "Добавить",
       "settings.cancel": "Отмена",
       "settings.delete_model": "Удалить выбранную модель",
@@ -378,6 +384,8 @@
       "sidebar.empty": "Još nema razgovora",
       "sidebar.rename_prompt": "Unesite novo ime razgovora:",
       "sidebar.delete_confirm": "Obrisati razgovor \"{title}\"?",
+      "sidebar.clear_all": "Obriši istoriju razgovora",
+      "sidebar.clear_all_confirm": "Obrisati sve razgovore? Ova radnja se ne može poništiti.",
       "ctx.filament": "Filament",
       "ctx.printer": "Štampač",
       "ctx.print": "Podešavanja štampe",
@@ -415,6 +423,7 @@
       "settings.global_badge": "globalno",
       "settings.reset_to_global": "Resetuj na globalno",
       "settings.add_model": "+ Dodaj model",
+      "settings.add_provider": "+ Dodaj provajdera",
       "settings.add": "Dodaj",
       "settings.cancel": "Otkaži",
       "settings.delete_model": "Obriši izabrani model",
@@ -1671,6 +1680,7 @@
   var ctSchemeDD = null;
   var ctNewSchemeDD = null;
   var ctEmptyMode = false; // флаг: у выбранного персонального провайдера нет моделей
+  var ctCreatingProvider = false; // флаг: открыта форма создания нового провайдера
 
   function customProviders() {
     return (state.providers || []).filter(function (p) {
@@ -1719,15 +1729,15 @@
   function fillCustomTab() {
     var provs = customProviders();
     var hasAny = provs.length > 0;
-    byId("ctEmptyBlock").style.display = hasAny ? "none" : "block";
-    byId("ctMainBlock").style.display = hasAny ? "block" : "none";
-    if (!hasAny) {
-      byId("ctNewName").value = "";
-      byId("ctNewBaseUrl").value = "";
-      byId("ctNewModelId").value = "";
-      byId("ctNewModelLabel").value = "";
-      byId("ctNewApiKey").value = "";
-      ctNewSchemeDD.setSelected("openai");
+    var creating = !hasAny || ctCreatingProvider;
+    byId("ctEmptyBlock").style.display = creating ? "block" : "none";
+    byId("ctMainBlock").style.display = creating ? "none" : "block";
+    // Кнопка «Добавить провайдера» видна только при наличии провайдеров и
+    // когда форма создания уже не открыта.
+    byId("ctProviderActions").style.display = (hasAny && !creating) ? "flex" : "none";
+    // «Отмена» в форме создания имеет смысл только если провайдеры уже есть.
+    byId("ctNewCancel").style.display = hasAny ? "inline-block" : "none";
+    if (creating) {
       return;
     }
     ctProviderDD.setOptions(provs.map(function (p) {
@@ -1738,6 +1748,26 @@
     var ids = provs.map(function (p) { return p.id; });
     ctProviderDD.setSelected(ids.indexOf(s.active_provider) >= 0 ? s.active_provider : ids[0]);
     onCtProviderChange();
+  }
+
+  /* Открывает форму создания нового персонального провайдера. */
+  function ctOpenNewProvider() {
+    ctCreatingProvider = true;
+    byId("ctNewName").value = "";
+    byId("ctNewBaseUrl").value = "";
+    byId("ctNewModelId").value = "";
+    byId("ctNewModelLabel").value = "";
+    byId("ctNewApiKey").value = "";
+    ctNewSchemeDD.setSelected("openai");
+    fillCustomTab();
+  }
+
+  /* Закрывает форму создания провайдера и возвращает управление списку. */
+  function ctCancelNewProvider() {
+    ctCreatingProvider = false;
+    if (customProviders().length > 0) {
+      fillCustomTab();
+    }
   }
 
   function onCtProviderChange() {
@@ -1831,6 +1861,7 @@
       payload.label = byId("ctNewModelLabel").value.trim();
     }
     post(payload);
+    ctCreatingProvider = false;
     byId("ctNewName").value = "";
     byId("ctNewBaseUrl").value = "";
     byId("ctNewModelId").value = "";
@@ -2583,20 +2614,14 @@
       this.title = masked ? t("common.hide_key") : t("common.show_key");
     });
     byId("ctNewSubmit").addEventListener("click", submitCtNewProvider);
-    byId("ctNewCancel").addEventListener("click", function () {
-      byId("ctNewName").value = "";
-      byId("ctNewBaseUrl").value = "";
-      byId("ctNewModelId").value = "";
-      byId("ctNewModelLabel").value = "";
-      byId("ctNewApiKey").value = "";
-    });
+    byId("ctNewCancel").addEventListener("click", ctCancelNewProvider);
+    byId("ctAddProviderBtn").addEventListener("click", ctOpenNewProvider);
     byId("ctAddModelBtn").addEventListener("click", function () {
-      byId("ctAddForm").style.display = "block";
+      // Кнопка работает как переключатель: раскрывает или скрывает форму.
+      var form = byId("ctAddForm");
+      form.style.display = form.style.display === "block" ? "none" : "block";
     });
     byId("ctAddSubmit").addEventListener("click", submitCtAddModel);
-    byId("ctAddCancel").addEventListener("click", function () {
-      byId("ctAddForm").style.display = "none";
-    });
     byId("ctDeleteModelBtn").addEventListener("click", function () {
       var pid = ctProviderDD.getSelected();
       var mid = ctModelDD.getSelected();
@@ -2628,6 +2653,11 @@
       resetCtModelField("reasoning");
     });
     byId("searchInput").addEventListener("input", renderSidebar);
+    byId("clearChatsBtn").addEventListener("click", function () {
+      if (window.confirm(t("sidebar.clear_all_confirm"))) {
+        post({ type: "clear_chats" });
+      }
+    });
     byId("messages").addEventListener("scroll", onMessagesScroll);
     byId("copyModalClose").addEventListener("click", closeCopyModal);
     byId("copyModalOk").addEventListener("click", closeCopyModal);
