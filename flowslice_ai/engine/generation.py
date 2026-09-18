@@ -1,0 +1,210 @@
+# pyright: ignore[reportGeneralTypeIssues]
+"""Генерация и стриминг ответов движка FlowSlice AI.
+
+Миксин GenerationMixin запускает фоновый поток генерации, собирает
+сообщения для запроса (системный промпт, история, вложения) и обрабатывает
+ошибки генерации.
+"""
+# pylint: disable=too-many-lines,too-many-branches,too-many-statements,broad-exception-caught
+# pylint: disable=too-many-public-methods,too-few-public-methods
+
+import threading
+import time
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from flowslice_ai.engine import _ChatEngine
+
+from flowslice_ai.constants import MAX_CONTEXT_CHARS, MAX_IMAGES_IN_HISTORY
+from flowslice_ai.errors import FlowSliceError
+from flowslice_ai.logging import _LOGGER
+
+
+class GenerationMixin:
+    """Запуск генерации, сборка сообщений и обработка ошибок."""
+
+    def _start_generation(self: "_ChatEngine", chat_id: int, user_text: str, user_msg_id: int) -> None:
+        """Запускает генерацию ответа в фоновом потоке."""
+        if self._gen:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("gen.already"),
+                    "kind": "err",
+                }
+            )
+            return
+        self._gen = True
+        threading.Thread(
+            target=self._worker, args=(chat_id, user_text, user_msg_id), daemon=True
+        ).start()
+
+    def _worker(self: "_ChatEngine", chat_id: int, user_text: str, user_msg_id: int) -> None:
+        """Выполняет запрос к API в фоновом потоке и стримит ответ."""
+        chat = self._chat_by_id(chat_id)
+        if chat is None:
+            self._gen = False
+            return
+        msg_id = self._next_msg_id()
+        chat["msgs"].append(
+            {"id": msg_id, "role": "assistant", "text": "", "ts": time.time()}
+        )
+        self._save_chats()
+        self._post({"type": "status", "text": "streaming"})
+        try:
+            messages = self._build_messages(chat, user_text)
+            full_text = self._call_api(messages, chat_id)
+            if not full_text.strip():
+                full_text = self._t("gen.empty_reply")
+            msg = self._find_msg(chat, msg_id)
+            if msg is not None:
+                msg["text"] = full_text
+            self._post({"type": "reply", "chat_id": chat_id, "text": full_text, "ok": True})
+            self._record_usage(user_text, full_text)
+        except FlowSliceError as exc:
+            self._fail_generation(chat, chat_id, user_msg_id, msg_id, str(exc))
+        except Exception as exc:
+            _LOGGER.error("Необработанная ошибка генерации: %s", exc)
+            self._fail_generation(
+                chat, chat_id, user_msg_id, msg_id, self._t("gen.internal_error")
+            )
+        finally:
+            self._gen = False
+            self._post({"type": "status", "text": ""})
+            self._save_chats()
+
+    def _fail_generation(
+        self: "_ChatEngine",
+        chat: dict[str, Any],
+        chat_id: int,
+        user_msg_id: int,
+        msg_id: int,
+        text: str,
+    ) -> None:
+        """Помечает генерацию как ошибочную и уведомляет UI."""
+        self._remove_msg(chat, user_msg_id)
+        msg = self._find_msg(chat, msg_id)
+        if msg is not None:
+            msg["text"] = text
+            msg["error"] = True
+        self._post({"type": "reply", "chat_id": chat_id, "text": text, "ok": False})
+
+    def _find_msg(self: "_ChatEngine", chat: dict[str, Any], msg_id: int) -> dict[str, Any] | None:
+        """Возвращает сообщение чата по идентификатору либо None."""
+        for msg in chat.get("msgs", []):
+            if msg.get("id") == msg_id:
+                return msg
+        return None
+
+    def _remove_msg(self: "_ChatEngine", chat: dict[str, Any], msg_id: int) -> None:
+        """Удаляет сообщение из чата по идентификатору."""
+        msgs = chat.get("msgs", [])
+        for index, msg in enumerate(msgs):
+            if msg.get("id") == msg_id:
+                del msgs[index]
+                return
+
+    def _collect_context_images(self: "_ChatEngine", chat: dict[str, Any]) -> list[str]:
+        """Собирает data URI изображений из последних сообщений чата."""
+        images: list[str] = []
+        for msg in reversed(chat.get("msgs", [])):
+            image = msg.get("image")
+            if not isinstance(image, str) or not image.startswith("data:"):
+                continue
+            images.append(image)
+            if len(images) >= MAX_IMAGES_IN_HISTORY:
+                break
+        return images
+
+    def _build_messages(self: "_ChatEngine", chat: dict[str, Any], user_text: str) -> list[dict[str, Any]]:
+        """Собирает список сообщений для запроса к модели."""
+        flags = chat.get("context_flags", {})
+        ctx = self._collect_context(flags)
+        system = self._build_system_prompt(ctx)
+        if len(system) > MAX_CONTEXT_CHARS:
+            system = system[:MAX_CONTEXT_CHARS]
+        messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        if flags.get("history"):
+            messages.extend(self._history_messages(chat, MAX_CONTEXT_CHARS))
+        user_content = user_text
+        last_user = self._last_user_msg(chat)
+        if last_user is not None and last_user.get("file"):
+            file_info = last_user["file"]
+            user_content += self._t(
+                "prompt.file",
+                name=str(file_info.get("name", self._t("attach.default_name"))),
+                text=str(file_info.get("text", "")),
+            )
+        images = self._collect_context_images(chat)
+        scheme = self._active_scheme()
+        if images and scheme == "anthropic":
+            # Нативный Messages API: изображения как base64-блоки.
+            content: list[dict[str, Any]] = [{"type": "text", "text": user_content}]
+            for img in images:
+                b64 = img.split(",", 1)[1] if "," in img else img
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": b64,
+                        },
+                    }
+                )
+            messages.append({"role": "user", "content": content})
+        elif images and scheme != "openai":
+            content = [{"type": "text", "text": user_content}]
+            content.extend(
+                {"type": "image_url", "image_url": {"url": img}} for img in images
+            )
+            messages.append({"role": "user", "content": content})
+        else:
+            if images:
+                user_content += self._t("prompt.images_unsupported", n=str(len(images)))
+            messages.append({"role": "user", "content": user_content})
+        return messages
+
+    def _last_user_msg(self: "_ChatEngine", chat: dict[str, Any]) -> dict[str, Any] | None:
+        """Возвращает последнее сообщение пользователя в чате."""
+        for msg in reversed(chat.get("msgs", [])):
+            if msg.get("role") == "user":
+                return msg
+        return None
+
+    def _history_messages(
+        self: "_ChatEngine",
+        chat: dict[str, Any],
+        max_chars: int,
+        include_last_user: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Собирает историю сообщений для контекста, отбрасывая старые.
+
+        При include_last_user=True (команда /context) включается и последнее
+        сообщение пользователя — для полного дампа истории.
+        """
+        msgs = chat.get("msgs", [])
+        history = msgs
+        if not include_last_user:
+            last_user = self._last_user_msg(chat)
+            if last_user is not None:
+                history = msgs[: msgs.index(last_user)]
+        result: list[dict[str, Any]] = []
+        total = 0
+        for msg in reversed(history):
+            if msg.get("role") not in ("user", "assistant"):
+                continue
+            text = str(msg.get("text", ""))
+            if msg.get("image"):
+                text += self._t("chat.photo_marker")
+            if msg.get("file"):
+                text += self._t(
+                    "chat.file_marker",
+                    name=str(msg.get("file", {}).get("name", self._t("attach.default_name"))),
+                )
+            if total + len(text) > max_chars:
+                break
+            result.append({"role": msg["role"], "content": text})
+            total += len(text)
+        result.reverse()
+        return result

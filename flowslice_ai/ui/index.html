@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlowSlice AI</title>
+<style>
+<!--STYLE-->
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar чатов -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title" data-i18n="sidebar.chats">Чаты</div>
+      <input type="text" id="searchInput" class="sidebar-search" placeholder="Поиск чатов…" data-i18n-placeholder="sidebar.search">
+    </div>
+    <div class="chat-list" id="chatList"></div>
+  </aside>
+
+  <!-- Основная область -->
+  <section class="main">
+    <header class="main-header">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span class="brand-name">FlowSlice AI</span>
+      </div>
+      <div class="header-right">
+        <span class="model-status" id="modelStatus"></span>
+        <button type="button" id="usageBtn" class="icon-btn" title="Статистика" data-i18n-title="common.stats">📊</button>
+        <button type="button" id="settingsBtn" class="icon-btn" title="Настройки" data-i18n-title="common.settings">⚙</button>
+        <button type="button" id="newChatBtn" class="icon-btn" title="Новый чат" data-i18n-title="common.new_chat">+</button>
+      </div>
+    </header>
+
+    <main class="messages" id="messages"></main>
+
+    <div class="typing" id="typing" style="display:none">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="typing-text" data-i18n="common.typing">печатает…</span>
+    </div>
+
+    <!-- Панель контекста -->
+    <div class="context-panel">
+      <div class="context-checks" id="contextChecks"></div>
+      <div class="context-tokens" id="contextTokens">≈ 0 токенов</div>
+    </div>
+
+    <!-- Композер -->
+    <div class="composer">
+      <div class="cmd-suggest" id="cmdSuggest" style="display:none"></div>
+      <div class="attach-preview" id="attachPreview"></div>
+      <div class="input-row">
+        <button type="button" id="attachBtn" class="icon-btn" title="Прикрепить файл" data-i18n-title="common.attach_file">📎</button>
+        <textarea id="input" rows="1" placeholder="Сообщение… (Enter — отправить, Shift+Enter — новая строка)" data-i18n-placeholder="composer.placeholder"></textarea>
+        <button type="button" id="stopBtn" class="stop-btn" title="Остановить генерацию" data-i18n-title="common.stop" style="display:none">■</button>
+        <button type="button" id="sendBtn" class="send-btn" title="Отправить" data-i18n-title="common.send">➤</button>
+        <input type="file" id="fileInput" multiple accept="image/*,.txt,.md,.json,.gcode,.stl,.3mf" style="display:none">
+      </div>
+      <div class="composer-footer">
+        <button type="button" id="modelChip" class="model-chip" title="Выбрать модель" data-i18n-title="common.choose_model">
+          <span class="chip-dot"></span>
+          <span class="chip-label" id="modelChipLabel">—</span>
+          <span class="chip-caret">▾</span>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Модалка настроек -->
+<div class="modal-overlay" id="settingsModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="settings.title">Настройки</span>
+      <button type="button" id="modalClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
+    </div>
+    <div class="settings-tabs">
+      <button type="button" class="settings-tab active" data-tab="models" data-i18n="settings.tab.models">Модели</button>
+      <button type="button" class="settings-tab" data-tab="general" data-i18n="settings.tab.general">Общие значения</button>
+      <button type="button" class="settings-tab" data-tab="appearance" data-i18n="settings.tab.appearance">Оформление</button>
+    </div>
+    <div class="settings-scroll">
+      <div id="tabModels">
+        <div class="field">
+          <label data-i18n="settings.provider">Провайдер</label>
+          <div class="dd-wrap" id="setProviderDD"></div>
+        </div>
+        <div class="field">
+          <label for="setApiKey" data-i18n="settings.api_key">API-ключ (провайдера)</label>
+          <div class="key-row">
+            <input type="password" id="setApiKey" autocomplete="off">
+            <button type="button" id="setApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
+            <button type="button" id="testKeyBtn" class="ghost-btn" data-i18n="settings.test_key">Проверить ключ</button>
+          </div>
+        </div>
+        <div class="field" id="customUrlWrap" style="display:none">
+          <label for="setBaseUrl" data-i18n="settings.base_url">Базовый URL API</label>
+          <input type="text" id="setBaseUrl" autocomplete="off">
+          <label for="setSchemeDD" style="margin-top:8px" data-i18n="settings.scheme">Схема API</label>
+          <div class="dd-wrap" id="setSchemeDD"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="settings.model">Модель</label>
+          <div class="dd-wrap" id="setModelDD"></div>
+        </div>
+        <div class="field" id="modelSettingsBlock">
+          <label><span data-i18n="settings.model_settings">Настройки модели:</span> <span id="modelSettingsLabel">—</span></label>
+          <div id="customModelFields" style="display:none">
+            <div class="field">
+              <label for="setModelName" data-i18n="settings.model_name">Удобное название</label>
+              <input type="text" id="setModelName" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="setModelSystemName" data-i18n="settings.model_system_name">Название в системе (id)</label>
+              <input type="text" id="setModelSystemName" readonly>
+            </div>
+            <div class="field">
+              <label for="setModelBaseUrl" data-i18n="settings.base_url">Базовый URL API</label>
+              <input type="text" id="setModelBaseUrl" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="setModelApiKey" data-i18n="settings.api_key">API-ключ</label>
+              <div class="key-row">
+                <input type="password" id="setModelApiKey" autocomplete="off">
+                <button type="button" id="setModelApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
+              </div>
+            </div>
+            <div class="field">
+              <label data-i18n="settings.scheme">Схема API</label>
+              <div class="dd-wrap" id="setModelSchemeDD"></div>
+            </div>
+          </div>
+          <div class="per-model-controls" style="margin-bottom:6px">
+            <label for="setTemperature" style="margin:0;white-space:nowrap"><span data-i18n="settings.temperature">Температура:</span> <span id="setTemperatureValue" class="range-value">0.7</span></label>
+            <input type="range" id="setTemperature" min="0" max="2" step="0.1" value="0.7">
+            <span class="dd-default-badge" id="setTemperatureBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+            <button type="button" id="resetTemperature" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+          </div>
+          <div class="per-model-controls" style="margin-bottom:6px">
+            <label for="setMaxTokens" style="margin:0;white-space:nowrap" data-i18n="settings.max_tokens">Максимум токенов</label>
+            <input type="number" id="setMaxTokens" min="1" max="100000" step="1" value="4096">
+            <span class="dd-default-badge" id="setMaxTokensBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+            <button type="button" id="resetMaxTokens" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+          </div>
+          <div class="per-model-controls">
+            <div class="check-row" style="margin:0">
+              <input type="checkbox" id="setReasoning">
+              <label for="setReasoning" data-i18n="settings.reasoning">Расширенное мышление</label>
+            </div>
+            <span class="dd-default-badge" id="setReasoningBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+            <button type="button" id="resetReasoning" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+          </div>
+        </div>
+        <div class="field">
+          <button type="button" id="addModelBtn" class="ghost-btn" data-i18n="settings.add_model">+ Добавить модель</button>
+          <div id="addModelForm" style="display:none;margin-top:8px">
+            <input type="text" id="amSystemName" placeholder="Название в системе (id)" data-i18n-placeholder="settings.model_system_name">
+            <input type="text" id="amLabel" placeholder="Удобное название" data-i18n-placeholder="settings.model_name">
+            <div id="amCustomFields">
+              <input type="text" id="amBaseUrl" placeholder="Базовый URL API" data-i18n-placeholder="settings.base_url">
+              <input type="password" id="amApiKey" placeholder="API-ключ" data-i18n-placeholder="settings.api_key">
+              <label for="amSchemeDD" data-i18n="settings.scheme">Схема API</label>
+              <div class="dd-wrap" id="amSchemeDD"></div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" id="amSubmit" class="primary-btn" data-i18n="common.add">Добавить</button>
+              <button type="button" id="amCancel" class="ghost-btn" data-i18n="common.cancel">Отмена</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="tabGeneral" style="display:none">
+        <div class="field">
+          <label for="setNotes" data-i18n="settings.notes">Заметки для контекста (видны агенту)</label>
+          <textarea id="setNotes" class="notes-textarea" placeholder="Например: температура PETG откалибрована по температурной башне — не предлагай калибровку" data-i18n-placeholder="settings.notes_placeholder"></textarea>
+        </div>
+        <div class="field">
+          <label for="setGlobalTemperature"><span data-i18n="settings.temperature">Температура:</span> <span id="setGlobalTemperatureValue" class="range-value">0.7</span></label>
+          <input type="range" id="setGlobalTemperature" min="0" max="2" step="0.1" value="0.7">
+        </div>
+        <div class="field">
+          <label for="setGlobalMaxTokens" data-i18n="settings.max_tokens">Максимум токенов</label>
+          <input type="number" id="setGlobalMaxTokens" min="1" max="100000" step="1" value="4096">
+        </div>
+        <div class="field">
+          <div class="check-row">
+            <input type="checkbox" id="setGlobalReasoning">
+            <label for="setGlobalReasoning" data-i18n="settings.reasoning">Расширенное мышление</label>
+          </div>
+        </div>
+      </div>
+      <div id="tabAppearance" style="display:none">
+        <div class="field">
+          <label data-i18n="settings.theme">Тема</label>
+          <div class="dd-wrap" id="setThemeDD"></div>
+        </div>
+        <div class="field">
+          <label for="setFontSize"><span data-i18n="settings.font_size">Размер шрифта:</span> <span id="setFontSizeValue">14</span> px</label>
+          <input type="range" id="setFontSize" min="10" max="20" step="1" value="14">
+        </div>
+        <div class="field">
+          <label data-i18n="settings.font_style">Стиль шрифта</label>
+          <div class="dd-wrap" id="setFontStyleDD"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="settings.language">Язык</label>
+          <div class="dd-wrap" id="setLanguageDD"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="exportBtn" class="ghost-btn" data-i18n="export.chat">Экспорт чата</button>
+      <button type="button" id="resetSettingsBtn" class="danger-btn" data-i18n="common.reset">Сбросить</button>
+      <button type="button" id="saveSettingsBtn" class="primary-btn" data-i18n="common.save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка статистики -->
+<div class="modal-overlay" id="usageModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="usage.title">Статистика использования</span>
+      <button type="button" id="usageModalClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
+    </div>
+    <div class="usage-row">
+      <div class="dd-wrap" id="setPeriodDD" style="width:150px"></div>
+      <span id="setUsage">Сообщения: 0 · Токены: 0</span>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="usageModalOk" class="primary-btn" data-i18n="common.close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка выбора модели -->
+<div class="modal-overlay" id="modelPickerModal" style="display:none">
+  <div class="mp-modal">
+    <div class="modal-header">
+      <span data-i18n="mp.title">Выбор модели</span>
+      <button type="button" id="mpClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
+    </div>
+    <input type="text" id="mpSearch" class="mp-search" placeholder="Поиск модели или провайдера…" data-i18n-placeholder="mp.search">
+    <div class="mp-list" id="mpList"></div>
+  </div>
+</div>
+
+<!-- Модалка ручного копирования (fallback буфера обмена) -->
+<div class="modal-overlay" id="copyModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="copy.title">Скопируйте текст вручную</span>
+      <button type="button" id="copyModalClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
+    </div>
+    <textarea class="copy-modal-text" id="copyModalText" readonly></textarea>
+    <div class="modal-actions">
+      <button type="button" id="copyModalOk" class="primary-btn" data-i18n="common.close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+<!--SCRIPT-->
+</script>
+</body>
+</html>

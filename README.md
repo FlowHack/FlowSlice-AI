@@ -33,9 +33,8 @@
 
 ## Установка
 
-Скопируйте `flowslice_ai_plugin.py` в каталог плагинов Orca Slicer
-(`data_dir()/orca_plugins/FlowSlice AI/`) и установите через менеджер плагинов.
-Зависимость: `numpy` (ставится автоматически).
+Скачайте `flowslice_ai-<версия>-py3-none-any.whl` со страницы релизов и установите через
+**Плагины → Установить локальный плагин** в Orca Slicer. Зависимость: `numpy` (ставится автоматически).
 
 ## Настройка
 
@@ -56,11 +55,14 @@ API-ключ указывается в настройках плагина (вк
 
 ## Разработка
 
-- `flowslice_ai_plugin.py` — единственный файл плагина (PEP 723, HTML/CSS/JS внутри).
+- `flowslice_ai/` — модульный пакет плагина (движок-миксины, UI-ресурсы, конфигурация).
+- `flowslice_ai/version.py` — единый файл версии (меняется только здесь).
+- Сборка wheel: `python -m build --wheel` (в wheel попадают только модули пакета).
 - `stubs/orca/` — стаб API Orca для локального QA (pylint/pyright вне слайсера).
+- `tests/` — pytest (мок `tests/mocks/orca/` — тесты работают без слайсера).
 - `assets/` — иконка вкладки и превью.
 - `docs/` — официальная документация API Orca Slicer (обязательно сверяться при правках).
 - `example/` — пример плагина (только для изучения синтаксиса `orca.host`).
 
-QA: `PYTHONPATH=stubs pylint flowslice_ai_plugin.py --disable=...` (цель 10.00/10),
-`PYTHONPATH=stubs pyright flowslice_ai_plugin.py` (0 errors).
+QA: `PYTHONPATH=stubs pylint flowslice_ai --fail-under=9.0`,
+`PYTHONPATH=stubs pyright flowslice_ai` (0 errors), `pytest tests/`.

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowslice-ai"
+description = "ИИ-ассистент инженера 3D-печати в OrcaSlicer: механика, Klipper и тонкая настройка материалов."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "AGPL-3.0-only"
+authors = [{ name = "FlowSlice AI" }]
+dependencies = ["numpy"]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = { attr = "flowslice_ai.version.__version__" }
+
+# В wheel попадают ТОЛЬКО перечисленные пакеты: никаких docs/, example/,
+# assets/, stubs/, tests/ и монолита flowslice_ai_plugin.py.
+[tool.setuptools]
+packages = ["flowslice_ai", "flowslice_ai.ui", "flowslice_ai.engine"]
+
+[tool.setuptools.package-data]
+"flowslice_ai.ui" = ["*.css", "*.html", "*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
