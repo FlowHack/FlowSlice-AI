@@ -719,8 +719,21 @@
     return s;
   }
 
+  function cacheLanguage(lang) {
+    try {
+      window.localStorage.setItem("flowslice.lang", lang);
+    } catch (err) {
+      // Хранилище может быть недоступно, тогда язык применится только на сессию.
+      console.warn("Не удалось сохранить язык интерфейса", err);
+    }
+  }
+
   function applyI18n(root) {
-    document.documentElement.lang = currentLang();
+    var lang = currentLang();
+    document.documentElement.lang = lang;
+    cacheLanguage(lang);
+    // Снимаем маску: тексты уже на выбранном языке.
+    document.documentElement.classList.remove("i18n-pending");
     var scope = root || document;
     scope.querySelectorAll("[data-i18n]").forEach(function (el) {
       el.textContent = t(el.getAttribute("data-i18n"));
@@ -4378,6 +4391,11 @@
     }
     initHelpTooltips();
     initSettingsDropdowns();
+    // Страховка: если состояние не пришло, показываем интерфейс с запасными
+    // текстами, чтобы окно не осталось пустым навсегда.
+    setTimeout(function () {
+      document.documentElement.classList.remove("i18n-pending");
+    }, 3000);
     post({ type: "get_state" });
   }
 

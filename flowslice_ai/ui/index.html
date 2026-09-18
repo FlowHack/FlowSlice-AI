@@ -1,10 +1,30 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>FlowSlice AI</title>
+<script>
+/* Язык применяется из настроек; до первой отрисовки берём сохранённый язык,
+   чтобы не показывать запасные тексты другого языка. Интерфейс скрыт
+   классом i18n-pending, пока локализация не применена. */
+(function () {
+  var lang = "en";
+  try {
+    var saved = window.localStorage.getItem("flowslice.lang");
+    if (saved === "ru" || saved === "sr" || saved === "en") {
+      lang = saved;
+    }
+  } catch (err) {
+    if (window.console && window.console.warn) {
+      window.console.warn("Не удалось прочитать сохранённый язык интерфейса", err);
+    }
+  }
+  document.documentElement.setAttribute("lang", lang);
+  document.documentElement.className += " i18n-pending";
+})();
+</script>
 <style>
 <!--STYLE-->
 </style>
