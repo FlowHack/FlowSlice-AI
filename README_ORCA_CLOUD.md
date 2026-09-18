@@ -5,284 +5,286 @@
 </p>
 
 <p align="center">
-  <b>ИИ-инженер 3D-печати прямо внутри Orca Slicer.</b><br>
-  Видит вашу модель, профили и историю печати и помогает с механикой, Klipper и тонкой настройкой материалов.
+  <b>An AI 3D-printing engineer right inside Orca Slicer.</b><br>
+  It sees your model, profiles and print history, and helps with mechanics, Klipper and material fine-tuning.
 </p>
 
-**FlowSlice AI** — нативный плагин-ассистент для Orca Slicer. Добавляет вкладку с чатом, в котором
-отвечает ИИ-инженер по 3D-печати. В отличие от обычного чат-бота, ассистент видит контекст вашего
-слайсера: какая модель стоит на столе, какие включены профили принтера, пластика и печати, какие у
-них параметры и заметки. Один ключ любого популярного провайдера — и вы получаете советы по делу,
-с учётом именно вашего оборудования и материала.
+## 🤖 What it is
 
-> 💡 **Пример.** «Почему по углам детали появляется вздутие, у меня PETG и принтер Ender-3?» —
-> ассистент увидит ваш профиль, температуру, скорость и поток и даст конкретные значения для правки.
+**FlowSlice AI** is an assistant plugin for [Orca Slicer](https://github.com/OrcaSlicer/OrcaSlicer).
+It adds a dedicated chat tab where an AI 3D-printing engineer answers. The assistant works with your
+slicer context, so its advice is specific to your model, your printer and your material — not generic
+tips.
 
----
+What the assistant can do:
 
-## 🤖 Что это такое
+- explain print defects and tell you which settings to change and where;
+- help with calibration (flow, Pressure Advance, retraction, first layer);
+- advise on mechanics, firmware (Klipper, Marlin) and printer maintenance;
+- compare materials (PLA, PETG, ABS, TPU, etc.) for a specific task;
+- analyze photos of defects when an image-capable model is selected.
 
-**FlowSlice AI** — это плагин-ассистент для [Orca Slicer](https://github.com/OrcaSlicer/OrcaSlicer).
-Он добавляет отдельную вкладку с чатом, в котором отвечает ИИ-инженер по 3D-печати. Ассистент
-работает с контекстом слайсера и отвечает не абстрактными общими советами, а применительно к вашей
-модели, вашему принтеру и вашему материалу.
-
-Что умеет ассистент:
-
-- объясняет дефекты печати и подсказывает, какие параметры и куда менять;
-- помогает с калибровкой (поток, Pressure Advance, ретракты, первый слой);
-- консультирует по механике, прошивкам (Klipper, Marlin) и обслуживанию принтера;
-- сравнивает материалы (PLA, PETG, ABS, TPU и др.) под конкретную задачу;
-- разбирает присланные фотографии дефектов, если выбрана модель с поддержкой изображений.
+> 💡 **Example.** "Why is there bulging on the corners? I use PETG on an Ender-3." — the assistant
+> will see your profile, temperature, speed and flow and give concrete values to change.
 
 ---
 
-## ✨ Возможности
+## ✨ Features
 
-### 💬 Чат
-- Стриминг ответов (SSE) — текст появляется по мере генерации
-- Остановка генерации, повторная генерация (regenerate)
-- Редактирование и повторная отправка (edit & resend)
-- Регенерация любого ответа
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### 🗂 Мультичат
-- Неограниченное число диалогов
-- Автоматические названия по первому вопросу
-- Поиск по истории чатов
-- Закрепление важных чатов
-- Сохранение истории между запусками
+### 💬 Chat
+- Streaming responses (SSE) — text appears as it is generated
+- Stop generation, regenerate
+- Edit & resend
+- Regenerate any answer
 
-### 🧠 Контекст слайсера
-- Модель на столе: габариты, объём, положение, целостность меша (manifold), экземпляры
-- Профили принтера, пластика и настроек печати
-- Полный дамп параметров или только изменённые относительно базового пресета
-- Заметки профилей и start/end G-code
-- Чекбоксы контекста прямо в панели чата, с запоминанием
+### 🗂 Multi-chat
+- Unlimited conversations
+- Automatic titles from the first question
+- Chat history search
+- Pin important chats
+- History saved between sessions
 
-### 🔌 Провайдеры и модели
-- 10 встроенных провайдеров «из коробки»
-- Свои OpenAI/Anthropic-совместимые провайдеры
-- Тонкая настройка каждой модели: температура, максимум токенов, режим мышления
-- Модель по умолчанию и заметки к моделям
-- Статистика использования (📊)
+</td>
+<td width="50%" valign="top">
 
-### 🎨 Оформление
-- Темы: авто (нативная Orca) / чисто белая / чисто чёрная
-- Фирменный красный акцент `#d9534f`
-- Локализация: English / Русский / Srpski (по умолчанию английский)
+### 🧠 Slicer context
+- Model on the plate: dimensions, volume, position, mesh integrity (manifold), instances
+- Printer, filament and print profiles
+- Full parameter dump or only changed vs. the base preset
+- Profile notes and start/end G-code
+- Context checkboxes right in the chat panel, remembered per chat
+
+### 🔌 Providers & models
+- 10 built-in providers out of the box
+- Your own OpenAI/Anthropic-compatible providers
+- Per-model tuning: temperature, max tokens, reasoning mode
+- Default model and per-model notes
+- Usage statistics (📊)
+
+</td>
+</tr>
+</table>
+
+- **Attachments:** photos (up to 6 MB) and text files (up to 1 MB).
+- **Localization:** English / Русский / Srpski (English by default).
+- **Themes:** auto (native Orca) / pure white / pure black, signature red accent `#d9534f`.
 
 ---
 
-## 🧩 Требования
+## 🧩 Requirements
 
-| Компонент | Версия |
+| Component | Version |
 | --- | --- |
-| Orca Slicer | с поддержкой Python-плагинов (ветка 2.x) |
-| ОС | Windows / Linux / macOS (x64, macOS arm64) |
-| Python | 3.12+ (входит в Orca Slicer) |
-| numpy | ставится автоматически вместе с плагином |
-| Интернет | нужен для обращения к API выбранного провайдера |
+| Orca Slicer | with Python plugin support (2.x branch) |
+| OS | Windows / Linux / macOS (x64, macOS arm64) |
+| Python | 3.12+ (bundled with Orca Slicer) |
+| numpy | installed automatically with the plugin |
+| Internet | required to reach the selected provider's API |
 
-### 📦 Установка
+### 📦 Installation
 
-Плагин распространяется через **OrcaCloud**:
+FlowSlice AI is distributed through **OrcaCloud**:
 
-1. Оформите подписку на **FlowSlice AI** в OrcaCloud.
-2. После подписки плагин появится в Orca Slicer среди доступных плагинов — установите и включите его.
-3. Откройте вкладку **FlowSlice AI** в интерфейсе Orca Slicer.
-4. Перезапустите Orca Slicer, если вкладка не появилась сразу.
+1. Subscribe to **FlowSlice AI** on OrcaCloud.
+2. After subscribing, the plugin appears among the available plugins in Orca Slicer — install and enable it.
+3. Open the **FlowSlice AI** tab in Orca Slicer.
+4. Restart Orca Slicer if the tab does not appear right away.
 
-> Отдельная установка `.whl`-файла не требуется — всё делается из интерфейса.
-
----
-
-## 🚀 Быстрый старт для новичков
-
-Никогда не работали с ИИ-чатами и API? Следуйте шагам — это займёт пару минут.
-
-### Шаг 1. Откройте вкладку плагина
-После установки найдите в Orca Slicer вкладку **FlowSlice AI** и откройте её.
-
-### Шаг 2. Получите API-ключ
-Выберите любого провайдера из [таблицы ниже](#-где-взять-api-ключ), зарегистрируйтесь и создайте
-API-ключ. Это бесплатно на старте — почти все провайдеры дают пробный лимит.
-
-### Шаг 3. Внесите ключ в плагин
-1. Нажмите кнопку **Настройки** (шестерёнка) в окне чата.
-2. Откройте вкладку **Модели**.
-3. В выпадающем списке **Провайдер** выберите провайдера, чей ключ вы получили.
-4. Вставьте ключ в поле **API-ключ**. Кнопка с глазиком покажет скрытый текст.
-5. Выберите **Модель** из списка.
-6. Нажмите **Сохранить**.
-
-> 🔰 **Совет новичку.** Для первого запуска удобно взять **OpenRouter** — один ключ даёт доступ
-> сразу ко многим моделям разных производителей. Роутеры `Auto`, `Auto (beta)` и `Free` сами
-> подберут подходящую модель.
-
-### Шаг 4. Задайте первый вопрос
-Напишите сообщение в поле ввода и нажмите **Enter**. Например:
-
-- «Проверь мои настройки печати PETG и скажи, что можно улучшить.»
-- «Почему первый слой плохо прилипает?»
-- «Что такое Pressure Advance и как его настроить на Klipper?»
-- «Сравни TPU и PETG для гибких деталей.»
-- «Порекомендуй температуру сопла и стола для моего пластика.»
-
-### Шаг 5. Управляйте контекстом
-В панели чата есть чекбоксы **Пластик**, **Принтер**, **Настройки печати** и **История**. Отметьте
-то, что ассистент должен учитывать. Рядом с каждым профилем есть выпадающий список:
-
-- **изм.** — отправить только параметры, которые вы изменили (экономит токены);
-- **все** — отправить полный профиль целиком.
-
-Нажмите **Enter** для отправки и **Shift+Enter** для переноса строки.
-
-### Шаг 6. Готово!
-Пользуйтесь чатом как обычным мессенджером. История сохраняется, можно создавать новые чаты,
-искать по ним и закреплять нужные.
+> No separate `.whl` installation is required — everything is done from the interface.
 
 ---
 
-## 🔑 Где взять API-ключ
+## 🚀 Quick start for beginners
 
-Все ключи создаются в личных кабинетах провайдеров. Поле **API-ключ** находится в
-**Настройки → Модели**.
+Never used AI chats and APIs before? Follow the steps — it takes a couple of minutes.
 
-| Провайдер | Где получить ключ | Примечание |
+### Step 1. Open the plugin tab
+After installation, find the **FlowSlice AI** tab in Orca Slicer and open it.
+
+### Step 2. Get an API key
+Pick any provider from the [table below](#-where-to-get-an-api-key), sign up and create an API key.
+It is free to start — almost all providers offer a trial quota.
+
+### Step 3. Add the key to the plugin
+1. Click the **Settings** button (gear) in the chat window.
+2. Open the **Models** tab.
+3. In the **Provider** dropdown, select the provider you got the key from.
+4. Paste the key into the **API key** field. The eye button reveals hidden text.
+5. Select a **Model** from the list.
+6. Click **Save**.
+
+> 🔰 **Beginner tip.** For your first run, **OpenRouter** is a convenient choice — one key gives
+> access to many models from different vendors. The `Auto`, `Auto (beta)` and `Free` routers pick a
+> suitable model for you.
+
+### Step 4. Ask your first question
+Type a message and press **Enter**. For example:
+
+- "Check my PETG print settings and tell me what to improve."
+- "Why does the first layer not stick well?"
+- "What is Pressure Advance and how do I tune it on Klipper?"
+- "Compare TPU and PETG for flexible parts."
+- "Recommend nozzle and bed temperature for my filament."
+
+### Step 5. Manage context
+The chat panel has **Filament**, **Printer**, **Print settings** and **History** checkboxes. Tick
+what the assistant should take into account. Each profile has a dropdown next to it:
+
+- **changed** — send only the parameters you changed (saves tokens);
+- **all** — send the full profile.
+
+Press **Enter** to send and **Shift+Enter** for a new line.
+
+### Step 6. You're done!
+Use the chat like a regular messenger. History is saved; you can create new chats, search them and pin
+the important ones.
+
+---
+
+## 🔑 Where to get an API key
+
+All keys are created in the providers' personal dashboards. The **API key** field is under
+**Settings → Models**.
+
+| Provider | Where to get the key | Note |
 | --- | --- | --- |
-| **DeepSeek** | https://platform.deepseek.com/api_keys | недорого, хорош для текста |
-| **OpenRouter** | https://openrouter.ai/keys | один ключ — много моделей, есть бесплатные |
-| **Google Gemini** | https://aistudio.google.com/app/apikey | есть бесплатный лимит |
-| **Anthropic** | https://console.anthropic.com/settings/keys | модели Claude |
-| **OpenAI** | https://platform.openai.com/api-keys | модели GPT |
-| **Groq** | https://console.groq.com/keys | очень высокая скорость |
-| **Zhipu GLM** | https://open.bigmodel.cn/ | модели GLM |
-| **Cerebras** | https://cloud.cerebras.ai/ | быстрый инференс |
-| **Mistral** | https://console.mistral.ai/api-keys | модели Mistral |
-| **xAI** | https://console.x.ai/ | модели Grok |
+| **DeepSeek** | https://platform.deepseek.com/api_keys | inexpensive, great for text |
+| **OpenRouter** | https://openrouter.ai/keys | one key — many models, free options |
+| **Google Gemini** | https://aistudio.google.com/app/apikey | free tier available |
+| **Anthropic** | https://console.anthropic.com/settings/keys | Claude models |
+| **OpenAI** | https://platform.openai.com/api-keys | GPT models |
+| **Groq** | https://console.groq.com/keys | very high speed |
+| **Zhipu GLM** | https://open.bigmodel.cn/ | GLM models |
+| **Cerebras** | https://cloud.cerebras.ai/ | fast inference |
+| **Mistral** | https://console.mistral.ai/api-keys | Mistral models |
+| **xAI** | https://console.x.ai/ | Grok models |
 
-> 🔒 Ключ хранится локально в настройках плагина Orca Slicer и отправляется только на сервер
-> выбранного вами провайдера. Плагин не пересылает его третьим лицам.
+> 🔒 The key is stored locally in the Orca Slicer plugin settings and is sent only to the server of
+> the provider you selected. The plugin never forwards it to third parties.
 
 ---
 
-## ⚙️ Настройки
+## ⚙️ Settings
 
-Настройки открываются шестерёнкой в окне чата и разбиты на четыре вкладки.
+Settings open via the gear in the chat window and are split into four tabs.
 
-| Вкладка | Что настраивается |
+| Tab | What you can configure |
 | --- | --- |
-| **Модели** | Провайдер, API-ключ, модель, температура, максимум токенов, режим мышления. Кнопка **Добавить модель** и корзина — рядом. |
-| **Персональные** | Свои OpenAI/Anthropic-совместимые провайдеры и модели: базовый URL, схема API, ключ, идентификатор и название модели. |
-| **Общие значения** | Заметки для контекста, общие температура / максимум токенов / режим мышления по умолчанию; сброс моделей. |
-| **Оформление** | Тема (авто / белая / чёрная), размер и стиль шрифта, язык интерфейса. |
+| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode. The **Add model** button and the trash icon sit next to it. |
+| **Custom** | Your own OpenAI/Anthropic-compatible providers and models: base URL, API scheme, key, model ID and name. |
+| **General** | Notes for the context, default temperature / max tokens / reasoning mode; reset models. |
+| **Appearance** | Theme (auto / white / black), font size and style, interface language. |
 
-- Значения модели можно настраивать индивидуально; если оставить поле пустым — наследуются общие.
-- Кнопка **Сбросить** действует только на текущую вкладку.
-- На вкладке «Общие значения» есть **Сброс моделей** и **Сброс персональных моделей**.
-- Изменения применяются только после нажатия **Сохранить**.
+- Model values can be tuned individually; if a field is left empty, the general defaults apply.
+- The **Reset** button affects only the current tab.
+- The **General** tab has **Reset models** and **Reset custom models**.
+- Changes apply only after clicking **Save**.
 
 ---
 
-## 🧠 Контекст слайсера
+## 🧠 Slicer context
 
-Панель контекста в чате определяет, что именно ассистент узнает о вашем проекте:
+The context panel in the chat decides what the assistant learns about your project:
 
-| Чекбокс | Что передаёт |
+| Checkbox | What it sends |
 | --- | --- |
-| **Модель** | Габариты, объём, положение на столе, целостность меша (manifold), количество экземпляров. |
-| **Пластик** | Профиль филамента: материал, температуры, поток, охлаждение и заметки. |
-| **Принтер** | Профиль принтера: кинематика, сопло, стол, ограничения и start/end G-code. |
-| **Настройки печати** | Профиль процесса: слои, периметры, заполнение, скорости, поддержки. |
-| **История** | Предыдущие сообщения текущего чата. |
+| **Model** | Dimensions, volume, position on the plate, mesh integrity (manifold), number of instances. |
+| **Filament** | Filament profile: material, temperatures, flow, cooling and notes. |
+| **Printer** | Printer profile: kinematics, nozzle, bed, limits and start/end G-code. |
+| **Print settings** | Process profile: layers, perimeters, infill, speeds, supports. |
+| **History** | Previous messages of the current chat. |
 
-Для профилей доступны два режима выгрузки: **изм.** (только изменённые относительно базового
-пресета параметры) и **все** (полный профиль). Выбранные чекбоксы и режимы запоминаются для чата.
-
----
-
-## 📎 Вложения
-
-- **Фотографии:** можно прикрепить снимок дефекта печати или детали. Изображение сжимается до
-  1024 px и передаётся только моделям с поддержкой изображений. Если выбранная модель их не
-  поддерживает — плагин сообщит об этом и не станет отправлять файл.
-- **Текстовые файлы:** содержимое файла (до 1 МБ) добавляется в сообщение как обычный текст,
-  поэтому работает с любой моделью.
-
-> Для распознавания фото выбирайте модели с поддержкой изображений, например через OpenRouter
-> (`Auto`, `Free` или конкретную vision-модель).
+For profiles, two export modes are available: **changed** (only the parameters changed relative to the
+base preset) and **all** (the full profile). Selected checkboxes and modes are remembered per chat.
 
 ---
 
-## ⌨️ Команды
+## 📎 Attachments
 
-Введите команду в поле чата и нажмите **Enter**.
+- **Photos:** attach a photo of a print defect or a part. The image is compressed to 1024 px and sent
+  only to models that support images. If the selected model does not, the plugin tells you and does not
+  send the file.
+- **Text files:** the file contents (up to 1 MB) are added to the message as plain text, so they work
+  with any model.
 
-| Команда | Описание |
+> To analyze photos, choose an image-capable model, e.g. via OpenRouter (`Auto`, `Free` or a specific
+> vision model).
+
+---
+
+## ⌨️ Commands
+
+Type a command in the chat input and press **Enter**.
+
+| Command | Description |
 | --- | --- |
-| `/context` | Показать контекст слайсера (модель, профили, чекбоксы, история) |
-| `/clear` | Очистить текущий чат |
-| `/model` | Показать текущую модель и её настройки |
-| `/printer` | Показать информацию о принтере |
-| `/stats` | Показать статистику использования |
-| `/help` | Список команд |
-| `/reset` | Сбросить настройки плагина |
+| `/context` | Show slicer context (model, profiles, checkboxes, history) |
+| `/clear` | Clear the current chat |
+| `/model` | Show the current model and its settings |
+| `/printer` | Show printer information |
+| `/stats` | Show usage statistics |
+| `/help` | List commands |
+| `/reset` | Reset plugin settings |
 
-**Горячие клавиши:** `Enter` — отправить, `Shift+Enter` — новая строка.
-
----
-
-## 🔐 Приватность и данные
-
-- **API-ключи** хранятся в конфигурации плагина Orca Slicer и передаются только на сервер
-  выбранного вами провайдера.
-- **История чатов** сохраняется локально: `data_dir()/flowslice_ai/chats.json`.
-- **Плагин не содержит телеметрии** и не отправляет данные никуда, кроме API-запроса к
-  выбранной модели.
-- Запросы идут напрямую с вашего компьютера к провайдеру (без промежуточных серверов).
+**Hotkeys:** `Enter` — send, `Shift+Enter` — new line.
 
 ---
 
-## ❓ Частые вопросы
+## 🔐 Privacy & data
+
+- **API keys** are stored in the Orca Slicer plugin configuration and are sent only to the server of
+  the provider you selected.
+- **Chat history** is stored locally: `data_dir()/flowslice_ai/chats.json`.
+- **The plugin has no telemetry** and sends no data anywhere except the API request to the selected
+  model.
+- Requests go directly from your computer to the provider (no intermediate servers).
+
+---
+
+## ❓ FAQ
 
 <details>
-<summary><b>Вкладка плагина не появилась.</b></summary>
+<summary><b>The plugin tab did not appear.</b></summary>
 
-Убедитесь, что подписка на плагин оформлена в OrcaCloud, а сам плагин включён в списке плагинов
-Orca Slicer. Перезапустите Orca Slicer. Проверьте, что версия Orca Slicer поддерживает
-Python-плагины (ветка 2.x).
+Make sure the plugin subscription is active on OrcaCloud and the plugin is enabled in the Orca Slicer
+plugin list. Restart Orca Slicer. Check that your Orca Slicer version supports Python plugins (2.x
+branch).
 </details>
 
 <details>
-<summary><b>Ошибка «API-ключ не указан» или «неверный ключ».</b></summary>
+<summary><b>"API key missing" or "invalid key" error.</b></summary>
 
-Откройте **Настройки → Модели**, проверьте, что ключ вставлен без лишних пробелов, и нажмите
-кнопку проверки ключа. Убедитесь, что у провайдера есть средства на балансе.
+Open **Settings → Models**, check that the key was pasted without extra spaces, and click the key
+check button. Make sure the provider account has funds on balance.
 </details>
 
 <details>
-<summary><b>Модель не принимает фотографии.</b></summary>
+<summary><b>The model does not accept photos.</b></summary>
 
-Выбранная модель не поддерживает изображения. Выберите vision-модель (например, через
-OpenRouter) — плагин сам предупредит, если модель не умеет работать с картинками.
+The selected model does not support images. Choose a vision model (e.g. via OpenRouter) — the plugin
+will warn you automatically if a model cannot handle images.
 </details>
 
 <details>
-<summary><b>Ответы обрываются или приходят медленно.</b></summary>
+<summary><b>Responses are cut off or arrive slowly.</b></summary>
 
-Проверьте интернет и лимиты провайдера. Попробуйте увеличить **Максимум токенов** в настройках
-модели или выбрать более быстрого провайдера (например, Groq или Cerebras).
+Check your internet connection and the provider limits. Try increasing **Max tokens** in the model
+settings or choose a faster provider (e.g. Groq or Cerebras).
 </details>
 
 <details>
-<summary><b>Где хранится история чатов?</b></summary>
+<summary><b>Where is the chat history stored?</b></summary>
 
-В `data_dir()/flowslice_ai/chats.json` внутри каталога данных Orca Slicer.
+In `data_dir()/flowslice_ai/chats.json` inside the Orca Slicer data directory.
 </details>
 
 <details>
-<summary><b>Можно ли использовать свой сервер?</b></summary>
+<summary><b>Can I use my own server?</b></summary>
 
-Да. На вкладке **Персональные** добавьте своего провайдера: укажите базовый URL, схему API
-(OpenAI- или Anthropic-совместимую), ключ и идентификатор модели.
+Yes. On the **Custom** tab, add your own provider: specify the base URL, API scheme (OpenAI- or
+Anthropic-compatible), key and model ID.
 </details>
