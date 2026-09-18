@@ -759,6 +759,15 @@ select option {
   gap: 8px;
   justify-content: flex-end;
 }
+/* Футер окна настроек: больше воздуха сверху, отделяем от содержимого вкладки. */
+#settingsFooter {
+  margin-top: 14px;
+  padding-top: 14px;
+}
+/* Блок «Сброс моделей» на вкладке «Общие значения»: зазор снизу. */
+#tabGeneral > .model-actions {
+  margin-bottom: 8px;
+}
 .danger-btn {
   border: 1px solid var(--orca-accent);
   background: transparent;
