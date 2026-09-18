@@ -322,6 +322,9 @@ class HandlersMixin:
         self._config = self._normalize_config(self._config)
         self._persist_config()
         self._post_settings()
+        # Обновляем снимок провайдеров: после сохранения ключа список моделей
+        # в UI должен сразу увидеть has_key, иначе он остаётся пустым.
+        self._send_state()
         self._post({"type": "toast", "text": self._t("settings.saved"), "kind": "ok"})
 
     def _handle_reset_settings(self: "_ChatEngine", message: dict) -> None:

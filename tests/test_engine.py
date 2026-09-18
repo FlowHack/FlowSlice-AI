@@ -369,6 +369,19 @@ def test_providers_snapshot_hides_api_keys(engine) -> None:
     assert deepseek["has_key"] is True
 
 
+def test_save_settings_sends_fresh_providers(engine, monkeypatch) -> None:
+    """После сохранения ключа UI получает state с обновлённым has_key."""
+    posts = []
+    monkeypatch.setattr(engine, "_post", posts.append)
+    engine._handle_save_settings(
+        {"settings": {"active_provider": "openrouter", "api_key": "sk-test"}}
+    )
+    states = [p for p in posts if p.get("type") == "state"]
+    assert states, "state не отправлен после сохранения настроек"
+    openrouter = next(p for p in states[-1]["providers"] if p["id"] == "openrouter")
+    assert openrouter["has_key"] is True
+
+
 def test_cmd_reset_chats_requires_confirmation(engine) -> None:
     """`/reset chats` очищает историю только после подтверждения."""
     before = len(engine._chats)

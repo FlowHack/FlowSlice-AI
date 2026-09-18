@@ -162,6 +162,7 @@
       "mp.search": "Search model or provider...",
       "mp.default": "Default",
       "mp.default_set": "Set as default model",
+      "mp.need_key": "Set an API key in settings",
       "mp.selected": "Selected",
       "copy.title": "Copy the text manually",
       "dd.provider_search": "Search providers...",
@@ -326,6 +327,7 @@
       "mp.search": "Поиск модели или провайдера…",
       "mp.default": "По умолчанию",
       "mp.default_set": "Сделать моделью по умолчанию",
+      "mp.need_key": "Укажите токен в настройках",
       "mp.selected": "Выбрано",
       "copy.title": "Скопируйте текст вручную",
       "dd.provider_search": "Поиск провайдера…",
@@ -490,6 +492,7 @@
       "mp.search": "Pretraga modela ili provajdera…",
       "mp.default": "Podrazumevano",
       "mp.default_set": "Postavi kao podrazumevani model",
+      "mp.need_key": "Postavite token u podešavanjima",
       "mp.selected": "Izabrano",
       "copy.title": "Kopirajte tekst ručno",
       "dd.provider_search": "Pretraga provajdera…",
@@ -899,7 +902,15 @@
       }
     }
     if (shown === 0) {
-      list.appendChild(el("div", "mp-empty", t("common.nothing")));
+      // Различаем «ключ не задан» и «ничего не нашлось по поиску».
+      var hasAnyKey = false;
+      for (var q = 0; q < providers.length; q++) {
+        if (providers[q].has_key && (providers[q].models || []).length > 0) {
+          hasAnyKey = true;
+          break;
+        }
+      }
+      list.appendChild(el("div", "mp-empty", t(hasAnyKey ? "common.nothing" : "mp.need_key")));
     }
   }
 
