@@ -33,6 +33,29 @@ def test_read_sse_collects_text_and_reasoning(engine, captured) -> None:
     assert thought == "думаю"
 
 
+def test_read_sse_posts_contiguous_chunks(engine, captured, monkeypatch) -> None:
+    """Между отправками копится ВСЁ: UI не получает куски вразнобой.
+
+    При троттлинге пропущенные дельты должны уходить вместе со следующей
+    отправкой, а не отдельным «хвостом» в конце — иначе текст в чате
+    перемешивается и «досыпается» одним куском после завершения.
+    """
+    ticks = iter([1.0, 1.05, 1.16])
+    monkeypatch.setattr(
+        "flowslice_ai.engine.api_client.time.monotonic", lambda: next(ticks)
+    )
+    stream = [
+        _sse({"choices": [{"delta": {"content": "A"}}]}),
+        _sse({"choices": [{"delta": {"content": "B"}}]}),
+        _sse({"choices": [{"delta": {"content": "C"}}]}),
+        b"data: [DONE]\n",
+    ]
+    text, _ = engine._read_sse(iter(stream), 1)
+    deltas = [m["text"] for m in captured if m.get("type") == "delta"]
+    assert text == "ABC"
+    assert deltas == ["A", "BC"]
+
+
 def test_read_sse_tolerates_broken_chunks(engine, captured) -> None:
     """_read_sse() пропускает битые строки и завершает поток целиком."""
     stream = [

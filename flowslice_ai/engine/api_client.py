@@ -261,8 +261,8 @@ class ApiClientMixin:
         """
         acc = ""
         thought = ""
-        sent = ""
-        sent_thought = ""
+        sent = 0
+        sent_thought = 0
         last_post = 0.0
         for raw in resp:
             if not self._gen:
@@ -280,27 +280,40 @@ class ApiClientMixin:
                 reasoning_delta = delta_obj.get("reasoning_content") or ""
             except (ValueError, KeyError, IndexError, TypeError, AttributeError):
                 continue
-            now = time.monotonic()
             if reasoning_delta:
                 thought += reasoning_delta
-                if now - last_post >= STREAM_THROTTLE:
-                    self._post(
-                        {"type": "thought_delta", "chat_id": chat_id, "text": reasoning_delta}
-                    )
-                    last_post = now
-                    sent_thought += reasoning_delta
             if delta:
                 acc += delta
-                if now - last_post >= STREAM_THROTTLE:
-                    self._post({"type": "delta", "chat_id": chat_id, "text": delta})
-                    last_post = now
-                    sent += delta
-        if thought and sent_thought != thought:
+            if not (reasoning_delta or delta):
+                continue
+            now = time.monotonic()
+            if now - last_post < STREAM_THROTTLE:
+                continue
+            # Отправляем ВСЁ накопленное с прошлой отправки, а не только текущую
+            # дельту: иначе UI теряет пропущенные куски и «досыпает» их в конце.
+            if len(thought) > sent_thought:
+                self._post(
+                    {
+                        "type": "thought_delta",
+                        "chat_id": chat_id,
+                        "text": thought[sent_thought:],
+                    }
+                )
+                sent_thought = len(thought)
+            if len(acc) > sent:
+                self._post({"type": "delta", "chat_id": chat_id, "text": acc[sent:]})
+                sent = len(acc)
+            last_post = now
+        if len(thought) > sent_thought:
             self._post(
-                {"type": "thought_delta", "chat_id": chat_id, "text": thought[len(sent_thought) :]}
+                {
+                    "type": "thought_delta",
+                    "chat_id": chat_id,
+                    "text": thought[sent_thought:],
+                }
             )
-        if acc and sent != acc:
-            self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
+        if len(acc) > sent:
+            self._post({"type": "delta", "chat_id": chat_id, "text": acc[sent:]})
         return acc, thought
 
     def _read_sse_anthropic(self: "_ChatEngine", resp: Any, chat_id: int) -> tuple[str, str]:
@@ -310,8 +323,8 @@ class ApiClientMixin:
         """
         acc = ""
         thought = ""
-        sent = ""
-        sent_thought = ""
+        sent = 0
+        sent_thought = 0
         last_post = 0.0
         for raw in resp:
             if not self._gen:
@@ -337,27 +350,37 @@ class ApiClientMixin:
                 is_thought = False
             if not text:
                 continue
-            now = time.monotonic()
             if is_thought:
                 thought += text
-                if now - last_post >= STREAM_THROTTLE:
-                    self._post(
-                        {"type": "thought_delta", "chat_id": chat_id, "text": text}
-                    )
-                    last_post = now
-                    sent_thought += text
             else:
                 acc += text
-                if now - last_post >= STREAM_THROTTLE:
-                    self._post({"type": "delta", "chat_id": chat_id, "text": text})
-                    last_post = now
-                    sent += text
-        if thought and sent_thought != thought:
+            now = time.monotonic()
+            if now - last_post < STREAM_THROTTLE:
+                continue
+            # См. _read_sse: отправляем всё накопленное, чтобы не терять куски.
+            if len(thought) > sent_thought:
+                self._post(
+                    {
+                        "type": "thought_delta",
+                        "chat_id": chat_id,
+                        "text": thought[sent_thought:],
+                    }
+                )
+                sent_thought = len(thought)
+            if len(acc) > sent:
+                self._post({"type": "delta", "chat_id": chat_id, "text": acc[sent:]})
+                sent = len(acc)
+            last_post = now
+        if len(thought) > sent_thought:
             self._post(
-                {"type": "thought_delta", "chat_id": chat_id, "text": thought[len(sent_thought) :]}
+                {
+                    "type": "thought_delta",
+                    "chat_id": chat_id,
+                    "text": thought[sent_thought:],
+                }
             )
-        if acc and sent != acc:
-            self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
+        if len(acc) > sent:
+            self._post({"type": "delta", "chat_id": chat_id, "text": acc[sent:]})
         return acc, thought
 
     def _test_key_worker(self: "_ChatEngine", key: str | None = None) -> None:

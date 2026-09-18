@@ -1078,6 +1078,167 @@
     return btn;
   }
 
+  /* ===== Разметка Markdown =====
+     Безопасный рендер без внешних библиотек: сначала экранируем HTML, затем
+     разбираем блочные и встроенные конструкции. Ссылки допускаются только с
+     http/https/mailto, поэтому вставка скриптов из ответа модели невозможна. */
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function safeHref(url) {
+    var u = String(url || "").trim();
+    return /^(https?:|mailto:)/i.test(u) ? u : "";
+  }
+
+  // Встроенные элементы: код, ссылки, жирный, курсив, зачёркнутый.
+  function mdInline(text) {
+    var parts = String(text).split("`");
+    var placeholders = [];
+    for (var i = 1; i < parts.length; i += 2) {
+      placeholders.push(parts[i]);
+      parts[i] = "\u0000" + (placeholders.length - 1) + "\u0000";
+    }
+    var out = parts.join("");
+    out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (m, label, url) {
+      var href = safeHref(url.replace(/&amp;/g, "&"));
+      if (!href) {
+        return label;
+      }
+      return (
+        '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' +
+        label + "</a>"
+      );
+    });
+    out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    out = out.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+    out = out.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+    out = out.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+    out = out.replace(/\u0000(\d+)\u0000/g, function (m, n) {
+      return "<code>" + placeholders[parseInt(n, 10)] + "</code>";
+    });
+    return out;
+  }
+
+  function renderMarkdown(raw) {
+    var escaped = escapeHtml(raw);
+    var lines = escaped.split("\n");
+    var html = [];
+    var i = 0;
+    var inCode = false;
+    var codeBuf = [];
+    var listType = null;
+    function closeList() {
+      if (listType) {
+        html.push("</" + listType + ">");
+        listType = null;
+      }
+    }
+    function isBlockStart(line) {
+      return (
+        /^```/.test(line) ||
+        /^(#{1,6})\s+/.test(line) ||
+        /^&gt;\s?/.test(line) ||
+        /^\s*[-*+]\s+/.test(line) ||
+        /^\s*\d+[.)]\s+/.test(line) ||
+        /^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)
+      );
+    }
+    while (i < lines.length) {
+      var line = lines[i];
+      if (inCode) {
+        if (/^```\s*$/.test(line)) {
+          html.push('<pre class="md-code"><code>' + codeBuf.join("\n") + "</code></pre>");
+          inCode = false;
+          codeBuf = [];
+        } else {
+          codeBuf.push(line);
+        }
+        i++;
+        continue;
+      }
+      var fence = line.match(/^```\s*([\w+-]*)\s*$/);
+      if (fence) {
+        closeList();
+        inCode = true;
+        codeBuf = [];
+        i++;
+        continue;
+      }
+      var heading = line.match(/^(#{1,6})\s+(.*)$/);
+      if (heading) {
+        closeList();
+        var level = heading[1].length;
+        html.push("<h" + level + ">" + mdInline(heading[2]) + "</h" + level + ">");
+        i++;
+        continue;
+      }
+      var quote = line.match(/^&gt;\s?(.*)$/);
+      if (quote) {
+        closeList();
+        html.push("<blockquote>" + mdInline(quote[1]) + "</blockquote>");
+        i++;
+        continue;
+      }
+      if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+        closeList();
+        html.push("<hr>");
+        i++;
+        continue;
+      }
+      var ul = line.match(/^\s*[-*+]\s+(.*)$/);
+      var ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      if (ul || ol) {
+        var want = ul ? "ul" : "ol";
+        if (listType !== want) {
+          closeList();
+          listType = want;
+          html.push("<" + want + ">");
+        }
+        html.push("<li>" + mdInline((ul || ol)[1]) + "</li>");
+        i++;
+        continue;
+      }
+      if (line.trim() === "") {
+        closeList();
+        i++;
+        continue;
+      }
+      closeList();
+      var para = [line];
+      i++;
+      while (i < lines.length && lines[i].trim() !== "" && !isBlockStart(lines[i])) {
+        para.push(lines[i]);
+        i++;
+      }
+      html.push("<p>" + mdInline(para.join("<br>")) + "</p>");
+    }
+    if (inCode) {
+      html.push('<pre class="md-code"><code>' + codeBuf.join("\n") + "</code></pre>");
+    }
+    closeList();
+    return html.join("");
+  }
+
+  // Заполняет элемент текстом: Markdown для ответов ассистента, иначе — как есть.
+  function setMessageText(node, text, markdown) {
+    if (!node) {
+      return;
+    }
+    if (markdown) {
+      node.classList.add("md");
+      node.innerHTML = renderMarkdown(text || "");
+    } else {
+      node.classList.remove("md");
+      node.textContent = text || "";
+    }
+  }
+
   // Сворачиваемый блок размышлений reasoning-моделей.
   function buildReasoning(reasoning, open) {
     var det = document.createElement("details");
@@ -1127,7 +1288,9 @@
     if (msg.reasoning) {
       bubble.appendChild(buildReasoning(msg.reasoning, false));
     }
-    bubble.appendChild(el("div", "msg-text", msg.text || ""));
+    var textNode = el("div", "msg-text");
+    setMessageText(textNode, msg.text || "", msg.role === "assistant");
+    bubble.appendChild(textNode);
     bubble.appendChild(el("div", "msg-time", formatTime(msg.ts)));
     wrap.appendChild(bubble);
     var actions = el("div", "msg-actions");
@@ -1196,7 +1359,7 @@
     }
     // Перерисовка во время стрима не должна терять накопленный текст.
     if (state.status === "streaming" && streamTextEl) {
-      streamTextEl.textContent = streamText;
+      setMessageText(streamTextEl, streamText, true);
     }
     if (state.status === "streaming" && streamThoughtEl) {
       streamThoughtEl.textContent = streamThought;
@@ -2504,7 +2667,7 @@
       streamTextEl = node.querySelector(".msg-text");
     }
     streamText += msg.text || "";
-    streamTextEl.textContent = streamText;
+    setMessageText(streamTextEl, streamText, true);
     scrollToBottom(false);
   }
 
@@ -2537,7 +2700,7 @@
       return;
     }
     if (streamTextEl) {
-      streamTextEl.textContent = msg.text || "";
+      setMessageText(streamTextEl, msg.text || "", true);
       var node = streamTextEl.closest(".msg-wrap");
       if (node) {
         node.classList.remove("msg-streaming");
