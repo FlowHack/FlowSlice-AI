@@ -68,10 +68,10 @@ IMAGE_ANALYSIS_HINT = (
 
 # Инструкция для моделей без поддержки изображений: не выдумывать ответ.
 NO_VISION_HINT = (
-    "If you cannot process images, do not guess and do not give any advice based "
-    "on the image: explicitly state that you cannot analyze images, ask the user "
-    "to describe the problem in words and send the message again without the "
-    "attachment, and write nothing else."
+    "CRITICAL RULE: If you cannot process images, do not guess and do not give "
+    "any advice based on the image: explicitly state that you cannot analyze "
+    "images, ask the user to describe the problem in words and send the message "
+    "again without the attachment, and write nothing else."
 )
 
 # Разделы пресетов, для которых режим выгрузки (changed/all) выбирается отдельно.
