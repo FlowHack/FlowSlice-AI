@@ -57,6 +57,7 @@ class CoreMixin:
         # Кэш возможностей моделей OpenRouter (id → поддержка изображений)
         self._or_models_cache: dict[str, bool] = {}
         self._or_vision_started = False
+        self._vision_cache: dict[str, tuple[float, dict[str, bool]]] = {}
         self._or_models_ts = 0.0
         self._load_chats()
 
@@ -654,12 +655,13 @@ class CoreMixin:
         """
         result: list[dict[str, Any]] = []
         providers = self._config.get("providers", {})
-        # Карта модальностей OpenRouter: если кэша нет, уточняем в фоне.
-        # Только при активном UI — иначе (например, в тестах) сеть не трогаем.
+        # Карта модальностей: если кэша нет, уточняем в фоне только при
+        # активном UI — иначе (например, в тестах) сеть не трогаем.
         or_map = self._or_models_cache
-        if not or_map and not self._or_vision_started and self._post_sink is not None:
+        vision_caches = self._vision_cache
+        if not self._or_vision_started and self._post_sink is not None:
             self._or_vision_started = True
-            threading.Thread(target=self._refresh_openrouter_vision, daemon=True).start()
+            threading.Thread(target=self._refresh_all_vision, daemon=True).start()
         for pid, pdef in providers.items():
             if not isinstance(pdef, dict):
                 continue
@@ -668,9 +670,15 @@ class CoreMixin:
                 if isinstance(mdef, dict):
                     vision = mdef.get("vision")
                     vision_source = str(mdef.get("vision_source", "default"))
-                    if pid == "openrouter" and vision_source != "manual" and mid in or_map:
-                        vision = or_map[mid]
-                        vision_source = "provider"
+                    if vision_source != "manual":
+                        cached_map = (
+                            or_map
+                            if pid == "openrouter"
+                            else vision_caches.get(pid, (0.0, {}))[1]
+                        )
+                        if mid in cached_map:
+                            vision = cached_map[mid]
+                            vision_source = "provider"
                     entry: dict[str, Any] = {
                         "id": mid,
                         "name": str(mdef.get("name", mid)),

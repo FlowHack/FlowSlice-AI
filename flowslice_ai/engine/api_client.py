@@ -26,6 +26,12 @@ _OR_MODELS_TTL = 600.0  # секунд: срок жизни кэша списк�
 _OR_MODELS_TIMEOUT = 6  # секунд: короткий таймаут, чтобы не блокировать UI
 _OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
+# Провайдеры, у которых поддержку изображений можно узнать запросом к API.
+_VISION_API_PROVIDERS = ("openrouter", "anthropic", "mistral", "cerebras", "xai")
+_VISION_CACHE_TTL = 600.0  # секунд: срок жизни кэша зрения по провайдеру
+_VISION_TIMEOUT = 8  # секунд
+_ANTHROPIC_VERSION = "2023-06-01"
+
 
 class ApiClientMixin:
     """Запросы к API провайдеров, чтение SSE-потоков, проверка ключей."""
@@ -97,12 +103,105 @@ class ApiClientMixin:
             self._or_models_ts = now
         return result
 
-    def _refresh_openrouter_vision(self: "_ChatEngine") -> None:
-        """Фоновое уточнение зрения моделей OpenRouter и сохранение в конфиг."""
-        mapping = self._openrouter_vision_map()
+    def _provider_models_url(self: "_ChatEngine", provider_id: str, base_url: str) -> str:
+        """Собирает URL списка моделей для провайдера."""
+        base = base_url.rstrip("/")
+        if provider_id == "anthropic":
+            return base + "/models?limit=1000"
+        if provider_id == "xai":
+            return base + "/language-models"
+        return base + "/models"
+
+    @staticmethod
+    def _vision_from_entry(entry: dict[str, Any]) -> bool | None:
+        """Извлекает признак зрения из одной записи ответа провайдера.
+
+        Поддерживает все известные форматы: ``architecture.input_modalities``
+        (OpenRouter), ``input_modalities`` (xAI), ``capabilities.vision``
+        (Mistral, Cerebras) и ``capabilities.image_input.supported`` (Anthropic).
+        """
+        arch = entry.get("architecture")
+        modalities = arch.get("input_modalities") if isinstance(arch, dict) else None
+        if not isinstance(modalities, list):
+            modalities = entry.get("input_modalities")
+        if isinstance(modalities, list):
+            return "image" in modalities
+        caps = entry.get("capabilities")
+        if isinstance(caps, dict):
+            image_input = caps.get("image_input")
+            if isinstance(image_input, dict) and isinstance(image_input.get("supported"), bool):
+                return image_input["supported"]
+            vision = caps.get("vision")
+            if isinstance(vision, bool):
+                return vision
+        return None
+
+    def _provider_vision_map(self: "_ChatEngine", provider_id: str) -> dict[str, bool]:
+        """Возвращает карту «id модели → поддержка изображений» для провайдера.
+
+        Результат кэшируется на _VISION_CACHE_TTL секунд. При сетевой ошибке
+        возвращается прежний кэш (если он был).
+        """
+        now = time.time()
+        cached = self._vision_cache.get(provider_id)
+        if cached and now - cached[0] < _VISION_CACHE_TTL:
+            return cached[1]
+        prov = self._config.get("providers", {}).get(provider_id)
+        if not isinstance(prov, dict):
+            return {}
+        base_url = str(prov.get("base_url", "")).strip()
+        if not base_url:
+            return {}
+        api_key = str(prov.get("api_key", "")).strip()
+        headers = dict(HTTP_HEADERS)
+        if api_key:
+            if provider_id == "anthropic":
+                headers["x-api-key"] = api_key
+                headers["anthropic-version"] = _ANTHROPIC_VERSION
+            else:
+                headers["Authorization"] = "Bearer " + api_key
+        url = self._provider_models_url(provider_id, base_url)
+        result: dict[str, bool] = {}
+        try:
+            request = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(request, timeout=_VISION_TIMEOUT) as response:
+                payload = json.loads(response.read().decode("utf-8", "replace"))
+            result = self._parse_vision_payload(payload)
+        except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+            _LOGGER.warning("Не удалось получить зрение моделей %s: %s", provider_id, exc)
+            result = cached[1] if cached else {}
+        if result:
+            self._vision_cache[provider_id] = (now, result)
+        return result
+
+    def _parse_vision_payload(self: "_ChatEngine", payload: Any) -> dict[str, bool]:
+        """Разбирает ответ провайдера в карту «id модели → зрение»."""
+        if not isinstance(payload, dict):
+            return {}
+        items = payload.get("data")
+        if not isinstance(items, list):
+            items = payload.get("models")
+        if not isinstance(items, list):
+            return {}
+        result: dict[str, bool] = {}
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            model_id = str(entry.get("id") or entry.get("name") or "")
+            value = self._vision_from_entry(entry)
+            if model_id and value is not None:
+                result[model_id] = value
+        return result
+
+    def _refresh_provider_vision(self: "_ChatEngine", provider_id: str) -> None:
+        """Фоновое уточнение зрения моделей провайдера и сохранение в конфиг."""
+        if provider_id == "openrouter":
+            mapping = self._openrouter_vision_map()
+        else:
+            mapping = self._provider_vision_map(provider_id)
         if not mapping:
             return
-        prov = self._config.get("providers", {}).get("openrouter")
+        prov = self._config.get("providers", {}).get(provider_id)
         if not isinstance(prov, dict):
             return
         changed = False
@@ -120,14 +219,28 @@ class ApiClientMixin:
             self._persist_config()
             self._send_state()
 
+    def _refresh_all_vision(self: "_ChatEngine") -> None:
+        """Уточняет зрение для всех провайдеров с машинно-читаемым признаком."""
+        providers = self._config.get("providers", {})
+        for provider_id in _VISION_API_PROVIDERS:
+            prov = providers.get(provider_id)
+            if not isinstance(prov, dict):
+                continue
+            # OpenRouter отдаёт список публично; остальным нужен ключ.
+            if provider_id != "openrouter" and not str(prov.get("api_key", "")).strip():
+                continue
+            self._refresh_provider_vision(provider_id)
+
     def _resolve_vision_for(self: "_ChatEngine", provider_id: str, model_id: str) -> bool | None:
         """Пытается определить поддержку изображений через API провайдера.
 
         Возвращает True/False, если провайдер отдаёт сведения о модальностях
-        модели (сейчас так умеет OpenRouter), иначе None.
+        модели, иначе None.
         """
         if provider_id == "openrouter":
             return self._openrouter_vision_map().get(model_id)
+        if provider_id in _VISION_API_PROVIDERS:
+            return self._provider_vision_map(provider_id).get(model_id)
         return None
 
     def _model_supports_images(self: "_ChatEngine") -> bool | None:

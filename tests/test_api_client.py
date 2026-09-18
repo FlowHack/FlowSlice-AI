@@ -247,3 +247,26 @@ def test_build_messages_without_images_has_no_hints(engine) -> None:
     system = messages[0]["content"]
     assert "Visually analyze the defects" not in system
     assert "cannot process images" not in system
+
+
+def test_parse_vision_payload_formats(engine) -> None:
+    """Разбор ответов провайдеров во всех известных форматах признака зрения."""
+    payload = {
+        "data": [
+            {"id": "a", "architecture": {"input_modalities": ["text", "image"]}},
+            {"id": "b", "input_modalities": ["text"]},
+            {"id": "c", "capabilities": {"vision": True}},
+            {"id": "d", "capabilities": {"image_input": {"supported": False}}},
+            {"id": "e"},
+        ]
+    }
+    result = engine._parse_vision_payload(payload)
+    assert result == {"a": True, "b": False, "c": True, "d": False}
+
+
+def test_parse_vision_payload_xai_models_key(engine) -> None:
+    """xAI отдаёт список в поле models, а не data."""
+    result = engine._parse_vision_payload(
+        {"models": [{"id": "grok-3", "input_modalities": ["text", "image"]}]}
+    )
+    assert result == {"grok-3": True}
