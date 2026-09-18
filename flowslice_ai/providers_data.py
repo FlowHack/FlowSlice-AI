@@ -15,6 +15,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
+                "vision": False,
             },
             "deepseek-reasoner": {
                 "name": "DeepSeek V4 Pro",
@@ -22,6 +23,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
+                "vision": False,
             },
         },
     },
@@ -32,6 +34,27 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         "builtin": True,
         "scheme": "openai",
         "models": {
+            "openrouter/auto": {
+                "name": "Auto",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "openrouter/auto-beta": {
+                "name": "Auto (beta)",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "openrouter/free": {
+                "name": "Free",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
             "deepseek/deepseek-chat-v3-0324": {
                 "name": "DeepSeek V3 (0324)",
                 "builtin": True,
@@ -172,6 +195,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
+                "vision": False,
             },
             "llama-3.1-8b-instant": {
                 "name": "Llama 3.1 8B Instant",
@@ -179,6 +203,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
+                "vision": False,
             },
             "deepseek-r1-distill-llama-70b": {
                 "name": "DeepSeek R1 Distill 70B",
@@ -186,6 +211,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
+                "vision": False,
             },
         },
     },
@@ -232,6 +258,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
+                "vision": False,
             },
             "llama-3.1-8b": {
                 "name": "Llama 3.1 8B",
@@ -239,6 +266,7 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
+                "vision": False,
             },
         },
     },

@@ -19,6 +19,11 @@ if TYPE_CHECKING:
 
 from flowslice_ai.constants import HTTP_HEADERS, STREAM_THROTTLE, TIMEOUT
 from flowslice_ai.errors import ApiError, NetworkError
+from flowslice_ai.logging import _LOGGER
+
+_OR_MODELS_TTL = 600.0  # секунд: срок жизни кэша списка моделей OpenRouter
+_OR_MODELS_TIMEOUT = 6  # секунд: короткий таймаут, чтобы не блокировать UI
+_OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 
 class ApiClientMixin:
@@ -59,6 +64,61 @@ class ApiClientMixin:
         if isinstance(mdef, dict):
             return str(mdef.get("scheme") or prov.get("scheme") or "openai")
         return str(prov.get("scheme") or "openai")
+
+    def _openrouter_vision_map(self: "_ChatEngine") -> dict[str, bool]:
+        """Возвращает карту «id модели OpenRouter → поддержка изображений».
+
+        Список моделей OpenRouter публичный (без ключа), поэтому кэшируется
+        на _OR_MODELS_TTL секунд. При сетевой ошибке возвращается прежний кэш.
+        """
+        now = time.time()
+        cache = self._or_models_cache
+        if cache and now - self._or_models_ts < _OR_MODELS_TTL:
+            return cache
+        result: dict[str, bool] = {}
+        try:
+            request = urllib.request.Request(_OR_MODELS_URL, headers=HTTP_HEADERS)
+            with urllib.request.urlopen(request, timeout=_OR_MODELS_TIMEOUT) as response:
+                payload = json.loads(response.read().decode("utf-8", "replace"))
+            for entry in payload.get("data", []):
+                if not isinstance(entry, dict):
+                    continue
+                model_id = str(entry.get("id", ""))
+                arch = entry.get("architecture")
+                modalities = arch.get("input_modalities") if isinstance(arch, dict) else None
+                if model_id and isinstance(modalities, list):
+                    result[model_id] = "image" in modalities
+        except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+            _LOGGER.warning("Не удалось получить список моделей OpenRouter: %s", exc)
+            result = cache
+        if result:
+            self._or_models_cache = result
+            self._or_models_ts = now
+        return result
+
+    def _model_supports_images(self: "_ChatEngine") -> bool | None:
+        """Определяет поддержку изображений активной моделью.
+
+        Возвращает True/False, если поддержку удалось определить, иначе None
+        (неизвестно — изображения разрешены, решение остаётся за провайдером).
+        """
+        provider_id, _base_url, _api_key, model, _scheme = self._active_api_credentials()
+        if provider_id == "openrouter":
+            return self._openrouter_vision_map().get(model)
+        prov = self._config.get("providers", {}).get(provider_id)
+        if not isinstance(prov, dict):
+            return None
+        mdef = prov.get("models", {}).get(model)
+        if not isinstance(mdef, dict):
+            return None
+        vision = mdef.get("vision")
+        if vision is None:
+            vision = prov.get("vision")
+        return bool(vision) if vision is not None else None
+
+    def _active_model_id(self: "_ChatEngine") -> str:
+        """Возвращает идентификатор активной модели."""
+        return str(self._config.get("active_model", ""))
 
     def _call_api(self: "_ChatEngine", messages: list[dict[str, Any]], chat_id: int) -> str:
         """Выполняет запрос к API провайдера и возвращает полный текст ответа."""

@@ -94,6 +94,22 @@ class HandlersMixin:
         text = str(message.get("text", "")).strip()
         if not text:
             return
+        if (
+            self._pending_attachment is not None
+            and self._pending_attachment.get("image")
+            and self._model_supports_images() is False
+        ):
+            self._pending_attachment = None
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t(
+                        "attach.image_unsupported", model=self._active_model_id()
+                    ),
+                    "kind": "err",
+                }
+            )
+            return
         if text.startswith("/") and self._handle_command(text):
             self._pending_attachment = None
             return
@@ -380,6 +396,17 @@ class HandlersMixin:
         name = str(message.get("name", self._t("attach.default_name")))
         data = message.get("data", "")
         if kind == "image":
+            if self._model_supports_images() is False:
+                self._post(
+                    {
+                        "type": "toast",
+                        "text": self._t(
+                            "attach.image_unsupported", model=self._active_model_id()
+                        ),
+                        "kind": "err",
+                    }
+                )
+                return
             if len(data) > MAX_IMAGE_B64:
                 self._post(
                     {

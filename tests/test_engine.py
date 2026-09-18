@@ -285,3 +285,45 @@ def test_collect_preset_data_changed_filters_inherited(engine, monkeypatch) -> N
 
     changed = engine._collect_preset_data({"printer": "changed"})
     assert changed["printer"]["params"] == {"nozzle_diameter": "0.6"}
+
+
+def test_model_supports_images_static(engine) -> None:
+    """_model_supports_images() читает статический флаг vision у модели."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    assert engine._model_supports_images() is False
+
+
+def test_model_supports_images_unknown(engine) -> None:
+    """Без флага vision поддержка изображений считается неизвестной."""
+    engine._config["active_provider"] = "openai"
+    engine._config["active_model"] = "gpt-4o"
+    assert engine._model_supports_images() is None
+
+
+def test_attach_image_blocked_without_vision(engine) -> None:
+    """_handle_attach_file() отклоняет изображение без поддержки vision."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    posted: list[dict] = []
+    engine._post = posted.append  # type: ignore[method-assign]
+    engine._handle_attach_file({"kind": "image", "name": "a.jpg", "data": "data:x"})
+    assert engine._pending_attachment is None
+    assert posted and posted[-1]["kind"] == "err"
+
+
+def test_build_messages_sends_images_over_openai(engine, monkeypatch) -> None:
+    """Для OpenAI-совместимой схемы изображения уходят как image_url."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    monkeypatch.setattr(engine, "_collect_context", lambda flags, modes=None: {})
+    monkeypatch.setattr(engine, "_build_system_prompt", lambda ctx: "sys")
+    chat = {
+        "msgs": [
+            {"role": "user", "text": "hi", "image": "data:image/jpeg;base64,AAA"}
+        ]
+    }
+    messages = engine._build_messages(chat, "hi")
+    content = messages[-1]["content"]
+    assert isinstance(content, list)
+    assert content[1]["type"] == "image_url"

@@ -45,6 +45,9 @@ class CoreMixin:
         self._post_sink: Any = None
         self._pending_attachment: dict[str, Any] | None = None
         self._pending_confirm: str | None = None
+        # Кэш возможностей моделей OpenRouter (id → поддержка изображений)
+        self._or_models_cache: dict[str, bool] = {}
+        self._or_models_ts = 0.0
         self._load_chats()
 
     def _t(self: "_ChatEngine", key: str, **params: str) -> str:

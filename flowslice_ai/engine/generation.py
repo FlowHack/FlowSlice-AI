@@ -154,15 +154,13 @@ class GenerationMixin:
                     }
                 )
             messages.append({"role": "user", "content": content})
-        elif images and scheme != "openai":
+        elif images:
             content = [{"type": "text", "text": user_content}]
             content.extend(
                 {"type": "image_url", "image_url": {"url": img}} for img in images
             )
             messages.append({"role": "user", "content": content})
         else:
-            if images:
-                user_content += self._t("prompt.images_unsupported", n=str(len(images)))
             messages.append({"role": "user", "content": user_content})
         return messages
 
