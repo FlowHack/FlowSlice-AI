@@ -17,8 +17,8 @@ HTML_PAGE = (
     .replace("<!--SCRIPT-->", _read("app.js"))
 )
 
-CONFIG_PAGE = """<!DOCTYPE html>
-<html lang="ru">
+CONFIG_PAGE_TEMPLATE = """<!DOCTYPE html>
+<html lang="<!--LANG-->">
 <head>
 <meta charset="utf-8">
 <title>FlowSlice AI</title>
@@ -31,8 +31,45 @@ CONFIG_PAGE = """<!DOCTYPE html>
 </head>
 <body>
   <h1>FlowSlice AI</h1>
-  <p>Все настройки плагина управляются через кнопку «Настройки» (шестерёнка) на вкладке FlowSlice AI: провайдеры, модели, API-ключи, температура, заметки для контекста и оформление.</p>
-  <p>Эта страница намеренно не содержит полей — настройки хранятся в конфигурации плагина и редактируются только на вкладке.</p>
+  <p><!--P1--></p>
+  <p><!--P2--></p>
 </body>
 </html>
 """
+
+# Тексты страницы настроек плагина для языков интерфейса.
+_CONFIG_TEXTS: dict[str, tuple[str, str]] = {
+    "en": (
+        "All plugin settings are managed from the \u00abSettings\u00bb (gear) button on the "
+        "FlowSlice AI tab: providers, models, API keys, temperature, context notes and appearance.",
+        "This page intentionally has no fields: settings are stored in the plugin configuration "
+        "and edited only on the tab.",
+    ),
+    "ru": (
+        "Все настройки плагина управляются через кнопку \u00abНастройки\u00bb (шестерёнка) на вкладке "
+        "FlowSlice AI: провайдеры, модели, API-ключи, температура, заметки для контекста и оформление.",
+        "Эта страница намеренно не содержит полей — настройки хранятся в конфигурации плагина "
+        "и редактируются только на вкладке.",
+    ),
+    "sr": (
+        "Sva pode\u0161avanja dodatka ure\u0111uju se preko dugmeta \u00abPode\u0161avanja\u00bb (zup\u010danik) na "
+        "kartici FlowSlice AI: provajderi, modeli, API klju\u010devi, temperatura, bele\u0161ke i izgled.",
+        "Ova stranica namerno nema polja: pode\u0161avanja se \u010duvaju u konfiguraciji dodatka "
+        "i menjaju se samo na kartici.",
+    ),
+}
+
+
+def config_page(lang: str = "en") -> str:
+    """Собирает страницу настроек плагина на указанном языке интерфейса."""
+    if lang not in _CONFIG_TEXTS:
+        lang = "en"
+    first, second = _CONFIG_TEXTS[lang]
+    return (
+        CONFIG_PAGE_TEMPLATE.replace("<!--LANG-->", lang)
+        .replace("<!--P1-->", first)
+        .replace("<!--P2-->", second)
+    )
+
+
+CONFIG_PAGE = config_page("en")

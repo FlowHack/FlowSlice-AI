@@ -12,8 +12,13 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"
 authors = [{ name = "FlowHack" }]
-dependencies = ["numpy"]
+dependencies = []
 dynamic = ["version"]
+
+[project.optional-dependencies]
+# Numpy нужен только для глубокого анализа геометрии модели (режим deep).
+# Плагин работает и без него: расширенные метрики просто не выгружаются.
+deep = ["numpy>=1.24"]
 
 [tool.setuptools.dynamic]
 version = { attr = "flowslice_ai.version.__version__" }

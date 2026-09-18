@@ -14,7 +14,7 @@ from flowslice_ai.engine import _ChatEngine
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _PAGES_BASE, _SCRIPT_BASE
 from flowslice_ai.paths import ICON_FILE, atomic_write_text
-from flowslice_ai.ui import CONFIG_PAGE, HTML_PAGE
+from flowslice_ai.ui import HTML_PAGE, config_page
 
 
 class _ConfigMixin:
@@ -43,8 +43,11 @@ class _ConfigMixin:
         return True
 
     def get_config_ui(self) -> str:
-        """Возвращает HTML-страницу настроек."""
-        return CONFIG_PAGE
+        """Возвращает HTML-страницу настроек на текущем языке интерфейса."""
+        engine = self._ensure_engine()
+        config = engine._config if isinstance(engine._config, dict) else {}
+        lang = str(config.get("language", "en"))
+        return config_page(lang)
 
     def _ensure_engine(self) -> _ChatEngine:
         """Лениво создаёт общий движок плагина и подключает sink."""

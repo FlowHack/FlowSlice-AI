@@ -66,15 +66,34 @@ jobs:
       - name: Проверка содержимого wheel
         run: |
           python - <<'EOF'
-          import zipfile, glob
+          import glob
+          import zipfile
+
           whl = glob.glob("dist/*.whl")[0]
-          names = zipfile.ZipFile(whl).namelist()
+          archive = zipfile.ZipFile(whl)
+          names = archive.namelist()
           bad = [n for n in names if any(
               p in n for p in ("docs/", "example/", "assets/", "stubs/", "tests/", "flowslice_ai_plugin.py")
           )]
           if bad:
               raise SystemExit(f"В wheel попали лишние файлы: {bad}")
-          print(f"OK: {whl}, файлов: {len(names)}")
+
+          metadata_name = next(n for n in names if n.endswith(".dist-info/METADATA"))
+          metadata = archive.read(metadata_name).decode("utf-8")
+          if "Name: FlowSlice AI" not in metadata:
+              raise SystemExit("В METADATA нет человекочитаемого имени 'Name: FlowSlice AI'")
+          if "Import-Name: flowslice_ai" not in metadata:
+              raise SystemExit("В METADATA нет 'Import-Name: flowslice_ai'")
+
+          package_files = [n for n in names if n.startswith("flowslice_ai/") and n.endswith(".py")]
+          if "flowslice_ai/__init__.py" not in package_files:
+              raise SystemExit("В wheel нет flowslice_ai/__init__.py")
+          if "flowslice_ai/engine/core.py" not in package_files:
+              raise SystemExit("В wheel нет flowslice_ai/engine/core.py")
+          if not any(n == "flowslice_ai/ui/app.js" for n in names):
+              raise SystemExit("В wheel нет flowslice_ai/ui/app.js")
+
+          print(f"OK: {whl}, файлов: {len(names)}, пакетных модулей: {len(package_files)}")
           EOF
 
       - name: Загрузка артефакта
