@@ -80,6 +80,7 @@
       "ctx.mode_changed": "changed",
       "ctx.mode_all": "all",
       "ctx.mode_title": "Preset export: only changed parameters or the full profile",
+      "ctx.mode_help": "Dropdown on the right: \"changed\" — only parameters changed from the base preset, \"all\" — the full profile.",
       "composer.placeholder": "Message... (Enter — send, Shift+Enter — new line)",
       "welcome.sub": "3D printing engineer-expert. Ask about mechanics, Klipper or materials.",
       "settings.title": "Settings",
@@ -235,6 +236,7 @@
       "ctx.mode_changed": "изм.",
       "ctx.mode_all": "все",
       "ctx.mode_title": "Выгрузка пресета: только изменённые параметры или полный профиль",
+      "ctx.mode_help": "Дропдаун справа: «изм.» — только изменённые относительно базового пресета параметры, «все» — полный профиль.",
       "composer.placeholder": "Сообщение… (Enter — отправить, Shift+Enter — новая строка)",
       "welcome.sub": "Инженер-эксперт 3D-печати. Спросите о механике, Klipper или материалах.",
       "settings.title": "Настройки",
@@ -390,6 +392,7 @@
       "ctx.mode_changed": "izm.",
       "ctx.mode_all": "sve",
       "ctx.mode_title": "Izvoz profila: samo izmenjeni parametri ili pun profil",
+      "ctx.mode_help": "Padajuća lista desno: „izm.” — samo parametri izmenjeni u odnosu na bazni profil, „sve” — pun profil.",
       "composer.placeholder": "Poruka… (Enter — pošalji, Shift+Enter — novi red)",
       "welcome.sub": "Inženjer-ekspert za 3D štampu. Pitajte o mehanici, Klipperu ili materijalima.",
       "settings.title": "Podešavanja",
@@ -531,8 +534,10 @@
      Рендерятся порталом в body с position:fixed, поэтому их не обрезают
      границы модалок (overflow) и они прижимаются к краям окна. */
   var helpTipEl = null;
+  var helpTipHost = null;
 
   function hideHelpTip() {
+    helpTipHost = null;
     if (helpTipEl) {
       helpTipEl.classList.remove("show");
     }
@@ -565,13 +570,26 @@
   }
 
   function initHelpTooltips() {
-    var icons = document.querySelectorAll(".help-icon");
-    for (var i = 0; i < icons.length; i++) {
-      icons[i].addEventListener("mouseenter", function () {
-        showHelpTip(this);
-      });
-      icons[i].addEventListener("mouseleave", hideHelpTip);
-    }
+    // Делегирование: работает и для статичных «?», и для динамически
+    // пересоздаваемых элементов (например, чекбоксы контекста в чате).
+    document.addEventListener("mouseover", function (e) {
+      var host = e.target && e.target.closest ? e.target.closest("[data-tooltip]") : null;
+      if (!host || host === helpTipHost) {
+        return;
+      }
+      showHelpTip(host);
+    });
+    document.addEventListener("mouseout", function (e) {
+      var host = e.target && e.target.closest ? e.target.closest("[data-tooltip]") : null;
+      if (!host) {
+        return;
+      }
+      var to = e.relatedTarget;
+      if (to && host.contains(to)) {
+        return;
+      }
+      hideHelpTip();
+    });
     window.addEventListener("scroll", hideHelpTip, true);
     window.addEventListener("resize", hideHelpTip);
   }
@@ -1069,8 +1087,13 @@
       var item = el("span", "ctx-item");
       item.setAttribute("data-key", key);
       var checkWrap = el("label", "ctx-check");
-      // Тултип: пояснение, что именно этот пункт добавляет в контекст.
-      checkWrap.title = t("ctx." + key + "_help");
+      // Тултип: пояснение, что именно этот пункт добавляет в контекст,
+      // а для пресетов — ещё и смысл режимов «изм.»/«все».
+      var helpText = t("ctx." + key + "_help");
+      if (CONTEXT_MODE_KEYS.indexOf(key) >= 0) {
+        helpText += " " + t("ctx.mode_help");
+      }
+      checkWrap.setAttribute("data-tooltip", helpText);
       var cb = document.createElement("input");
       cb.type = "checkbox";
       cb.checked = !!flags[key];
@@ -1097,6 +1120,11 @@
           null,
           false
         );
+        // Подсказка на самой выпадайке: выбор «изм.»/«все».
+        var modeBtn = modeWrap.querySelector(".dd-btn");
+        if (modeBtn) {
+          modeBtn.setAttribute("data-tooltip", t("ctx.mode_title"));
+        }
       }
     }
     byId("contextTokens").textContent = "≈ " + t("ctx.tokens", { n: state.context_tokens || 0 });
