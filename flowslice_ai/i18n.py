@@ -6,6 +6,9 @@ I18N_PY: dict[str, dict[str, str]] = {
     "en": {
         "settings.saved": "Settings saved.",
         "settings.reset": "Settings reset to defaults.",
+        "settings.reset_scope_unknown": "Unknown settings tab for reset.",
+        "settings.models_reset": "Built-in models reset to defaults.",
+        "settings.custom_models_reset": "Custom providers and models removed.",
         "attach.image_too_big": "Image is too large (6 MB limit).",
         "attach.file_too_big": "File is too large (1 MB limit).",
         "attach.added": "Attachment added.",
@@ -97,6 +100,9 @@ I18N_PY: dict[str, dict[str, str]] = {
     "ru": {
         "settings.saved": "Настройки сохранены.",
         "settings.reset": "Настройки сброшены к заводским.",
+        "settings.reset_scope_unknown": "Неизвестная вкладка для сброса настроек.",
+        "settings.models_reset": "Встроенные модели сброшены к заводским.",
+        "settings.custom_models_reset": "Пользовательские провайдеры и модели удалены.",
         "attach.image_too_big": "Изображение слишком большое (лимит 6 МБ).",
         "attach.file_too_big": "Файл слишком большой (лимит 1 МБ).",
         "attach.added": "Вложение добавлено.",
@@ -188,6 +194,9 @@ I18N_PY: dict[str, dict[str, str]] = {
     "sr": {
         "settings.saved": "Podešavanja sačuvana.",
         "settings.reset": "Podešavanja su resetovana na podrazumevana.",
+        "settings.reset_scope_unknown": "Nepoznata kartica za resetovanje podešavanja.",
+        "settings.models_reset": "Ugrađeni modeli su resetovani na podrazumevano.",
+        "settings.custom_models_reset": "Sopstveni provajderi i modeli su uklonjeni.",
         "attach.image_too_big": "Slika je prevelika (ograničenje 6 MB).",
         "attach.file_too_big": "Fajl je prevelik (ograničenje 1 MB).",
         "attach.added": "Prilog dodat.",

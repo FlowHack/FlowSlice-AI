@@ -15,9 +15,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
-from flowslice_ai.config import DEFAULT_CONFIG
-from flowslice_ai.constants import MAX_FILE_CHARS, MAX_IMAGE_B64
+from flowslice_ai.config import DEFAULT_CONFIG, RESET_SCOPES, SETTINGS_KEYS
+from flowslice_ai.constants import MAX_FILE_CHARS, MAX_IMAGE_B64, PRESET_CONTEXT_KEYS
 from flowslice_ai.logging import _LOGGER
+from flowslice_ai.providers_data import DEFAULT_PROVIDERS
 
 
 class HandlersMixin:
@@ -50,7 +51,11 @@ class HandlersMixin:
         elif msg_type == "save_settings":
             self._handle_save_settings(message)
         elif msg_type == "reset_settings":
-            self._handle_reset_settings()
+            self._handle_reset_settings(message)
+        elif msg_type == "reset_models":
+            self._handle_reset_models()
+        elif msg_type == "reset_custom_models":
+            self._handle_reset_custom_models()
         elif msg_type == "test_key":
             self._handle_test_key(message)
         elif msg_type == "get_usage":
@@ -183,7 +188,11 @@ class HandlersMixin:
         self._post({"type": "status", "text": ""})
 
     def _handle_context_flags(self: "_ChatEngine", message: dict) -> None:
-        """Обновляет флаги контекста активного чата."""
+        """Обновляет флаги и режимы контекста активного чата.
+
+        Дополнительно запоминает выбор в конфигурации, чтобы новые чаты
+        наследовали его без повторной настройки.
+        """
         flags = message.get("flags", {})
         if not isinstance(flags, dict):
             return
@@ -192,9 +201,34 @@ class HandlersMixin:
             key: bool(flags.get(key, value))
             for key, value in chat["context_flags"].items()
         }
-        self._ctx_tokens = self._estimate_context_tokens(chat["context_flags"])
+        modes = message.get("modes")
+        current_modes = chat.get("context_modes")
+        if not isinstance(current_modes, dict):
+            current_modes = {}
+        if isinstance(modes, dict):
+            for key in PRESET_CONTEXT_KEYS:
+                current_modes[key] = "all" if modes.get(key) == "all" else "changed"
+        chat["context_modes"] = {
+            key: ("all" if current_modes.get(key) == "all" else "changed")
+            for key in PRESET_CONTEXT_KEYS
+        }
+        self._ctx_tokens = self._estimate_context_tokens(
+            chat["context_flags"], chat["context_modes"]
+        )
         self._save_chats()
+        self._remember_context(chat)
         self._send_state()
+
+    def _remember_context(self: "_ChatEngine", chat: dict[str, Any]) -> None:
+        """Сохраняет флаги и режимы контекста как значения по умолчанию."""
+        self._config["context"] = {
+            "flags": dict(chat.get("context_flags", {})),
+            "modes": dict(chat.get("context_modes", {})),
+        }
+        try:
+            self._cap.save_config(json.dumps(self._config))
+        except (TypeError, ValueError) as exc:
+            _LOGGER.error("Не удалось сохранить настройки контекста: %s", exc)
 
     def _handle_regenerate(self: "_ChatEngine") -> None:
         """Перегенерирует последний ответ ассистента."""
@@ -230,19 +264,7 @@ class HandlersMixin:
         settings = message.get("settings", {})
         if not isinstance(settings, dict):
             return
-        for key in (
-            "active_provider",
-            "active_model",
-            "default_model",
-            "notes",
-            "temperature",
-            "max_tokens",
-            "reasoning",
-            "theme",
-            "font_size",
-            "font_style",
-            "language",
-        ):
+        for key in SETTINGS_KEYS:
             if key in settings:
                 self._config[key] = settings[key]
         # Обратная совместимость со старой схемой из текущего JS.
@@ -250,11 +272,6 @@ class HandlersMixin:
             self._config["active_provider"] = settings["provider"]
         if "model" in settings:
             self._config["active_model"] = settings["model"]
-        if settings.get("custom_model"):
-            self._config["active_model"] = settings["custom_model"]
-        if "custom_base_url" in settings:
-            providers = self._config.setdefault("providers", {})
-            providers.setdefault("custom", {})["base_url"] = settings["custom_base_url"]
         if "api_key" in settings:
             provider_id = str(self._config.get("active_provider", "deepseek"))
             providers = self._config.setdefault("providers", {})
@@ -264,12 +281,62 @@ class HandlersMixin:
         self._post_settings()
         self._post({"type": "toast", "text": self._t("settings.saved"), "kind": "ok"})
 
-    def _handle_reset_settings(self: "_ChatEngine") -> None:
-        """Сбрасывает настройки к заводским значениям."""
-        self._config = self._normalize_config(DEFAULT_CONFIG.copy())
+    def _handle_reset_settings(self: "_ChatEngine", message: dict) -> None:
+        """Сбрасывает к заводским значениям только ключи текущей вкладки настроек."""
+        scope = str(message.get("scope", ""))
+        keys = RESET_SCOPES.get(scope)
+        if not keys:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("settings.reset_scope_unknown"),
+                    "kind": "err",
+                }
+            )
+            return
+        for key in keys:
+            if key in DEFAULT_CONFIG:
+                self._config[key] = json.loads(json.dumps(DEFAULT_CONFIG[key]))
+        self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._post_settings()
         self._post({"type": "toast", "text": self._t("settings.reset"), "kind": "ok"})
+
+    def _handle_reset_models(self: "_ChatEngine") -> None:
+        """Сбрасывает встроенные провайдеры и их модели к заводским значениям.
+
+        Сохраняет введённые API-ключи встроенных провайдеров.
+        """
+        providers = self._config.setdefault("providers", {})
+        for pid, pdef in DEFAULT_PROVIDERS.items():
+            api_key = ""
+            existing = providers.get(pid)
+            if isinstance(existing, dict):
+                api_key = str(existing.get("api_key", ""))
+            fresh = json.loads(json.dumps(pdef))
+            if api_key:
+                fresh["api_key"] = api_key
+            providers[pid] = fresh
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post({"type": "toast", "text": self._t("settings.models_reset"), "kind": "ok"})
+
+    def _handle_reset_custom_models(self: "_ChatEngine") -> None:
+        """Удаляет всех пользовательских провайдеров и их модели."""
+        providers = self._config.get("providers", {})
+        for pid in [
+            p
+            for p, d in providers.items()
+            if isinstance(d, dict) and not d.get("builtin")
+        ]:
+            del providers[pid]
+        self._config = self._normalize_config(self._config)
+        self._cap.save_config(json.dumps(self._config))
+        self._send_state()
+        self._post(
+            {"type": "toast", "text": self._t("settings.custom_models_reset"), "kind": "ok"}
+        )
 
     def _post_settings(self: "_ChatEngine") -> None:
         """Отправляет актуальные настройки в UI."""

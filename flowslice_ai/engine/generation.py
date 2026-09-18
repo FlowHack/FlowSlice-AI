@@ -119,7 +119,8 @@ class GenerationMixin:
     def _build_messages(self: "_ChatEngine", chat: dict[str, Any], user_text: str) -> list[dict[str, Any]]:
         """Собирает список сообщений для запроса к модели."""
         flags = chat.get("context_flags", {})
-        ctx = self._collect_context(flags)
+        modes = chat.get("context_modes", {})
+        ctx = self._collect_context(flags, modes)
         system = self._build_system_prompt(ctx)
         if len(system) > MAX_CONTEXT_CHARS:
             system = system[:MAX_CONTEXT_CHARS]

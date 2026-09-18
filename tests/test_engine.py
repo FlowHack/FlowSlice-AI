@@ -40,10 +40,9 @@ def test_collect_preset_data_orca_none(engine, monkeypatch) -> None:
     data = engine._collect_preset_data()
     assert set(data) == {"printer", "filament", "print"}
     for section in data.values():
-        assert set(section) == {"name", "params", "changed"}
+        assert set(section) == {"name", "params"}
         assert section["name"] == ""
         assert section["params"] == {}
-        assert section["changed"] == []
 
 
 def test_collect_preset_data_bundle_none(engine) -> None:
@@ -51,7 +50,7 @@ def test_collect_preset_data_bundle_none(engine) -> None:
     data = engine._collect_preset_data()
     assert set(data) == {"printer", "filament", "print"}
     for section in data.values():
-        assert set(section) == {"name", "params", "changed"}
+        assert set(section) == {"name", "params"}
 
 
 def test_preset_config_items_skips_metadata(engine) -> None:

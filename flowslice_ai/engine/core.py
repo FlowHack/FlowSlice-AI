@@ -17,7 +17,11 @@ if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
 from flowslice_ai.config import COMMANDS, DEFAULT_CONFIG, SETTINGS_KEYS
-from flowslice_ai.constants import CONTEXT_OPTIONS, MAX_CHAT_MESSAGES
+from flowslice_ai.constants import (
+    CONTEXT_OPTIONS,
+    MAX_CHAT_MESSAGES,
+    PRESET_CONTEXT_KEYS,
+)
 from flowslice_ai.i18n import I18N_PY
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.paths import CHATS_FILE
@@ -103,7 +107,9 @@ class CoreMixin:
             else:
                 normalized_providers[pid] = json.loads(json.dumps(pdef))
         for pid, pdef in providers.items():
-            if pid in DEFAULT_PROVIDERS or not isinstance(pdef, dict):
+            # "custom" — устаревший встроенный псевдо-провайдер: вычищаем его
+            # из старых конфигураций (пользовательские провайдеры создаются UI).
+            if pid in DEFAULT_PROVIDERS or pid == "custom" or not isinstance(pdef, dict):
                 continue
             user_models: dict[str, dict[str, Any]] = {}
             for mid, mdef in pdef.get("models", {}).items():
@@ -210,9 +216,17 @@ class CoreMixin:
         # Язык интерфейса: en/ru/sr.
         if merged.get("language") not in ("en", "ru", "sr"):
             merged["language"] = "en"
-        # Режим контекста пресетов: только изменённые или все параметры.
-        if merged.get("preset_context") not in ("changed", "all"):
-            merged["preset_context"] = "changed"
+        # Контекст слайсера: запомненные флаги и режимы выгрузки пресетов.
+        # Используются как значения по умолчанию для новых чатов.
+        context = merged.get("context")
+        if not isinstance(context, dict):
+            context = {}
+        ctx_flags = context.get("flags")
+        ctx_modes = context.get("modes")
+        merged["context"] = {
+            "flags": dict(ctx_flags) if isinstance(ctx_flags, dict) else {},
+            "modes": dict(ctx_modes) if isinstance(ctx_modes, dict) else {},
+        }
         try:
             font_size = int(merged.get("font_size", 14))
         except (TypeError, ValueError):
@@ -318,6 +332,11 @@ class CoreMixin:
         for chat in self._chats:
             if isinstance(chat, dict) and chat.get("title") == "Новый чат":
                 chat["title"] = ""
+            # Миграция: у старых чатов нет режимов выгрузки пресетов.
+            if isinstance(chat, dict) and not isinstance(chat.get("context_modes"), dict):
+                chat["context_modes"] = {
+                    key: "changed" for key in PRESET_CONTEXT_KEYS
+                }
         self._active = self._as_int(data.get("active"), 0)
         self._next_id = self._as_int(data.get("next_id"), 1)
         self._msg_counter = self._as_int(data.get("next_msg_id"), 1)
@@ -380,19 +399,35 @@ class CoreMixin:
     # ===== Мультичат =====
 
     def _create_chat(self: "_ChatEngine") -> dict[str, Any]:
-        """Создаёт новый чат и делает его активным."""
+        """Создаёт новый чат и делает его активным.
+
+        Флаги контекста и режимы выгрузки пресетов наследуются от последних
+        использованных (хранятся в конфигурации), чтобы не выставлять их заново.
+        """
+        saved = self._config.get("context")
+        saved = saved if isinstance(saved, dict) else {}
+        saved_flags = saved.get("flags")
+        saved_flags = saved_flags if isinstance(saved_flags, dict) else {}
+        saved_modes = saved.get("modes")
+        saved_modes = saved_modes if isinstance(saved_modes, dict) else {}
+        flags = {key: bool(saved_flags.get(key, True)) for key in CONTEXT_OPTIONS}
+        modes = {
+            key: ("all" if saved_modes.get(key) == "all" else "changed")
+            for key in PRESET_CONTEXT_KEYS
+        }
         chat = {
             "id": self._next_id,
             "title": "",
             "updated": time.time(),
             "pinned": False,
-            "context_flags": {key: True for key in CONTEXT_OPTIONS},
+            "context_flags": flags,
+            "context_modes": modes,
             "msgs": [],
         }
         self._next_id += 1
         self._chats.append(chat)
         self._active = chat["id"]
-        self._ctx_tokens = self._estimate_context_tokens(chat["context_flags"])
+        self._ctx_tokens = self._estimate_context_tokens(flags, modes)
         # Новый чат стартует на модели по умолчанию (конфиг уже нормализован).
         default_model = str(self._config.get("default_model", ""))
         if "::" in default_model:
@@ -494,6 +529,7 @@ class CoreMixin:
                     for cmd, _desc in COMMANDS
                 ],
                 "context_flags": chat["context_flags"],
+                "context_modes": chat.get("context_modes", {}),
                 "context_tokens": self._ctx_tokens,
                 "status": "streaming" if self._gen else "",
             }

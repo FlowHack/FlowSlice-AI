@@ -77,14 +77,29 @@ class ProvidersMixin:
         api_key = str(message.get("api_key", "")).strip()
         pid = self._slugify(name) + "_" + self._random_suffix()
         providers = self._config.setdefault("providers", {})
+        scheme = "anthropic" if str(message.get("scheme", "openai")) == "anthropic" else "openai"
         providers[pid] = {
             "name": name,
             "base_url": base_url,
             "api_key": api_key,
             "builtin": False,
-            "scheme": "anthropic" if str(message.get("scheme", "openai")) == "anthropic" else "openai",
+            "scheme": scheme,
             "models": {},
         }
+        # Первая модель может создаваться вместе с провайдером (форма из вкладки «Персональные»).
+        model_id = str(message.get("model_id", "")).strip()
+        if model_id:
+            label = str(message.get("label", "")).strip() or model_id
+            providers[pid]["models"][model_id] = {
+                "name": label,
+                "builtin": False,
+                "base_url": base_url,
+                "api_key": api_key,
+                "scheme": scheme,
+            }
+            # Сразу делаем нового провайдера и модель активными.
+            self._config["active_provider"] = pid
+            self._config["active_model"] = model_id
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()

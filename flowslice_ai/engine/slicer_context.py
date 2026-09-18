@@ -31,13 +31,19 @@ from flowslice_ai.slicer_context import PRESET_METADATA_KEYS, PRESET_SECTIONS
 class SlicerContextMixin:
     """Сбор контекста слайсера, системный промпт и оценка токенов."""
 
-    def _collect_context(self: "_ChatEngine", flags: dict[str, Any]) -> dict[str, Any]:
-        """Собирает контекст слайсера по включённым флагам."""
+    def _collect_context(
+        self: "_ChatEngine", flags: dict[str, Any], modes: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Собирает контекст слайсера по включённым флагам.
+
+        modes задаёт режим выгрузки для каждого раздела пресетов
+        ("changed" — только изменённые параметры, "all" — полный профиль).
+        """
         ctx: dict[str, Any] = {}
         if flags.get("model"):
             ctx["model"] = self._collect_model_data()
         if flags.get("filament") or flags.get("printer") or flags.get("print"):
-            ctx["presets"] = self._collect_preset_data()
+            ctx["presets"] = self._collect_preset_data(modes)
         return ctx
 
     def _collect_model_data(self: "_ChatEngine") -> dict[str, Any]:
@@ -53,18 +59,18 @@ class SlicerContextMixin:
                     if mesh is None:
                         continue
                     bbox = self._safe_get(mesh, "bounding_box")
+                    local_bbox: tuple[float, ...] = ()
                     if bbox is not None:
                         size = getattr(bbox, "size", bbox)
                         if isinstance(size, (tuple, list)) and len(size) >= 3:
                             local_bbox = tuple(round(float(v), 1) for v in size[:3])
-                        else:
-                            local_bbox = ()
-                    else:
-                        local_bbox = ()
                     volume = self._safe_get(mesh, "volume")
                     entry: dict[str, Any] = {
                         "name": self._safe_get(vol, "name") or "",
                         "local_bbox_mm": local_bbox,
+                        "local_bbox_min_mm": self._bbox_tuple(bbox, "min"),
+                        "local_bbox_max_mm": self._bbox_tuple(bbox, "max"),
+                        "local_bbox_center_mm": self._bbox_tuple(bbox, "center"),
                         "volume_cm3": round(volume / 1000.0, 2) if volume else 0.0,
                         "manifold": bool(self._safe_get(mesh, "is_manifold")),
                         "triangles": self._safe_get(mesh, "triangle_count") or 0,
@@ -124,6 +130,11 @@ class SlicerContextMixin:
                         "world_bbox_mm": tuple(
                             round(v, 1) for v in (bbox_max - bbox_min)
                         ),
+                        "world_bbox_min_mm": tuple(round(v, 1) for v in bbox_min),
+                        "world_bbox_max_mm": tuple(round(v, 1) for v in bbox_max),
+                        "world_bbox_center_mm": tuple(
+                            round(v, 1) for v in ((bbox_max + bbox_min) / 2.0)
+                        ),
                         "surface_area_cm2": round(area / 100.0, 2),
                         "mirrored": bool(self._safe_get(inst, "is_left_handed")),
                     }
@@ -165,6 +176,25 @@ class SlicerContextMixin:
         return stats
 
     @staticmethod
+    def _bbox_tuple(bbox: Any, name: str) -> tuple[float, ...]:
+        """Извлекает из BoundingBox кортеж (x, y, z) по имени атрибута.
+
+        Поддерживает как свойства, так и методы; округляет до 0.1 мм.
+        При отсутствии данных возвращает пустой кортеж.
+        """
+        if bbox is None:
+            return ()
+        raw = getattr(bbox, name, None)
+        if callable(raw):
+            try:
+                raw = raw()
+            except (TypeError, RuntimeError):
+                return ()
+        if isinstance(raw, (tuple, list)) and len(raw) >= 3:
+            return tuple(round(float(v), 1) for v in raw[:3])
+        return ()
+
+    @staticmethod
     def _safe_get(target: Any, name: str) -> Any:
         """Безопасно читает атрибут или метод объекта."""
         value = getattr(target, name, None)
@@ -193,19 +223,20 @@ class SlicerContextMixin:
             }
         return str(value)[:500]
 
-    def _collect_preset_data(self: "_ChatEngine") -> dict[str, Any]:
+    def _collect_preset_data(
+        self: "_ChatEngine", modes: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Собирает данные активных пресетов печати через preset_bundle.
 
         Для каждого раздела строится цепочка наследования (inherits) от корня
-        к выбранному пресету. В режиме "all" выводятся ВСЕ параметры (включая
-        унаследованные) с пометкой изменённых в текущем профиле; в режиме
-        "changed" — только изменённые. Режим задаётся настройкой
-        "preset_context" (значения "changed"/"all").
+        к выбранному пресету. Режим выбирается отдельно для каждого раздела
+        через modes: "all" — все параметры, "changed" — только изменённые
+        (по умолчанию). Поле "changed" в вывод не попадает.
         """
         empty: dict[str, Any] = {
-            "printer": {"name": "", "params": {}, "changed": []},
-            "filament": {"name": "", "params": {}, "changed": []},
-            "print": {"name": "", "params": {}, "changed": []},
+            "printer": {"name": "", "params": {}},
+            "filament": {"name": "", "params": {}},
+            "print": {"name": "", "params": {}},
         }
         if orca is None:
             return empty
@@ -214,10 +245,10 @@ class SlicerContextMixin:
             if bundle is None:
                 return empty
             has_full_value = callable(getattr(bundle, "full_config_value", None))
-            mode = self._config.get("preset_context", "changed")
-            mode = mode if mode == "all" else "changed"
+            mode_map = modes if isinstance(modes, dict) else {}
             out: dict[str, Any] = {}
             for key, (collection_attr, fields) in PRESET_SECTIONS.items():
+                mode = "all" if mode_map.get(key) == "all" else "changed"
                 out[key] = self._collect_preset_section(
                     bundle, collection_attr, fields, has_full_value, mode
                 )
@@ -236,10 +267,10 @@ class SlicerContextMixin:
     ) -> dict[str, Any]:
         """Собирает данные одного раздела пресетов в едином формате.
 
-        Формат раздела: {"name", "params", "changed"} — имя выбранного
-        пресета, словарь параметров и список ключей изменённых параметров.
+        Формат раздела: {"name", "params"} — имя выбранного пресета и словарь
+        параметров (полных или только изменённых согласно mode).
         """
-        section: dict[str, Any] = {"name": "", "params": {}, "changed": []}
+        section: dict[str, Any] = {"name": "", "params": {}}
         try:
             collection = getattr(bundle, collection_attr, None)
             if collection is None:
@@ -278,7 +309,6 @@ class SlicerContextMixin:
                     if value not in (None, ""):
                         params[field] = self._json_safe(value)
             section["params"] = params
-            section["changed"] = sorted(changed.keys())
         except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
             _LOGGER.warning(
                 "Не удалось собрать раздел пресетов %s: %s", collection_attr, exc
@@ -424,10 +454,12 @@ class SlicerContextMixin:
         """Грубо оценивает число токенов в тексте."""
         return len(text) // 4
 
-    def _estimate_context_tokens(self: "_ChatEngine", flags: dict[str, Any]) -> int:
-        """Оценивает число токенов контекста по флагам."""
+    def _estimate_context_tokens(
+        self: "_ChatEngine", flags: dict[str, Any], modes: dict[str, Any] | None = None
+    ) -> int:
+        """Оценивает число токенов контекста по флагам и режимам пресетов."""
         try:
-            ctx = self._collect_context(flags)
+            ctx = self._collect_context(flags, modes)
         except Exception as exc:  # noqa: BLE001
             _LOGGER.warning("Не удалось собрать контекст слайсера: %s", exc)
             ctx = {}

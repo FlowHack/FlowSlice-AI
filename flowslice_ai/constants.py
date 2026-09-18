@@ -21,3 +21,6 @@ MAX_IMAGES_IN_HISTORY = 2
 MAX_CONTEXT_CHARS = 60_000
 
 CONTEXT_OPTIONS = ("filament", "printer", "print", "model", "history")
+
+# Разделы пресетов, для которых режим выгрузки (changed/all) выбирается отдельно.
+PRESET_CONTEXT_KEYS = ("filament", "printer", "print")

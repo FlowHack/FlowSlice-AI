@@ -19,9 +19,9 @@ def test_save_config_roundtrip(engine) -> None:
 
 
 def test_reset_config(engine) -> None:
-    """reset_config() возвращает словарь, равный DEFAULT_CONFIG."""
+    """reset_config() возвращает конфигурацию, равную нормализованному дефолту."""
     engine.save_config({"temperature": 1.5, "notes": "мусор"})
-    assert engine.reset_config() == DEFAULT_CONFIG
+    assert engine.reset_config() == engine._normalize_config(DEFAULT_CONFIG.copy())
 
 
 def test_normalize_unknown_keys(engine) -> None:

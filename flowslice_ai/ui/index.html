@@ -80,6 +80,7 @@
     </div>
     <div class="settings-tabs">
       <button type="button" class="settings-tab active" data-tab="models" data-i18n="settings.tab.models">Модели</button>
+      <button type="button" class="settings-tab" data-tab="custom" data-i18n="settings.tab.custom">Персональные</button>
       <button type="button" class="settings-tab" data-tab="general" data-i18n="settings.tab.general">Общие значения</button>
       <button type="button" class="settings-tab" data-tab="appearance" data-i18n="settings.tab.appearance">Оформление</button>
     </div>
@@ -182,6 +183,115 @@
           </div>
         </div>
       </div>
+      <div id="tabCustom" style="display:none">
+        <!-- Нет ни одного персонального провайдера: создание провайдера и первой модели -->
+        <div id="ctEmptyBlock">
+          <div class="field">
+            <label for="ctNewName" data-i18n="settings.provider">Провайдер</label>
+            <input type="text" id="ctNewName" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="ctNewBaseUrl"><span data-i18n="settings.base_url">Базовый URL API</span> <span class="help-icon" data-i18n-tooltip="settings.help_url" data-i18n-title="settings.help_url">?</span></label>
+            <input type="text" id="ctNewBaseUrl" autocomplete="off">
+            <label for="ctNewSchemeDD" style="margin-top:8px"><span data-i18n="settings.scheme">Схема API</span> <span class="help-icon" data-i18n-tooltip="settings.help_scheme" data-i18n-title="settings.help_scheme">?</span></label>
+            <div class="dd-wrap" id="ctNewSchemeDD"></div>
+          </div>
+          <div class="field">
+            <label for="ctNewModelId"><span data-i18n="settings.model_system_name">Название в системе (id)</span> <span class="help-icon" data-i18n-tooltip="settings.help_model_name" data-i18n-title="settings.help_model_name">?</span></label>
+            <input type="text" id="ctNewModelId" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="ctNewModelLabel"><span data-i18n="settings.model_name">Удобное название</span> <span class="help-icon" data-i18n-tooltip="settings.help_model_alias" data-i18n-title="settings.help_model_alias">?</span></label>
+            <input type="text" id="ctNewModelLabel" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="ctNewApiKey"><span data-i18n="settings.api_key">API-ключ</span> <span class="help-icon" data-i18n-tooltip="settings.help_api_key" data-i18n-title="settings.help_api_key">?</span></label>
+            <div class="key-row">
+              <input type="password" id="ctNewApiKey" autocomplete="off">
+              <button type="button" id="ctNewApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="ctNewSubmit" class="primary-btn" data-i18n="settings.add">Добавить</button>
+            <button type="button" id="ctNewCancel" class="ghost-btn" data-i18n="settings.cancel">Отмена</button>
+          </div>
+        </div>
+        <!-- Есть персональные провайдеры: управление провайдером и моделями -->
+        <div id="ctMainBlock" style="display:none">
+          <div class="field">
+            <label><span data-i18n="settings.provider">Провайдер</span> <span class="help-icon" data-i18n-tooltip="settings.help_provider" data-i18n-title="settings.help_provider">?</span></label>
+            <div class="dd-wrap" id="ctProviderDD"></div>
+          </div>
+          <div class="field">
+            <label for="ctBaseUrl"><span data-i18n="settings.base_url">Базовый URL API</span> <span class="help-icon" data-i18n-tooltip="settings.help_url" data-i18n-title="settings.help_url">?</span></label>
+            <input type="text" id="ctBaseUrl" autocomplete="off">
+            <label for="ctSchemeDD" style="margin-top:8px"><span data-i18n="settings.scheme">Схема API</span> <span class="help-icon" data-i18n-tooltip="settings.help_scheme" data-i18n-title="settings.help_scheme">?</span></label>
+            <div class="dd-wrap" id="ctSchemeDD"></div>
+          </div>
+          <div class="field">
+            <label for="ctApiKey"><span data-i18n="settings.api_key">API-ключ</span> <span class="help-icon" data-i18n-tooltip="settings.help_api_key" data-i18n-title="settings.help_api_key">?</span></label>
+            <div class="key-row">
+              <input type="password" id="ctApiKey" autocomplete="off">
+              <button type="button" id="ctApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
+            </div>
+          </div>
+          <div class="field" id="ctModelBlock">
+            <hr class="settings-divider">
+            <label><span data-i18n="settings.model">Модель</span> <span class="help-icon" data-i18n-tooltip="settings.help_model" data-i18n-title="settings.help_model">?</span></label>
+            <div class="dd-wrap" id="ctModelDD"></div>
+          </div>
+          <div class="field" id="ctModelSettings">
+            <label data-i18n="settings.model_settings">Настройки модели</label>
+            <div class="field">
+              <label for="ctModelName"><span data-i18n="settings.model_name">Удобное название</span> <span class="help-icon" data-i18n-tooltip="settings.help_model_alias" data-i18n-title="settings.help_model_alias">?</span></label>
+              <input type="text" id="ctModelName" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="ctModelSystemName"><span data-i18n="settings.model_system_name">Название в системе (id)</span> <span class="help-icon" data-i18n-tooltip="settings.help_model_name" data-i18n-title="settings.help_model_name">?</span></label>
+              <input type="text" id="ctModelSystemName" readonly>
+            </div>
+            <hr class="settings-divider">
+            <div class="settings-subtitle" data-i18n="settings.fine_tuning">Тонкие настройки</div>
+            <div class="per-model-controls" style="margin-bottom:6px">
+              <label for="ctTemperature" style="margin:0;white-space:nowrap"><span data-i18n="settings.temperature">Температура:</span> <span id="ctTemperatureValue" class="range-value">0.7</span> <span class="help-icon" data-i18n-tooltip="settings.help_temperature" data-i18n-title="settings.help_temperature">?</span></label>
+              <input type="range" id="ctTemperature" min="0" max="2" step="0.1" value="0.7">
+              <span class="dd-default-badge" id="ctTemperatureBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+              <button type="button" id="ctTemperatureReset" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+            </div>
+            <div class="per-model-controls field-gap" style="margin-bottom:6px">
+              <label for="ctMaxTokens" style="margin:0;white-space:nowrap"><span data-i18n="settings.max_tokens">Максимум токенов</span> <span class="help-icon" data-i18n-tooltip="settings.help_max_tokens" data-i18n-title="settings.help_max_tokens">?</span></label>
+              <input type="number" id="ctMaxTokens" min="1" max="100000" step="1" value="4096">
+              <span class="dd-default-badge" id="ctMaxTokensBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+              <button type="button" id="ctMaxTokensReset" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+            </div>
+            <div class="per-model-controls">
+              <div class="check-row" style="margin:0">
+                <input type="checkbox" id="ctReasoning">
+                <label for="ctReasoning"><span data-i18n="settings.reasoning">Расширенное мышление</span> <span class="help-icon" data-i18n-tooltip="settings.help_reasoning" data-i18n-title="settings.help_reasoning">?</span></label>
+              </div>
+              <span class="dd-default-badge" id="ctReasoningBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+              <button type="button" id="ctReasoningReset" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+            </div>
+          </div>
+          <div class="field" id="ctActionsBlock">
+            <hr class="settings-divider" id="ctActionsHr">
+            <div class="model-actions">
+              <button type="button" id="ctAddModelBtn" class="ghost-btn" data-i18n="settings.add_model">+ Добавить модель</button>
+              <button type="button" id="ctDeleteModelBtn" class="danger-btn" data-i18n="settings.delete_model">Удалить выбранную модель</button>
+            </div>
+          </div>
+          <div class="field">
+            <div id="ctAddForm" style="display:none;margin-top:8px">
+              <input type="text" id="ctAddSystemName" placeholder="Название в системе (id)" data-i18n-placeholder="settings.model_system_name">
+              <input type="text" id="ctAddLabel" placeholder="Удобное название" data-i18n-placeholder="settings.model_name">
+              <div class="modal-actions">
+                <button type="button" id="ctAddSubmit" class="primary-btn" data-i18n="settings.add">Добавить</button>
+                <button type="button" id="ctAddCancel" class="ghost-btn" data-i18n="settings.cancel">Отмена</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="tabGeneral" style="display:none">
         <div class="field">
           <label for="setNotes"><span data-i18n="settings.notes">Заметки для контекста (видны агенту)</span> <span class="help-icon" data-i18n-tooltip="settings.help_notes" data-i18n-title="settings.help_notes">?</span></label>
@@ -204,9 +314,11 @@
             <label for="setGlobalReasoning"><span data-i18n="settings.reasoning">Расширенное мышление</span> <span class="help-icon" data-i18n-tooltip="settings.help_reasoning" data-i18n-title="settings.help_reasoning">?</span></label>
           </div>
         </div>
-        <div class="field">
-          <label for="setPresetContextDD"><span data-i18n="settings.preset_context">Контекст пресетов</span> <span class="help-icon" data-i18n-tooltip="settings.help_preset_context" data-i18n-title="settings.help_preset_context">?</span></label>
-          <div class="dd-wrap" id="setPresetContextDD"></div>
+        <hr class="settings-divider">
+        <div class="settings-subtitle" data-i18n="settings.data_title">Сброс данных</div>
+        <div class="model-actions">
+          <button type="button" id="resetModelsBtn" class="ghost-btn" data-i18n="settings.reset_models">Сброс моделей</button>
+          <button type="button" id="resetCustomModelsBtn" class="danger-btn" data-i18n="settings.reset_custom_models">Сброс персональных моделей</button>
         </div>
       </div>
       <div id="tabAppearance" style="display:none">

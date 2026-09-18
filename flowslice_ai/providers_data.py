@@ -288,12 +288,4 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
             },
         },
     },
-    "custom": {
-        "name": "Custom",
-        "base_url": "",
-        "api_key": "",
-        "builtin": False,
-        "scheme": "openai",
-        "models": {},
-    },
 }

@@ -85,7 +85,8 @@ class CommandsMixin:
 
     def _cmd_printer(self: "_ChatEngine") -> None:
         """Формирует сводку профилей печати."""
-        data = self._collect_preset_data()
+        chat = self._active_chat()
+        data = self._collect_preset_data(chat.get("context_modes", {}))
         lines = [self._t("cmd.printer.title")]
         sections = (
             ("printer", self._t("cmd.printer.section_printer")),
@@ -102,10 +103,8 @@ class CommandsMixin:
             name = section.get("name")
             if name:
                 lines.append("  " + self._t("cmd.printer.profile", name=str(name)))
-            changed = set(section.get("changed", []))
             for field, value in params.items():
-                marker = " *" if field in changed else ""
-                lines.append("  " + str(field) + ": " + str(value) + marker)
+                lines.append("  " + str(field) + ": " + str(value))
         self._append_system("\n".join(lines))
 
     def _cmd_stats(self: "_ChatEngine") -> None:
@@ -119,13 +118,9 @@ class CommandsMixin:
         """Выводит полный дамп контекста слайсера."""
         chat = self._active_chat()
         flags = chat.get("context_flags", {})
-        ctx = self._collect_context(flags)
+        modes = chat.get("context_modes", {})
+        ctx = self._collect_context(flags, modes)
         lines = [self._t("cmd.context.title")]
-        mode = self._config.get("preset_context", "changed")
-        mode_label = self._t(
-            "cmd.context.preset_all" if mode == "all" else "cmd.context.preset_changed"
-        )
-        lines.append(self._t("cmd.context.preset_mode", mode=mode_label))
         lines.append(self._t("cmd.context.system_prompt"))
         lines.append(self._build_system_prompt(ctx, include_data=False))
         lines.append(self._t("cmd.context.checkboxes"))
@@ -146,7 +141,7 @@ class CommandsMixin:
         else:
             lines.append(self._t("cmd.context.empty"))
         lines.append(
-            self._t("cmd.context.tokens", v=str(self._estimate_context_tokens(flags)))
+            self._t("cmd.context.tokens", v=str(self._estimate_context_tokens(flags, modes)))
         )
         self._append_system("\n".join(lines))
 

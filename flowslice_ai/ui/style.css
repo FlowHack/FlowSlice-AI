@@ -418,6 +418,19 @@ select option {
 .ctx-check input {
   accent-color: var(--orca-accent);
 }
+.ctx-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ctx-mode {
+  font-size: 11px;
+  padding: 1px 2px;
+  border: 1px solid var(--orca-border);
+  border-radius: 4px;
+  background: var(--orca-input);
+  color: var(--orca-fg);
+}
 .context-tokens {
   font-size: 12px;
   color: var(--orca-muted);
