@@ -360,7 +360,7 @@ class ApiClientMixin:
             with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
                 return self._read_sse(resp, chat_id)
         except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")[:500]
+            body = self._http_error_detail(exc)
             raise ApiError(
                 self._t("err.api", code=str(exc.code), body=body)
             ) from exc
@@ -422,7 +422,7 @@ class ApiClientMixin:
             with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
                 return self._read_sse_anthropic(resp, chat_id)
         except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")[:500]
+            body = self._http_error_detail(exc)
             raise ApiError(
                 self._t("err.api", code=str(exc.code), body=body)
             ) from exc
@@ -655,24 +655,44 @@ class ApiClientMixin:
 
     @staticmethod
     def _http_error_detail(exc: urllib.error.HTTPError) -> str:
-        """Извлекает текст ошибки из тела HTTP-ответа для показа в UI."""
+        """Извлекает понятный текст ошибки из тела HTTP-ответа для UI.
+
+        Помимо самого сообщения добавляет провайдера и подсказку из блока
+        ``metadata`` (OpenRouter), чтобы причина (например, перегрузка
+        upstream-провайдера) была видна прямо в чате.
+        """
         try:
             raw = exc.read().decode("utf-8", "replace")
         except OSError:
             return ""
-        raw = raw.strip()[:300]
+        raw = raw.strip()
         if not raw:
             return ""
+        text = raw[:300]
         try:
             data = json.loads(raw)
         except (ValueError, TypeError):
-            return raw
-        if isinstance(data, dict):
-            error = data.get("error")
-            if isinstance(error, dict) and error.get("message"):
-                return str(error["message"])[:300]
-            if isinstance(error, str) and error:
-                return error[:300]
-            if data.get("detail"):
-                return str(data["detail"])[:300]
-        return raw
+            return text
+        if not isinstance(data, dict):
+            return text
+        error = data.get("error")
+        parts: list[str] = []
+        meta: dict[str, Any] = {}
+        if isinstance(error, dict):
+            if error.get("message"):
+                parts.append(str(error["message"]))
+            if isinstance(error.get("metadata"), dict):
+                meta = error["metadata"]
+        elif isinstance(error, str) and error:
+            parts.append(error)
+        elif data.get("detail"):
+            parts.append(str(data["detail"]))
+        if not parts:
+            return text
+        provider = meta.get("provider_name")
+        if provider:
+            parts.append("[" + str(provider) + "]")
+        hint = meta.get("remedy_hint") or meta.get("raw")
+        if hint:
+            parts.append(str(hint))
+        return " ".join(parts)[:300]

@@ -77,12 +77,16 @@ class GenerationMixin:
             )
             self._record_usage(user_text, full_text)
         except FlowSliceError as exc:
-            self._fail_generation(chat, chat_id, user_msg_id, msg_id, str(exc))
+            _LOGGER.warning("Ошибка генерации (запрос %s): %s", user_msg_id, exc)
+            self._fail_generation(chat, chat_id, msg_id, str(exc))
         except Exception as exc:
-            _LOGGER.error("Необработанная ошибка генерации: %s", exc, exc_info=True)
-            self._fail_generation(
-                chat, chat_id, user_msg_id, msg_id, self._t("gen.internal_error")
+            _LOGGER.error(
+                "Необработанная ошибка генерации (запрос %s): %s",
+                user_msg_id,
+                exc,
+                exc_info=True,
             )
+            self._fail_generation(chat, chat_id, msg_id, self._t("gen.internal_error"))
         finally:
             with self._gen_lock:
                 self._gen = False
@@ -95,12 +99,14 @@ class GenerationMixin:
         self: "_ChatEngine",
         chat: dict[str, Any],
         chat_id: int,
-        user_msg_id: int,
         msg_id: int,
         text: str,
     ) -> None:
-        """Помечает генерацию как ошибочную и уведомляет UI."""
-        self._remove_msg(chat, user_msg_id)
+        """Помечает генерацию как ошибочную и уведомляет UI.
+
+        Сообщение пользователя НЕ удаляется: оно остаётся в чате, чтобы было
+        видно, какой именно запрос привёл к ошибке.
+        """
         msg = self._find_msg(chat, msg_id)
         if msg is not None:
             msg["text"] = text
@@ -113,14 +119,6 @@ class GenerationMixin:
             if msg.get("id") == msg_id:
                 return msg
         return None
-
-    def _remove_msg(self: "_ChatEngine", chat: dict[str, Any], msg_id: int) -> None:
-        """Удаляет сообщение из чата по идентификатору."""
-        msgs = chat.get("msgs", [])
-        for index, msg in enumerate(msgs):
-            if msg.get("id") == msg_id:
-                del msgs[index]
-                return
 
     @staticmethod
     def _message_images(msg: dict[str, Any]) -> list[str]:
@@ -282,6 +280,9 @@ class GenerationMixin:
         total = 0
         for msg in reversed(history):
             if msg.get("role") not in ("user", "assistant"):
+                continue
+            # Технические ошибки не отправляем модели: это не ответ ассистента.
+            if msg.get("error"):
                 continue
             text = str(msg.get("text", ""))
             if msg.get("image"):

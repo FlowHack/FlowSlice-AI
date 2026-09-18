@@ -39,3 +39,33 @@ def test_save_load_chats(engine) -> None:
 
     engine._save_chats()
     assert CHATS_FILE.exists()
+
+
+def test_fail_generation_keeps_user_message(engine) -> None:
+    """_fail_generation() не удаляет запрос пользователя, помечая ответ ошибкой."""
+    chat = engine._create_chat()
+    chat["msgs"] = [
+        {"id": 1, "role": "user", "text": "почему 429?"},
+        {"id": 2, "role": "assistant", "text": ""},
+    ]
+    engine._fail_generation(chat, chat["id"], 2, "Ошибка API 429")
+    users = [m for m in chat["msgs"] if m["role"] == "user"]
+    assert len(users) == 1
+    assert users[0]["text"] == "почему 429?"
+    assistant = [m for m in chat["msgs"] if m["role"] == "assistant"][0]
+    assert assistant["error"] is True
+    assert assistant["text"] == "Ошибка API 429"
+
+
+def test_history_skips_error_messages(engine) -> None:
+    """_history_messages() не отправляет модели технические ошибки."""
+    chat = engine._create_chat()
+    chat["msgs"] = [
+        {"id": 1, "role": "user", "text": "вопрос"},
+        {"id": 2, "role": "assistant", "text": "Ошибка API 429", "error": True},
+        {"id": 3, "role": "assistant", "text": "нормальный ответ"},
+    ]
+    history = engine._history_messages(chat, 100000, include_last_user=True)
+    texts = [m["content"] for m in history]
+    assert "Ошибка API 429" not in texts
+    assert "нормальный ответ" in texts
