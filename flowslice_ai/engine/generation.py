@@ -277,7 +277,11 @@ class GenerationMixin:
         return result
 
     def _render_file(self: "_ChatEngine", file_info: dict[str, Any]) -> str:
-        """Формирует текстовый блок файла для истории сообщений."""
+        """Формирует текстовый блок файла для истории сообщений.
+
+        Блок явно ограничен заголовком и меткой конца, чтобы модель понимала:
+        это содержимое файла, а не ссылка на недоступное вложение.
+        """
         name = str(file_info.get("name", self._t("attach.default_name")))
         content = str(file_info.get("text", ""))
         if not content:
@@ -285,4 +289,4 @@ class GenerationMixin:
         block = self._t("prompt.file", name=name, text=content)
         if file_info.get("truncated"):
             block += self._t("prompt.file_truncated")
-        return block
+        return block + self._t("prompt.file_footer")

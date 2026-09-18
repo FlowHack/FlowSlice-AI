@@ -355,6 +355,11 @@ class CoreMixin:
                 chat["context_modes"] = {
                     key: "changed" for key in PRESET_CONTEXT_KEYS
                 }
+            # Миграция: старые версии дописывали метки вложений прямо в текст.
+            if isinstance(chat, dict):
+                for msg in chat.get("msgs", []):
+                    if isinstance(msg, dict) and isinstance(msg.get("text"), str):
+                        msg["text"] = self._strip_legacy_markers(msg["text"])
         self._active = self._as_int(data.get("active"), 0)
         self._next_id = self._as_int(data.get("next_id"), 1)
         self._msg_counter = self._as_int(data.get("next_msg_id"), 1)
@@ -365,6 +370,26 @@ class CoreMixin:
         self._ctx_tokens = self._estimate_context_tokens(
             active_chat.get("context_flags", {}), active_chat.get("context_modes", {})
         )
+
+    @staticmethod
+    def _strip_legacy_markers(text: str) -> str:
+        """Убирает легаси-метки вложений, которые старые версии дописывали в текст.
+
+        Метка вида ``[file: name]`` больше не добавляется: содержимое вложений
+        хранится в самом сообщении, поэтому такая метка только путает модель.
+        """
+        for marker in (" [photo]", " [фото]", " [foto]"):
+            text = text.replace(marker, "")
+        for prefix in ("[file: ", "[файл: ", "[fajl: "):
+            while True:
+                start = text.rfind(prefix)
+                if start == -1:
+                    break
+                end = text.find("]", start)
+                if end == -1:
+                    break
+                text = text[:start].rstrip() + text[end + 1:]
+        return text
 
     def _flatten_chats(self: "_ChatEngine") -> list[dict[str, Any]]:
         """Возвращает копию чатов для записи на диск и отправки в UI.

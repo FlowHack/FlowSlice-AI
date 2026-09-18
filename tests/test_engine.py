@@ -448,7 +448,8 @@ def test_chat_message_accepts_inline_attachments(engine, monkeypatch) -> None:
     content = messages[-1]["content"]
     text = content if isinstance(content, str) else content[0]["text"]
     assert "СЕКРЕТ_ФАЙЛА" in text
-    assert "Attached file: a.txt" in text
+    assert "<source>a.txt</source>" in text
+    assert "<document_content>" in text
 
 
 def test_chat_with_only_attachment_keeps_text_empty(engine, monkeypatch) -> None:
@@ -526,6 +527,15 @@ def test_flatten_keeps_file_content_and_no_markers(engine, monkeypatch) -> None:
     assert flat_msg["text"] == "смотри файл"
     assert "[file:" not in flat_msg["text"]
     assert flat_msg["attachments"][0]["file"]["text"] == "ТЕЛО"
+
+
+def test_strip_legacy_markers_removes_file_and_photo_marks(engine) -> None:
+    """Миграция убирает старые метки вложений из текста сообщений."""
+    assert engine._strip_legacy_markers("текст [file: a.txt]") == "текст"
+    assert engine._strip_legacy_markers("текст [файл: b.gcode]") == "текст"
+    assert engine._strip_legacy_markers("текст [fajl: c.txt]") == "текст"
+    assert engine._strip_legacy_markers("текст [фото] [photo]") == "текст"
+    assert engine._strip_legacy_markers("обычный текст") == "обычный текст"
 
 
 def test_attachment_content_survives_reload(engine, monkeypatch) -> None:
