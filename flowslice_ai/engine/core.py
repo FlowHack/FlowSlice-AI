@@ -657,6 +657,7 @@ class CoreMixin:
                         "reasoning": mdef.get("reasoning"),
                         "scheme": str(mdef.get("scheme") or pdef.get("scheme") or "openai"),
                         "has_key": bool(str(mdef.get("api_key", "")).strip()),
+                        "vision": mdef.get("vision"),
                     }
                     if not mdef.get("builtin", False):
                         entry["base_url"] = str(mdef.get("base_url", ""))

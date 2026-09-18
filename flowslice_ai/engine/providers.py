@@ -9,7 +9,6 @@
 # pylint: disable=too-many-lines,too-many-statements,too-many-branches
 # pylint: disable=too-many-locals,too-many-public-methods,too-few-public-methods,line-too-long
 
-import json
 import secrets
 from typing import TYPE_CHECKING, Any
 

@@ -172,10 +172,11 @@ def test_collect_context_images_keeps_all_current(engine) -> None:
     assert len(result) == 4
 
 
-def test_build_messages_adds_image_hints(engine) -> None:
-    """При наличии изображения промпт требует разбор дефектов и запрещает выдумки."""
+def test_build_messages_adds_image_hints(engine, monkeypatch) -> None:
+    """При наличии изображения промпт требует разбор дефектов печати."""
     chat = engine._active_chat()
     engine._config["language"] = "en"
+    monkeypatch.setattr(engine, "_model_supports_images", lambda: True)
     chat["msgs"] = [
         {
             "id": 1,
@@ -188,7 +189,31 @@ def test_build_messages_adds_image_hints(engine) -> None:
     messages = engine._build_messages(chat, "что не так с печатью?")
     system = messages[0]["content"]
     assert "Visually analyze the defects" in system
+    assert "cannot process images" not in system
+
+
+def test_build_messages_no_vision_model_skips_images(engine) -> None:
+    """Модель без зрения: картинки не уходят, промпт просит честно об этом сказать."""
+    chat = engine._active_chat()
+    engine._config["language"] = "en"
+    # deepseek-chat по умолчанию помечен vision: false.
+    assert engine._model_supports_images() is False
+    chat["msgs"] = [
+        {
+            "id": 1,
+            "role": "user",
+            "text": "что не так с печатью?",
+            "ts": 0,
+            "attachments": [{"image": "data:image/jpeg;base64,AAAA", "name": "a.jpg"}],
+        }
+    ]
+    messages = engine._build_messages(chat, "что не так с печатью?")
+    system = messages[0]["content"]
     assert "cannot process images" in system
+    assert "Visually analyze the defects" not in system
+    user = messages[-1]["content"]
+    user_text = user if isinstance(user, str) else json.dumps(user, ensure_ascii=False)
+    assert "data:image/jpeg;base64,AAAA" not in user_text
 
 
 def test_build_messages_without_images_has_no_hints(engine) -> None:

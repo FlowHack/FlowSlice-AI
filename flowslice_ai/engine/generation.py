@@ -24,7 +24,9 @@ from flowslice_ai.logging import _LOGGER
 class GenerationMixin:
     """Запуск генерации, сборка сообщений и обработка ошибок."""
 
-    def _start_generation(self: "_ChatEngine", chat_id: int, user_text: str, user_msg_id: int) -> None:
+    def _start_generation(
+        self: "_ChatEngine", chat_id: int, user_text: str, user_msg_id: int
+    ) -> None:
         """Запускает генерацию ответа в фоновом потоке."""
         with self._gen_lock:
             if self._gen:
@@ -135,6 +137,20 @@ class GenerationMixin:
                     images.append(data)
         return images
 
+    @staticmethod
+    def _message_has_image(msg: dict[str, Any]) -> bool:
+        """Проверяет наличие изображения в сообщении (в том числе без data URI)."""
+        if isinstance(msg.get("image"), str):
+            return True
+        attachments = msg.get("attachments")
+        if isinstance(attachments, list):
+            for att in attachments:
+                if not isinstance(att, dict):
+                    continue
+                if att.get("image") or att.get("kind") == "image":
+                    return True
+        return False
+
     def _collect_context_images(self: "_ChatEngine", chat: dict[str, Any]) -> list[str]:
         """Собирает изображения: все из текущего запроса + ограниченно из истории."""
         images: list[str] = []
@@ -158,14 +174,22 @@ class GenerationMixin:
                 break
         return images[:MAX_IMAGES_IN_REQUEST]
 
-    def _build_messages(self: "_ChatEngine", chat: dict[str, Any], user_text: str) -> list[dict[str, Any]]:
+    def _build_messages(
+        self: "_ChatEngine", chat: dict[str, Any], user_text: str
+    ) -> list[dict[str, Any]]:
         """Собирает список сообщений для запроса к модели."""
         flags = chat.get("context_flags", {})
         modes = chat.get("context_modes", {})
         ctx = self._collect_context(flags, modes)
         # Изображения собираем заранее: от их наличия зависит системный промпт.
         images = self._collect_context_images(chat)
-        system = self._build_system_prompt(ctx, has_images=bool(images))
+        no_vision = False
+        if self._model_supports_images() is False:
+            # Модель без зрения: картинку не отправляем, но просим честно
+            # сказать, что анализировать изображения она не умеет.
+            no_vision = self._message_has_image(self._last_user_msg(chat) or {})
+            images = []
+        system = self._build_system_prompt(ctx, has_images=bool(images), no_vision=no_vision)
         if len(system) > MAX_CONTEXT_CHARS:
             system = system[:MAX_CONTEXT_CHARS]
         messages: list[dict[str, Any]] = [{"role": "system", "content": system}]

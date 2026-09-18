@@ -109,19 +109,6 @@ class HandlersMixin:
         # Заголовок чата для отправки одним вложением формируем по его метке,
         # но сам текст сообщения не подменяем: пользователь его не писал.
         title_text = text or self._attachment_label()
-        has_image = any(att.get("image") for att in self._pending_attachments)
-        if has_image and self._model_supports_images() is False:
-            self._pending_attachments = []
-            self._post(
-                {
-                    "type": "toast",
-                    "text": self._t(
-                        "attach.image_unsupported", model=self._active_model_id()
-                    ),
-                    "kind": "err",
-                }
-            )
-            return
         if text.startswith("/"):
             if self._handle_command(text):
                 self._pending_attachments = []
@@ -426,17 +413,8 @@ class HandlersMixin:
             _LOGGER.warning("Пропущено вложение без данных (kind=%s)", kind)
             return None
         if kind == "image":
-            if self._model_supports_images() is False:
-                self._post(
-                    {
-                        "type": "toast",
-                        "text": self._t(
-                            "attach.image_unsupported", model=self._active_model_id()
-                        ),
-                        "kind": "err",
-                    }
-                )
-                return None
+            # Изображение принимаем всегда: если модель без зрения, оно останется
+            # в чате, а системный промпт попросит честно сообщить об этом.
             if len(data) > MAX_IMAGE_B64:
                 self._post(
                     {

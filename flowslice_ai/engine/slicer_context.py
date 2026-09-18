@@ -521,19 +521,22 @@ class SlicerContextMixin:
         ctx: dict[str, Any],
         include_data: bool = True,
         has_images: bool = False,
+        no_vision: bool = False,
     ) -> str:
         """Собирает системный промпт с данными контекста слайсера.
 
         При include_data=False возвращается только персона, язык, заметки и
         данные — без JSON-данных слайсера (используется командой /context,
         которая выводит данные отдельным блоком). При has_images=True
-        добавляются правила анализа изображений дефектов печати.
+        добавляются правила анализа изображений дефектов печати, при
+        no_vision=True — требование честно сообщить об отсутствии зрения.
         """
         parts = [SYSTEM_PROMPT]
         # Язык ответа задаётся отдельно: базовый промпт всегда на английском.
         parts.append(self._t("prompt.language"))
         if has_images:
             parts.append(IMAGE_ANALYSIS_HINT)
+        if no_vision:
             parts.append(NO_VISION_HINT)
         notes = str(self._config.get("notes", "")).strip()
         if notes:

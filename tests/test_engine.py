@@ -309,15 +309,13 @@ def test_model_supports_images_unknown(engine) -> None:
     assert engine._model_supports_images() is None
 
 
-def test_attach_image_blocked_without_vision(engine) -> None:
-    """_handle_attach_file() отклоняет изображение без поддержки vision."""
+def test_attach_image_kept_without_vision(engine) -> None:
+    """Изображение принимается даже моделью без зрения: решение принимает промпт."""
     engine._config["active_provider"] = "deepseek"
     engine._config["active_model"] = "deepseek-chat"
-    posted: list[dict] = []
-    engine._post = posted.append  # type: ignore[method-assign]
     engine._handle_attach_file({"kind": "image", "name": "a.jpg", "data": "data:x"})
-    assert engine._pending_attachments == []
-    assert posted and posted[-1]["kind"] == "err"
+    assert len(engine._pending_attachments) == 1
+    assert engine._pending_attachments[0]["image"] == "data:x"
 
 
 def test_build_messages_sends_images_over_openai(engine, monkeypatch) -> None:
@@ -326,6 +324,7 @@ def test_build_messages_sends_images_over_openai(engine, monkeypatch) -> None:
     engine._config["active_model"] = "deepseek-chat"
     monkeypatch.setattr(engine, "_collect_context", lambda flags, modes=None: {})
     monkeypatch.setattr(engine, "_build_system_prompt", lambda ctx, **kwargs: "sys")
+    monkeypatch.setattr(engine, "_model_supports_images", lambda: True)
     chat = {
         "msgs": [
             {"role": "user", "text": "hi", "image": "data:image/jpeg;base64,AAA"}

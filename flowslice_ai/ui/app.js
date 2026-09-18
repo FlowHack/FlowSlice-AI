@@ -173,6 +173,7 @@
       "mp.search": "Search model or provider...",
       "mp.default": "Default",
       "mp.default_set": "Set as default model",
+      "mp.vision_supported": "Supports image analysis",
       "mp.need_key": "Set an API key for one of the providers or add your own model",
       "mp.no_model": "No model configured",
       "mp.open_settings": "Open settings",
@@ -350,6 +351,7 @@
       "mp.search": "Поиск модели или провайдера…",
       "mp.default": "По умолчанию",
       "mp.default_set": "Сделать моделью по умолчанию",
+      "mp.vision_supported": "Поддерживает анализ изображений",
       "mp.need_key": "Укажите для одного из провайдеров токен или внесите свою модель",
       "mp.no_model": "Модель не настроена",
       "mp.open_settings": "Открыть настройки",
@@ -527,6 +529,7 @@
       "mp.search": "Pretraga modela ili provajdera…",
       "mp.default": "Podrazumevano",
       "mp.default_set": "Postavi kao podrazumevani model",
+      "mp.vision_supported": "Podržava analizu slika",
       "mp.need_key": "Postavite token za jednog od provajdera ili dodajte sopstveni model",
       "mp.no_model": "Model nije podešen",
       "mp.open_settings": "Otvori podešavanja",
@@ -925,6 +928,11 @@
         row.setAttribute("data-provider", prov.id);
         row.setAttribute("data-model", item.id);
         row.appendChild(el("span", "mp-item-name", item.name || item.id));
+        if (item.vision === true) {
+          var eye = el("span", "mp-vision", "👁");
+          eye.title = t("mp.vision_supported");
+          row.appendChild(eye);
+        }
         row.appendChild(el("code", "mp-item-id", item.id));
         var star = el("button", "mp-star" + (isDefault ? " active" : ""), isDefault ? "★" : "☆");
         star.type = "button";
