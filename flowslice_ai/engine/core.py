@@ -210,6 +210,9 @@ class CoreMixin:
         # Язык интерфейса: en/ru/sr.
         if merged.get("language") not in ("en", "ru", "sr"):
             merged["language"] = "en"
+        # Режим контекста пресетов: только изменённые или все параметры.
+        if merged.get("preset_context") not in ("changed", "all"):
+            merged["preset_context"] = "changed"
         try:
             font_size = int(merged.get("font_size", 14))
         except (TypeError, ValueError):

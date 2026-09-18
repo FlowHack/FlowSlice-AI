@@ -69,6 +69,11 @@
       "ctx.print": "Print settings",
       "ctx.model": "Model from the plate",
       "ctx.history": "History",
+      "ctx.filament_help": "Adds the active filament profile to the context: type, temperatures, flow rate and other parameters",
+      "ctx.printer_help": "Adds the active printer profile to the context: bed size, print height, G-code and other parameters",
+      "ctx.print_help": "Adds the active print profile to the context: layer height, speeds, infill and other parameters",
+      "ctx.model_help": "Adds the loaded model data to the context: dimensions, volume, triangle count",
+      "ctx.history_help": "Adds the chat message history to the context",
       "ctx.tokens": "Context tokens: {n}",
       "composer.placeholder": "Message... (Enter — send, Shift+Enter — new line)",
       "welcome.sub": "3D printing engineer-expert. Ask about mechanics, Klipper or materials.",
@@ -82,7 +87,7 @@
       "settings.base_url": "Base URL",
       "settings.scheme": "API scheme",
       "settings.model": "Model",
-      "settings.model_settings": "Model settings:",
+      "settings.model_settings": "Model settings",
       "settings.model_name": "Display name",
       "settings.model_system_name": "Name in system (id)",
       "settings.temperature": "Temperature:",
@@ -91,8 +96,31 @@
       "settings.global_badge": "global",
       "settings.reset_to_global": "Reset to global",
       "settings.add_model": "+ Add model",
+      "settings.add": "Add",
+      "settings.cancel": "Cancel",
+      "settings.delete_model": "Delete selected model",
+      "settings.fine_tuning": "Fine tuning",
+      "settings.delete_model_title": "Delete model",
       "settings.notes": "Notes for context (visible to agent)",
-      "settings.notes_placeholder": "e.g. PETG temperature calibrated by temperature tower — do not suggest calibration",
+      "settings.notes_placeholder": "Profile-specific info can be written in the notes of the filament, printer or print profile and attached to the context. General additional info — in this field",
+      "settings.default_model_title": "Default model settings",
+      "settings.default_model_hint": "If a model has custom parameters, they are used instead of the defaults",
+      "settings.preset_context": "Preset context",
+      "settings.preset_context_changed": "Only changed parameters",
+      "settings.preset_context_all": "All parameters (changed ones are marked)",
+      "settings.help_provider": "API provider used to send requests to models",
+      "settings.help_model": "Active model for new messages",
+      "settings.help_url": "API server address of the provider",
+      "settings.help_model_name": "Model name in the provider system (id)",
+      "settings.help_model_alias": "Friendly model name shown in the UI",
+      "settings.help_api_key": "Provider API access key",
+      "settings.help_scheme": "API request format: OpenAI-compatible or native Anthropic",
+      "settings.help_temperature": "Response randomness: lower is more precise, higher is more creative",
+      "settings.help_max_tokens": "Maximum response length in tokens",
+      "settings.help_reasoning": "Enable extended model reasoning before answering",
+      "settings.help_notes": "Additional info the agent takes into account when answering",
+      "settings.help_language": "Plugin UI language",
+      "settings.help_preset_context": "What goes into the slicer context: only changed preset parameters or all of them",
       "settings.font_size": "Font size:",
       "settings.font_style": "Font style",
       "settings.language": "Language",
@@ -106,7 +134,7 @@
       "usage.period.today": "Today",
       "usage.period.week": "This week",
       "usage.period.month": "This month",
-      "mp.title": "Choose model",
+      "mp.title": "Choose active model",
       "mp.search": "Search model or provider...",
       "mp.default": "Default",
       "mp.default_set": "Set as default model",
@@ -187,6 +215,11 @@
       "ctx.print": "Настройки печати",
       "ctx.model": "Модель со стола",
       "ctx.history": "История",
+      "ctx.filament_help": "Добавляет в контекст активный профиль пластика: тип, температуры, скорость потока и другие параметры",
+      "ctx.printer_help": "Добавляет в контекст активный профиль принтера: размеры стола, высоту печати, G-code и другие параметры",
+      "ctx.print_help": "Добавляет в контекст активный профиль печати: высоту слоя, скорости, заполнение и другие параметры",
+      "ctx.model_help": "Добавляет в контекст данные загруженной модели: размеры, объём, количество треугольников",
+      "ctx.history_help": "Добавляет в контекст историю сообщений чата",
       "ctx.tokens": "Токенов контекста: {n}",
       "composer.placeholder": "Сообщение… (Enter — отправить, Shift+Enter — новая строка)",
       "welcome.sub": "Инженер-эксперт 3D-печати. Спросите о механике, Klipper или материалах.",
@@ -200,7 +233,7 @@
       "settings.base_url": "Базовый URL API",
       "settings.scheme": "Схема API",
       "settings.model": "Модель",
-      "settings.model_settings": "Настройки модели:",
+      "settings.model_settings": "Настройки модели",
       "settings.model_name": "Удобное название",
       "settings.model_system_name": "Название в системе (id)",
       "settings.temperature": "Температура:",
@@ -209,8 +242,31 @@
       "settings.global_badge": "общий",
       "settings.reset_to_global": "Сбросить к общему",
       "settings.add_model": "+ Добавить модель",
+      "settings.add": "Добавить",
+      "settings.cancel": "Отмена",
+      "settings.delete_model": "Удалить выбранную модель",
+      "settings.fine_tuning": "Тонкие настройки",
+      "settings.delete_model_title": "Удалить модель",
       "settings.notes": "Заметки для контекста (видны агенту)",
-      "settings.notes_placeholder": "Например: температура PETG откалибрована по температурной башне — не предлагай калибровку",
+      "settings.notes_placeholder": "Специфическую информацию к профилю можно прописывать в заметках профиля пластика, принтера или печати и подключать к контексту. Общую дополнительную информацию — в это поле",
+      "settings.default_model_title": "Дефолтные настройки моделей",
+      "settings.default_model_hint": "Если у модели изменены параметры, используются именно они, а не дефолтные",
+      "settings.preset_context": "Контекст пресетов",
+      "settings.preset_context_changed": "Только изменённые параметры",
+      "settings.preset_context_all": "Все параметры (изменённые помечены)",
+      "settings.help_provider": "Провайдер API, через который отправляются запросы к моделям",
+      "settings.help_model": "Активная модель для новых сообщений",
+      "settings.help_url": "Адрес API-сервера провайдера",
+      "settings.help_model_name": "Название модели в системе провайдера (id)",
+      "settings.help_model_alias": "Удобное имя модели для отображения в интерфейсе",
+      "settings.help_api_key": "Ключ доступа к API провайдера",
+      "settings.help_scheme": "Формат запросов к API: OpenAI-совместимый или нативный Anthropic",
+      "settings.help_temperature": "Случайность ответов: ниже — точнее, выше — креативнее",
+      "settings.help_max_tokens": "Максимальная длина ответа в токенах",
+      "settings.help_reasoning": "Включить расширенное мышление модели перед ответом",
+      "settings.help_notes": "Дополнительная информация, которую агент учитывает при ответах",
+      "settings.help_language": "Язык интерфейса плагина",
+      "settings.help_preset_context": "Что попадает в контекст слайсера: только изменённые параметры пресетов или все",
       "settings.font_size": "Размер шрифта:",
       "settings.font_style": "Стиль шрифта",
       "settings.language": "Язык",
@@ -224,7 +280,7 @@
       "usage.period.today": "Сегодня",
       "usage.period.week": "Неделя",
       "usage.period.month": "Месяц",
-      "mp.title": "Выбор модели",
+      "mp.title": "Выбор активной модели",
       "mp.search": "Поиск модели или провайдера…",
       "mp.default": "По умолчанию",
       "mp.default_set": "Сделать моделью по умолчанию",
@@ -305,6 +361,11 @@
       "ctx.print": "Podešavanja štampe",
       "ctx.model": "Model sa stola",
       "ctx.history": "Istorija",
+      "ctx.filament_help": "Dodaje u kontekst aktivni profil filamenta: tip, temperature, protok i druge parametre",
+      "ctx.printer_help": "Dodaje u kontekst aktivni profil štampača: dimenzije stola, visinu štampe, G-code i druge parametre",
+      "ctx.print_help": "Dodaje u kontekst aktivni profil štampe: visinu sloja, brzine, ispunu i druge parametre",
+      "ctx.model_help": "Dodaje u kontekst podatke učitanog modela: dimenzije, zapreminu, broj trouglova",
+      "ctx.history_help": "Dodaje u kontekst istoriju poruka razgovora",
       "ctx.tokens": "Tokeni konteksta: {n}",
       "composer.placeholder": "Poruka… (Enter — pošalji, Shift+Enter — novi red)",
       "welcome.sub": "Inženjer-ekspert za 3D štampu. Pitajte o mehanici, Klipperu ili materijalima.",
@@ -318,7 +379,7 @@
       "settings.base_url": "Osnovni URL API",
       "settings.scheme": "API šema",
       "settings.model": "Model",
-      "settings.model_settings": "Podešavanja modela:",
+      "settings.model_settings": "Podešavanja modela",
       "settings.model_name": "Prikazano ime",
       "settings.model_system_name": "Ime u sistemu (id)",
       "settings.temperature": "Temperatura:",
@@ -327,8 +388,31 @@
       "settings.global_badge": "globalno",
       "settings.reset_to_global": "Resetuj na globalno",
       "settings.add_model": "+ Dodaj model",
+      "settings.add": "Dodaj",
+      "settings.cancel": "Otkaži",
+      "settings.delete_model": "Obriši izabrani model",
+      "settings.fine_tuning": "Fino podešavanje",
+      "settings.delete_model_title": "Obriši model",
       "settings.notes": "Beleške za kontekst (vidljive agentu)",
-      "settings.notes_placeholder": "Npr. temperatura PETG kalibrisana pomoću temperaturne kule — ne predlaži kalibraciju",
+      "settings.notes_placeholder": "Informacije specifične za profil možete upisati u beleške profila filamenta, štampača ili štampe i priključiti ih kontekstu. Opšte dodatne informacije — u ovo polje",
+      "settings.default_model_title": "Podrazumevana podešavanja modela",
+      "settings.default_model_hint": "Ako model ima izmenjene parametre, koriste se oni, a ne podrazumevani",
+      "settings.preset_context": "Kontekst preseta",
+      "settings.preset_context_changed": "Samo izmenjeni parametri",
+      "settings.preset_context_all": "Svi parametri (izmenjeni su označeni)",
+      "settings.help_provider": "API provajder kroz koji se šalju zahtevi ka modelima",
+      "settings.help_model": "Aktivni model za nove poruke",
+      "settings.help_url": "Adresa API servera provajdera",
+      "settings.help_model_name": "Naziv modela u sistemu provajdera (id)",
+      "settings.help_model_alias": "Prikazano ime modela u interfejsu",
+      "settings.help_api_key": "Ključ za pristup API provajdera",
+      "settings.help_scheme": "Format zahteva ka API: OpenAI-kompatibilan ili nativni Anthropic",
+      "settings.help_temperature": "Nasumičnost odgovora: niže — preciznije, više — kreativnije",
+      "settings.help_max_tokens": "Maksimalna dužina odgovora u tokenima",
+      "settings.help_reasoning": "Uključi produženo razmišljanje modela pre odgovora",
+      "settings.help_notes": "Dodatne informacije koje agent uzima u obzir pri odgovaranju",
+      "settings.help_language": "Jezik interfejsa dodatka",
+      "settings.help_preset_context": "Šta ulazi u kontekst slajsera: samo izmenjeni parametri preseta ili svi",
       "settings.font_size": "Veličina fonta:",
       "settings.font_style": "Stil fonta",
       "settings.language": "Jezik",
@@ -342,7 +426,7 @@
       "usage.period.today": "Danas",
       "usage.period.week": "Ova nedelja",
       "usage.period.month": "Ovaj mesec",
-      "mp.title": "Izbor modela",
+      "mp.title": "Izbor aktivnog modela",
       "mp.search": "Pretraga modela ili provajdera…",
       "mp.default": "Podrazumevano",
       "mp.default_set": "Postavi kao podrazumevani model",
@@ -406,6 +490,9 @@
     });
     scope.querySelectorAll("[data-i18n-title]").forEach(function (el) {
       el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    scope.querySelectorAll("[data-i18n-tooltip]").forEach(function (el) {
+      el.setAttribute("data-tooltip", t(el.getAttribute("data-i18n-tooltip")));
     });
   }
 
@@ -477,6 +564,15 @@
       document.body.style.fontFamily = "Georgia, serif";
     } else {
       document.body.style.fontFamily = "var(--orca-font)";
+    }
+  }
+
+  /* ===== Переключатель темы (горизонтальные кнопки) ===== */
+  function updateThemeSwitch() {
+    var theme = (state.settings && state.settings.theme) || "auto";
+    var btns = document.querySelectorAll(".theme-switch button");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("active", btns[i].getAttribute("data-theme") === theme);
     }
   }
 
@@ -563,7 +659,9 @@
     var withModels = [];
     for (var i = 0; i < providers.length; i++) {
       var models = providers[i].models || [];
-      if (models.length > 0) {
+      // Показываем только провайдеров с непустым API-ключом и хотя бы одной моделью.
+      var hasKey = (providers[i].api_key || "").trim().length > 0;
+      if (models.length > 0 && hasKey) {
         withModels.push(providers[i]);
       }
     }
@@ -872,6 +970,8 @@
     for (var i = 0; i < CONTEXT_KEYS.length; i++) {
       var key = CONTEXT_KEYS[i];
       var checkWrap = el("label", "ctx-check");
+      // Тултип: пояснение, что именно этот пункт добавляет в контекст.
+      checkWrap.title = t("ctx." + key + "_help");
       var cb = document.createElement("input");
       cb.type = "checkbox";
       cb.checked = !!flags[key];
@@ -1201,17 +1301,18 @@
   var setProviderDD = null;
   var setModelDD = null;
   var setSchemeDD = null;
-  var setThemeDD = null;
   var setFontStyleDD = null;
   var setLanguageDD = null;
   var setPeriodDD = null;
   var amSchemeDD = null;
   var setModelSchemeDD = null;
+  var setPresetContextDD = null;
   var perModelDirty = false; // флаг: per-model настройки изменены вручную
   var currentModelKey = null; // ключ "provider::model" текущей редактируемой модели
   var perModelDrafts = {}; // черновики per-model настроек: ключ -> {temperature, max_tokens, reasoning}
+  var customEmptyMode = false; // флаг: у пользовательского провайдера нет моделей
 
-  function makeDropdown(containerId, options, selected, onSelect, placeholder) {
+  function makeDropdown(containerId, options, selected, onSelect, placeholder, showSearch, renderItem) {
     var wrap = byId(containerId);
     wrap.className = "dd-wrap";
     wrap.innerHTML = "";
@@ -1229,11 +1330,15 @@
     btn.appendChild(caret);
     var popup = el("div", "dd-popup");
     popup.style.display = "none";
-    var search = el("input", "dd-search");
-    search.type = "text";
-    search.placeholder = placeholder || t("common.search");
+    // Поле поиска создаётся только при showSearch !== false.
+    var search = null;
+    if (showSearch !== false) {
+      search = el("input", "dd-search");
+      search.type = "text";
+      search.placeholder = placeholder || t("common.search");
+      popup.appendChild(search);
+    }
     var list = el("div", "dd-list");
-    popup.appendChild(search);
     popup.appendChild(list);
     wrap.appendChild(btn);
     wrap.appendChild(popup);
@@ -1244,7 +1349,7 @@
 
     function renderList() {
       list.innerHTML = "";
-      var q = search.value.trim().toLowerCase();
+      var q = search ? search.value.trim().toLowerCase() : "";
       var shown = 0;
       for (var i = 0; i < opts.length; i++) {
         var o = opts[i];
@@ -1253,7 +1358,12 @@
           continue;
         }
         var item = el("div", "dd-item" + (o.value === current ? " active" : ""));
-        item.appendChild(el("span", "dd-item-label", o.label));
+        if (renderItem) {
+          // Кастомный рендер строки списка (например, с кнопкой удаления).
+          renderItem(item, o);
+        } else {
+          item.appendChild(el("span", "dd-item-label", o.label));
+        }
         if (o.value === current) {
           item.appendChild(el("span", "dd-check", "✓"));
         }
@@ -1277,9 +1387,11 @@
     function openPopup() {
       open = true;
       popup.style.display = "flex";
-      search.value = "";
+      if (search) {
+        search.value = "";
+        search.focus();
+      }
       renderList();
-      search.focus();
     }
 
     function close() {
@@ -1328,7 +1440,9 @@
         openPopup();
       }
     });
-    search.addEventListener("input", renderList);
+    if (search) {
+      search.addEventListener("input", renderList);
+    }
     // Регистрируем дропдаун в общем списке для единого обработчика клика.
     allDropdowns.push({ containerId: containerId, wrap: wrap, close: close });
     // Единый document click listener: закрывает все дропдауны, кроме кликнутого.
@@ -1359,16 +1473,29 @@
 
   function initSettingsDropdowns() {
     setProviderDD = makeDropdown("setProviderDD", [], "", onProviderChange, t("dd.provider_search"));
-    setModelDD = makeDropdown("setModelDD", [], "", onModelChange, t("dd.model_search"));
+    setModelDD = makeDropdown("setModelDD", [], "", onModelChange, t("dd.model_search"), undefined, function (item, o) {
+      // Кастомный рендер: имя модели + кнопка удаления для пользовательских моделей.
+      item.appendChild(el("span", "dd-item-label", o.label));
+      var provider = setProviderDD.getSelected();
+      var prov = providerById(provider);
+      var model = prov ? modelById(provider, o.value) : null;
+      if (prov && !prov.builtin && model && !model.builtin) {
+        var rm = el("button", "dd-remove", "✕");
+        rm.type = "button";
+        rm.title = t("settings.delete_model_title");
+        (function (pid, mid) {
+          rm.addEventListener("click", function (e) {
+            e.stopPropagation();
+            post({ type: "delete_model", provider: pid, model_id: mid });
+          });
+        })(provider, o.value);
+        item.appendChild(rm);
+      }
+    });
     setSchemeDD = makeDropdown("setSchemeDD", [
       { value: "openai", label: t("scheme.openai") },
       { value: "anthropic", label: t("scheme.anthropic") }
     ], "openai", null, t("dd.scheme_search"));
-    setThemeDD = makeDropdown("setThemeDD", [
-      { value: "auto", label: t("theme.auto") },
-      { value: "light", label: t("theme.light") },
-      { value: "dark", label: t("theme.dark") }
-    ], "auto", null, t("dd.theme_search"));
     setFontStyleDD = makeDropdown("setFontStyleDD", [
       { value: "system", label: t("font.system") },
       { value: "mono", label: t("font.mono") },
@@ -1394,7 +1521,11 @@
       { value: "en", label: t("lang.en") },
       { value: "ru", label: t("lang.ru") },
       { value: "sr", label: t("lang.sr") }
-    ], "en", null, t("dd.language_search"));
+    ], "en", null, t("dd.language_search"), false);
+    setPresetContextDD = makeDropdown("setPresetContextDD", [
+      { value: "changed", label: t("settings.preset_context_changed") },
+      { value: "all", label: t("settings.preset_context_all") }
+    ], "changed", null, null, false);
   }
 
   function onProviderChange() {
@@ -1413,6 +1544,9 @@
       setSchemeDD.setSelected(provider.scheme || "openai");
     }
     var models = provider.models || [];
+    // Режим пользовательского провайдера (Custom): добавление/удаление моделей.
+    // force=true: при смене провайдера принудительно закрываем форму добавления.
+    updateCustomMode(provider, models, true);
     setModelDD.setOptions(models.map(function (m) {
       return { value: m.id, label: m.name || m.id };
     }));
@@ -1426,6 +1560,74 @@
     }
     setModelDD.setSelected(matched ? s.active_model : (models.length > 0 ? models[0].id : ""));
     onModelChange();
+  }
+
+  /* Переключение режима пользовательского провайдера (Custom):
+     - нет моделей: форма добавления видна сразу, кнопка «Добавить модель» — сабмит;
+     - есть модели: дропдаун моделей + настройки, кнопки «Добавить модель»/«Удалить выбранную модель»;
+     - builtin-провайдер: управление моделями скрыто. */
+  function updateCustomMode(provider, models, force) {
+    var modelField = byId("setModelDD").closest(".field");
+    var actionsBlock = byId("modelActionsBlock");
+    var addForm = byId("addModelForm");
+    var addBtn = byId("addModelBtn");
+    var delBtn = byId("deleteModelBtn");
+    var hr = byId("modelActionsHr");
+    if (!provider || provider.builtin) {
+      customEmptyMode = false;
+      modelField.style.display = "block";
+      actionsBlock.style.display = "none";
+      addForm.style.display = "none";
+      return;
+    }
+    var hasModels = (models || []).length > 0;
+    var prevEmpty = customEmptyMode;
+    customEmptyMode = !hasModels;
+    modelField.style.display = hasModels ? "block" : "none";
+    actionsBlock.style.display = "block";
+    delBtn.style.display = hasModels ? "inline-block" : "none";
+    addBtn.style.display = "inline-block";
+    addBtn.textContent = t("settings.add_model");
+    if (hr) {
+      hr.style.display = hasModels ? "block" : "none";
+    }
+    if (hasModels) {
+      // Режим «есть модели»: форма скрыта, открывается по кнопке «Добавить модель».
+      // При force (смена провайдера) или переходе «нет моделей → есть модели» — закрываем.
+      if (force || prevEmpty) {
+        addForm.style.display = "none";
+      }
+    } else {
+      // Режим «нет моделей»: форма видна сразу, кнопки «Добавить»/«Отмена» скрыты,
+      // сабмит выполняет кнопка «Добавить модель».
+      byId("amCustomFields").style.display = "block";
+      byId("amSubmit").style.display = "none";
+      byId("amCancel").style.display = "none";
+      addForm.style.display = "block";
+    }
+  }
+
+  /* Отправка формы добавления модели (общая для режимов «нет моделей» и «есть модели»). */
+  function submitAddModel() {
+    var provider = setProviderDD.getSelected();
+    var prov = providerById(provider);
+    var payload = {
+      type: "add_model",
+      provider: provider,
+      model_id: byId("amSystemName").value.trim(),
+      label: byId("amLabel").value.trim()
+    };
+    if (prov && !prov.builtin) {
+      payload.base_url = byId("amBaseUrl").value.trim();
+      payload.api_key = byId("amApiKey").value.trim();
+      payload.scheme = amSchemeDD.getSelected();
+    }
+    post(payload);
+    byId("addModelForm").style.display = "none";
+    byId("amSystemName").value = "";
+    byId("amLabel").value = "";
+    byId("amBaseUrl").value = "";
+    byId("amApiKey").value = "";
   }
 
   function onModelChange() {
@@ -1445,7 +1647,6 @@
       return;
     }
     byId("modelSettingsBlock").style.display = "block";
-    byId("modelSettingsLabel").textContent = model.name || model.id;
     var key = provider + "::" + model.id;
     currentModelKey = key;
     var draft = perModelDrafts[key];
@@ -1496,9 +1697,10 @@
     byId("setGlobalTemperatureValue").textContent = byId("setGlobalTemperature").value;
     byId("setGlobalMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 4096);
     byId("setGlobalReasoning").checked = !!s.reasoning;
-    setThemeDD.setSelected(s.theme || "auto");
+    updateThemeSwitch();
     setFontStyleDD.setSelected(s.font_style || "system");
     setLanguageDD.setSelected(s.language || "en");
+    setPresetContextDD.setSelected(s.preset_context || "changed");
     byId("setFontSize").value = String(s.font_size || 14);
     byId("setFontSizeValue").textContent = String(s.font_size || 14);
   }
@@ -1572,6 +1774,7 @@
   }
 
   function saveSettings() {
+    var themeBtn = document.querySelector(".theme-switch button.active");
     var settings = {
       active_provider: setProviderDD.getSelected(),
       active_model: setModelDD.getSelected(),
@@ -1580,10 +1783,11 @@
       temperature: parseFloat(byId("setGlobalTemperature").value),
       max_tokens: parseInt(byId("setGlobalMaxTokens").value, 10) || 4096,
       reasoning: byId("setGlobalReasoning").checked,
-      theme: setThemeDD.getSelected(),
+      theme: themeBtn ? themeBtn.getAttribute("data-theme") : "auto",
       font_size: parseInt(byId("setFontSize").value, 10) || 14,
       font_style: setFontStyleDD.getSelected(),
-      language: setLanguageDD.getSelected()
+      language: setLanguageDD.getSelected(),
+      preset_context: setPresetContextDD.getSelected()
     };
     post({ type: "save_settings", settings: settings });
     // Сохраняем черновики всех изменённых моделей.
@@ -1788,6 +1992,10 @@
         fillSettingsForm();
         applyI18n();
         renderHeader();
+        // Перерисовываем динамический контент чата на новом языке.
+        renderSidebar();
+        renderContext();
+        renderMessages();
         break;
       case "key_test":
         showToast(msg.text || (msg.ok ? t("key.valid") : t("key.invalid")), msg.ok ? "ok" : "err");
@@ -1817,6 +2025,8 @@
     }
     setModelDD.setSelected(still ? current : (models.length > 0 ? models[0].id : ""));
     onModelChange();
+    // Обновляем режим Custom (переход «нет моделей» ↔ «есть модели»).
+    updateCustomMode(provider, models, false);
   }
 
   /* ===== Инициализация ===== */
@@ -1860,6 +2070,17 @@
           switchSettingsTab(btn.getAttribute("data-tab"));
         });
       })(tabBtns[tb]);
+    }
+    // Горизонтальный переключатель темы.
+    var themeBtns = document.querySelectorAll(".theme-switch button");
+    for (var tb2 = 0; tb2 < themeBtns.length; tb2++) {
+      (function (btn) {
+        btn.addEventListener("click", function () {
+          state.settings.theme = btn.getAttribute("data-theme");
+          applyTheme(state.settings);
+          updateThemeSwitch();
+        });
+      })(themeBtns[tb2]);
     }
     byId("modalClose").addEventListener("click", closeSettings);
     byId("settingsModal").addEventListener("click", function (e) {
@@ -1918,33 +2139,28 @@
     });
     byId("exportBtn").addEventListener("click", exportChat);
     byId("addModelBtn").addEventListener("click", function () {
+      if (customEmptyMode) {
+        // Режим «нет моделей»: кнопка «Добавить модель» — сабмит формы.
+        submitAddModel();
+        return;
+      }
       var provider = providerById(setProviderDD.getSelected());
       byId("amCustomFields").style.display = (provider && !provider.builtin) ? "block" : "none";
+      byId("amSubmit").style.display = "inline-block";
+      byId("amCancel").style.display = "inline-block";
       byId("addModelForm").style.display = "block";
     });
     byId("amCancel").addEventListener("click", function () {
       byId("addModelForm").style.display = "none";
     });
-    byId("amSubmit").addEventListener("click", function () {
+    byId("amSubmit").addEventListener("click", submitAddModel);
+    byId("deleteModelBtn").addEventListener("click", function () {
       var provider = setProviderDD.getSelected();
-      var prov = providerById(provider);
-      var payload = {
-        type: "add_model",
-        provider: provider,
-        model_id: byId("amSystemName").value.trim(),
-        label: byId("amLabel").value.trim()
-      };
-      if (prov && !prov.builtin) {
-        payload.base_url = byId("amBaseUrl").value.trim();
-        payload.api_key = byId("amApiKey").value.trim();
-        payload.scheme = amSchemeDD.getSelected();
+      var model = setModelDD.getSelected();
+      if (!provider || !model) {
+        return;
       }
-      post(payload);
-      byId("addModelForm").style.display = "none";
-      byId("amSystemName").value = "";
-      byId("amLabel").value = "";
-      byId("amBaseUrl").value = "";
-      byId("amApiKey").value = "";
+      post({ type: "delete_model", provider: provider, model_id: model });
     });
     byId("searchInput").addEventListener("input", renderSidebar);
     byId("messages").addEventListener("scroll", onMessagesScroll);

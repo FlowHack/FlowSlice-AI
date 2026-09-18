@@ -25,7 +25,7 @@ except ImportError:
 from flowslice_ai.constants import SYSTEM_PROMPT
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _HAS_NUMPY, _np
-from flowslice_ai.slicer_context import PRESET_SECTIONS
+from flowslice_ai.slicer_context import PRESET_METADATA_KEYS, PRESET_SECTIONS
 
 
 class SlicerContextMixin:
@@ -196,62 +196,174 @@ class SlicerContextMixin:
     def _collect_preset_data(self: "_ChatEngine") -> dict[str, Any]:
         """Собирает данные активных пресетов печати через preset_bundle.
 
-        Приоритет: полный конфиг выбранного пресета (preset.config — все
-        ключи и значения, включая заметки и G-code), затем full_config_value
-        по списку полей, затем объединённый конфиг.
+        Для каждого раздела строится цепочка наследования (inherits) от корня
+        к выбранному пресету. В режиме "all" выводятся ВСЕ параметры (включая
+        унаследованные) с пометкой изменённых в текущем профиле; в режиме
+        "changed" — только изменённые. Режим задаётся настройкой
+        "preset_context" (значения "changed"/"all").
         """
-        out: dict[str, Any] = {"printer": {}, "filament": {}, "print": {}}
+        empty: dict[str, Any] = {
+            "printer": {"name": "", "params": {}, "changed": []},
+            "filament": {"name": "", "params": {}, "changed": []},
+            "print": {"name": "", "params": {}, "changed": []},
+        }
         if orca is None:
-            return out
+            return empty
         try:
             bundle = orca.host.preset_bundle()
+            if bundle is None:
+                return empty
             has_full_value = callable(getattr(bundle, "full_config_value", None))
+            mode = self._config.get("preset_context", "changed")
+            mode = mode if mode == "all" else "changed"
+            out: dict[str, Any] = {}
             for key, (collection_attr, fields) in PRESET_SECTIONS.items():
-                section: dict[str, Any] = {}
-                try:
-                    collection = getattr(bundle, collection_attr, None)
-                    if collection is not None:
-                        name = self._safe_get(collection, "get_selected_preset_name")
-                        if name:
-                            section["name"] = str(name)
-                        # Полный конфиг выбранного пресета: все ключи и значения.
-                        preset = self._safe_get(collection, "get_selected_preset")
-                        if preset is not None:
-                            config = getattr(preset, "config", None)
-                            items = getattr(config, "items", None)
-                            if callable(items):
-                                result = items()
-                                if isinstance(result, dict):
-                                    for fkey, fval in result.items():
-                                        fval = getattr(fval, "value", fval)
-                                        if fval not in (None, ""):
-                                            section[str(fkey)] = self._json_safe(fval)
-                            elif isinstance(config, dict):
-                                for fkey, fval in config.items():
-                                    fval = getattr(fval, "value", fval)
-                                    if fval not in (None, ""):
-                                        section[str(fkey)] = self._json_safe(fval)
-                except (AttributeError, RuntimeError):
-                    pass
-                # Fallback: если полный конфиг не получен — по списку полей.
-                if len(section) <= 1:
-                    for field in fields:
-                        value: Any = None
-                        if has_full_value:
-                            try:
-                                value = bundle.full_config_value(field)
-                            except (RuntimeError, TypeError, ValueError):
-                                value = None
-                            value = getattr(value, "value", value)
-                        if value in (None, ""):
-                            value = self._fallback_preset_value(bundle, field)
-                        if value not in (None, ""):
-                            section[field] = self._json_safe(value)
-                out[key] = section
+                out[key] = self._collect_preset_section(
+                    bundle, collection_attr, fields, has_full_value, mode
+                )
+            return out
         except Exception as exc:  # noqa: BLE001
             _LOGGER.warning("Не удалось собрать данные пресетов: %s", exc)
-            out = {"printer": {}, "filament": {}, "print": {}}
-        return out
+            return empty
+
+    def _collect_preset_section(
+        self: "_ChatEngine",  # pyright: ignore[reportGeneralTypeIssues]
+        bundle: Any,
+        collection_attr: str,
+        fields: tuple[str, ...],
+        has_full_value: bool,
+        mode: str,
+    ) -> dict[str, Any]:
+        """Собирает данные одного раздела пресетов в едином формате.
+
+        Формат раздела: {"name", "params", "changed"} — имя выбранного
+        пресета, словарь параметров и список ключей изменённых параметров.
+        """
+        section: dict[str, Any] = {"name": "", "params": {}, "changed": []}
+        try:
+            collection = getattr(bundle, collection_attr, None)
+            if collection is None:
+                return section
+            name = self._safe_get(collection, "get_selected_preset_name")
+            preset = self._safe_get(collection, "get_selected_preset")
+            if preset is None:
+                section["name"] = str(name) if name else ""
+                return section
+            section["name"] = str(name) if name else str(getattr(preset, "name", "") or "")
+            # Цепочка наследования от корня к текущему пресету.
+            chain = self._preset_inheritance_chain(collection, preset)
+            # Полный конфиг: merge по цепочке в обратном порядке (от корня),
+            # значения текущего пресета перекрывают унаследованные.
+            full: dict[str, Any] = {}
+            for item in reversed(chain):
+                for fkey, fval in self._preset_config_items(item).items():
+                    full[fkey] = self._json_safe(fval)
+            changed = {
+                fkey: self._json_safe(fval)
+                for fkey, fval in self._preset_config_items(preset).items()
+            }
+            params = full if mode == "all" else changed
+            # Fallback: конфиг пресета не получен — по списку полей.
+            if len(params) <= 1:
+                for field in fields:
+                    value: Any = None
+                    if has_full_value:
+                        try:
+                            value = bundle.full_config_value(field)
+                        except (RuntimeError, TypeError, ValueError):
+                            value = None
+                        value = getattr(value, "value", value)
+                    if value in (None, ""):
+                        value = self._fallback_preset_value(bundle, field)
+                    if value not in (None, ""):
+                        params[field] = self._json_safe(value)
+            section["params"] = params
+            section["changed"] = sorted(changed.keys())
+        except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+            _LOGGER.warning(
+                "Не удалось собрать раздел пресетов %s: %s", collection_attr, exc
+            )
+        return section
+
+    @staticmethod
+    def _preset_inheritance_chain(collection: Any, preset: Any) -> list[Any]:
+        """Строит цепочку наследования пресета от корня к текущему.
+
+        Родитель берётся из ключа "inherits" конфига пресета; цепочка
+        ограничена 20 шагами и защищена от циклов по именам пресетов.
+        """
+        chain: list[Any] = []
+        seen: set[str] = set()
+        cur = preset
+        for _ in range(20):
+            if cur is None:
+                break
+            cur_name = str(getattr(cur, "name", "") or "")
+            if cur_name in seen:
+                break
+            seen.add(cur_name)
+            chain.append(cur)
+            parent_name = ""
+            config = getattr(cur, "config", None)
+            if isinstance(config, dict):
+                parent_name = str(config.get("inherits", "") or "")
+            elif config is not None:
+                getter = getattr(config, "get", None)
+                if callable(getter):
+                    try:
+                        parent_name = str(getter("inherits") or "")
+                    except (TypeError, RuntimeError, ValueError):
+                        parent_name = ""
+            if not parent_name:
+                break
+            finder = getattr(collection, "find_preset", None)
+            if not callable(finder):
+                break
+            try:
+                cur = finder(parent_name)
+            except (TypeError, RuntimeError, ValueError):
+                break
+        return chain
+
+    @staticmethod
+    def _preset_config_items(preset: Any) -> dict[str, Any]:
+        """Возвращает собственные ключи пресета без metadata-ключей.
+
+        Значения-обёртки (объекты с атрибутом value) распаковываются;
+        пустые значения (None, "") отбрасываются.
+        """
+        result: dict[str, Any] = {}
+        config = getattr(preset, "config", None)
+        items = getattr(config, "items", None)
+        if callable(items):
+            try:
+                raw: Any = items()
+            except (TypeError, RuntimeError):
+                raw = None
+            if isinstance(raw, dict):
+                source = raw.items()
+            elif raw is not None:
+                # dict_items / прочие итерируемые пары ключ-значение.
+                try:
+                    source = list(raw)
+                except TypeError:
+                    source = []
+            else:
+                source = []
+            for fkey, fval in source:
+                fval = getattr(fval, "value", fval)
+                if fval not in (None, ""):
+                    result[str(fkey)] = fval
+        elif isinstance(config, dict):
+            for fkey, fval in config.items():
+                fval = getattr(fval, "value", fval)
+                if fval not in (None, ""):
+                    result[str(fkey)] = fval
+        return {
+            fkey: fval
+            for fkey, fval in result.items()
+            if fkey not in PRESET_METADATA_KEYS
+        }
 
     def _fallback_preset_value(self: "_ChatEngine", bundle: Any, key: str) -> Any:
         """Ищет значение ключа через объединённый конфиг пресетов."""

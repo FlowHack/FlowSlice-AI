@@ -825,6 +825,10 @@ select option {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   overflow: hidden;
 }
+/* Отступ заголовка от левого края — как в остальных модалках (.modal: padding 16px) */
+.mp-modal .modal-header {
+  padding: 16px 16px 0;
+}
 .mp-search {
   margin: 0 12px 8px;
   padding: 8px 12px;
@@ -1176,5 +1180,141 @@ details.field summary {
   margin-bottom: 8px;
 }
 details.field summary:hover {
+  color: var(--orca-accent);
+}
+
+/* ===== Горизонтальный переключатель темы ===== */
+.theme-switch {
+  display: flex;
+  gap: 4px;
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  padding: 3px;
+  background: var(--orca-input);
+}
+.theme-switch-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--orca-muted);
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--orca-font);
+  white-space: nowrap;
+}
+.theme-switch-btn:hover {
+  color: var(--orca-fg);
+}
+.theme-switch-btn.active {
+  background: var(--orca-accent);
+  color: var(--orca-accent-fg);
+}
+
+/* ===== Разделитель, подзаголовок и сноска в настройках ===== */
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--orca-border);
+  margin: 14px 0;
+}
+.settings-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--orca-fg);
+  margin-bottom: 4px;
+}
+.settings-hint {
+  font-size: 11px;
+  color: var(--orca-muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+/* ===== Отступ между полями ===== */
+.field-gap {
+  margin-top: 14px;
+}
+
+/* ===== Поле «лейбл + input» в одну строку ===== */
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field-inline label {
+  margin: 0;
+  white-space: nowrap;
+}
+.field-inline input[type="number"] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== Иконка-подсказка «?» ===== */
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--orca-muted);
+  color: var(--orca-muted);
+  font-size: 10px;
+  line-height: 1;
+  cursor: help;
+  margin-left: 4px;
+  vertical-align: middle;
+  position: relative;
+  flex-shrink: 0;
+}
+.help-icon:hover {
+  border-color: var(--orca-accent);
+  color: var(--orca-accent);
+}
+.help-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--orca-fg);
+  color: var(--orca-bg);
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 6px 8px;
+  border-radius: 6px;
+  width: 220px;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 120;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.help-icon:hover::after {
+  opacity: 1;
+}
+
+/* ===== Кнопки управления моделями пользовательского провайдера ===== */
+.model-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ===== Кнопка удаления модели в дропдауне ===== */
+.dd-remove {
+  border: none;
+  background: transparent;
+  color: var(--orca-muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.dd-remove:hover {
   color: var(--orca-accent);
 }

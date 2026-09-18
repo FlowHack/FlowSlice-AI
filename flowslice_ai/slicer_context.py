@@ -1,5 +1,38 @@
 """Разделы пресетов слайсера для сбора контекста."""
 
+# Metadata-ключи пресетов: служебные поля JSON-профиля, НЕ настройки.
+# Исключаются из вывода контекста. Полезные параметры (printer_model,
+# printer_variant, nozzle_diameter) в список НЕ входят и остаются в выводе.
+PRESET_METADATA_KEYS: frozenset[str] = frozenset(
+    {
+        "name",
+        "inherits",
+        "from",
+        "type",
+        "version",
+        "setting_id",
+        "instantiation",
+        "printer_settings_id",
+        "print_settings_id",
+        "filament_settings_id",
+        "compatible_printers",
+        "renamed_from",
+        "default_print_profile",
+        "default_filament_profile",
+        "filament_id",
+        "host_type",
+        "printer_extruder_id",
+        "printer_extruder_variant",
+        "print_extruder_id",
+        "print_extruder_variant",
+        "filament_extruder_variant",
+        "sync_info",
+        "base_id",
+        "user_id",
+        "updated_time",
+    }
+)
+
 # Разделы пресетов: ключ результата → (атрибут коллекции, поля для full_config_value).
 PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
     "printer": (

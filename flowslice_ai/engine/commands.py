@@ -94,12 +94,18 @@ class CommandsMixin:
         )
         for key, label in sections:
             section = data.get(key, {})
-            if not section:
+            params = section.get("params", {}) if isinstance(section, dict) else {}
+            if not params:
                 lines.append("• " + self._t("cmd.printer.unavailable", label=label))
                 continue
             lines.append("• " + label + ":")
-            for field, value in section.items():
-                lines.append("  " + str(field) + ": " + str(value))
+            name = section.get("name")
+            if name:
+                lines.append("  " + self._t("cmd.printer.profile", name=str(name)))
+            changed = set(section.get("changed", []))
+            for field, value in params.items():
+                marker = " *" if field in changed else ""
+                lines.append("  " + str(field) + ": " + str(value) + marker)
         self._append_system("\n".join(lines))
 
     def _cmd_stats(self: "_ChatEngine") -> None:
@@ -115,6 +121,11 @@ class CommandsMixin:
         flags = chat.get("context_flags", {})
         ctx = self._collect_context(flags)
         lines = [self._t("cmd.context.title")]
+        mode = self._config.get("preset_context", "changed")
+        mode_label = self._t(
+            "cmd.context.preset_all" if mode == "all" else "cmd.context.preset_changed"
+        )
+        lines.append(self._t("cmd.context.preset_mode", mode=mode_label))
         lines.append(self._t("cmd.context.system_prompt"))
         lines.append(self._build_system_prompt(ctx, include_data=False))
         lines.append(self._t("cmd.context.checkboxes"))

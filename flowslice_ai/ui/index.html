@@ -86,11 +86,11 @@
     <div class="settings-scroll">
       <div id="tabModels">
         <div class="field">
-          <label data-i18n="settings.provider">Провайдер</label>
+          <label><span data-i18n="settings.provider">Провайдер</span> <span class="help-icon" data-i18n-tooltip="settings.help_provider" data-i18n-title="settings.help_provider">?</span></label>
           <div class="dd-wrap" id="setProviderDD"></div>
         </div>
         <div class="field">
-          <label for="setApiKey" data-i18n="settings.api_key">API-ключ (провайдера)</label>
+          <label for="setApiKey"><span data-i18n="settings.api_key">API-ключ (провайдера)</span> <span class="help-icon" data-i18n-tooltip="settings.help_api_key" data-i18n-title="settings.help_api_key">?</span></label>
           <div class="key-row">
             <input type="password" id="setApiKey" autocomplete="off">
             <button type="button" id="setApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
@@ -98,50 +98,53 @@
           </div>
         </div>
         <div class="field" id="customUrlWrap" style="display:none">
-          <label for="setBaseUrl" data-i18n="settings.base_url">Базовый URL API</label>
+          <label for="setBaseUrl"><span data-i18n="settings.base_url">Базовый URL API</span> <span class="help-icon" data-i18n-tooltip="settings.help_url" data-i18n-title="settings.help_url">?</span></label>
           <input type="text" id="setBaseUrl" autocomplete="off">
-          <label for="setSchemeDD" style="margin-top:8px" data-i18n="settings.scheme">Схема API</label>
+          <label for="setSchemeDD" style="margin-top:8px"><span data-i18n="settings.scheme">Схема API</span> <span class="help-icon" data-i18n-tooltip="settings.help_scheme" data-i18n-title="settings.help_scheme">?</span></label>
           <div class="dd-wrap" id="setSchemeDD"></div>
         </div>
         <div class="field">
-          <label data-i18n="settings.model">Модель</label>
+          <label><span data-i18n="settings.model">Модель</span> <span class="help-icon" data-i18n-tooltip="settings.help_model" data-i18n-title="settings.help_model">?</span></label>
           <div class="dd-wrap" id="setModelDD"></div>
         </div>
         <div class="field" id="modelSettingsBlock">
-          <label><span data-i18n="settings.model_settings">Настройки модели:</span> <span id="modelSettingsLabel">—</span></label>
+          <hr class="settings-divider">
+          <label data-i18n="settings.model_settings">Настройки модели</label>
           <div id="customModelFields" style="display:none">
             <div class="field">
-              <label for="setModelName" data-i18n="settings.model_name">Удобное название</label>
+              <label for="setModelName"><span data-i18n="settings.model_name">Удобное название</span> <span class="help-icon" data-i18n-tooltip="settings.help_model_alias" data-i18n-title="settings.help_model_alias">?</span></label>
               <input type="text" id="setModelName" autocomplete="off">
             </div>
             <div class="field">
-              <label for="setModelSystemName" data-i18n="settings.model_system_name">Название в системе (id)</label>
+              <label for="setModelSystemName"><span data-i18n="settings.model_system_name">Название в системе (id)</span> <span class="help-icon" data-i18n-tooltip="settings.help_model_name" data-i18n-title="settings.help_model_name">?</span></label>
               <input type="text" id="setModelSystemName" readonly>
             </div>
             <div class="field">
-              <label for="setModelBaseUrl" data-i18n="settings.base_url">Базовый URL API</label>
+              <label for="setModelBaseUrl"><span data-i18n="settings.base_url">Базовый URL API</span> <span class="help-icon" data-i18n-tooltip="settings.help_url" data-i18n-title="settings.help_url">?</span></label>
               <input type="text" id="setModelBaseUrl" autocomplete="off">
             </div>
             <div class="field">
-              <label for="setModelApiKey" data-i18n="settings.api_key">API-ключ</label>
+              <label for="setModelApiKey"><span data-i18n="settings.api_key">API-ключ</span> <span class="help-icon" data-i18n-tooltip="settings.help_api_key" data-i18n-title="settings.help_api_key">?</span></label>
               <div class="key-row">
                 <input type="password" id="setModelApiKey" autocomplete="off">
                 <button type="button" id="setModelApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
               </div>
             </div>
             <div class="field">
-              <label data-i18n="settings.scheme">Схема API</label>
+              <label><span data-i18n="settings.scheme">Схема API</span> <span class="help-icon" data-i18n-tooltip="settings.help_scheme" data-i18n-title="settings.help_scheme">?</span></label>
               <div class="dd-wrap" id="setModelSchemeDD"></div>
             </div>
           </div>
+          <hr class="settings-divider">
+          <div class="settings-subtitle" data-i18n="settings.fine_tuning">Тонкие настройки</div>
           <div class="per-model-controls" style="margin-bottom:6px">
-            <label for="setTemperature" style="margin:0;white-space:nowrap"><span data-i18n="settings.temperature">Температура:</span> <span id="setTemperatureValue" class="range-value">0.7</span></label>
+            <label for="setTemperature" style="margin:0;white-space:nowrap"><span data-i18n="settings.temperature">Температура:</span> <span id="setTemperatureValue" class="range-value">0.7</span> <span class="help-icon" data-i18n-tooltip="settings.help_temperature" data-i18n-title="settings.help_temperature">?</span></label>
             <input type="range" id="setTemperature" min="0" max="2" step="0.1" value="0.7">
             <span class="dd-default-badge" id="setTemperatureBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
             <button type="button" id="resetTemperature" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
           </div>
-          <div class="per-model-controls" style="margin-bottom:6px">
-            <label for="setMaxTokens" style="margin:0;white-space:nowrap" data-i18n="settings.max_tokens">Максимум токенов</label>
+          <div class="per-model-controls field-gap" style="margin-bottom:6px">
+            <label for="setMaxTokens" style="margin:0;white-space:nowrap"><span data-i18n="settings.max_tokens">Максимум токенов</span> <span class="help-icon" data-i18n-tooltip="settings.help_max_tokens" data-i18n-title="settings.help_max_tokens">?</span></label>
             <input type="number" id="setMaxTokens" min="1" max="100000" step="1" value="4096">
             <span class="dd-default-badge" id="setMaxTokensBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
             <button type="button" id="resetMaxTokens" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
@@ -149,14 +152,20 @@
           <div class="per-model-controls">
             <div class="check-row" style="margin:0">
               <input type="checkbox" id="setReasoning">
-              <label for="setReasoning" data-i18n="settings.reasoning">Расширенное мышление</label>
+              <label for="setReasoning"><span data-i18n="settings.reasoning">Расширенное мышление</span> <span class="help-icon" data-i18n-tooltip="settings.help_reasoning" data-i18n-title="settings.help_reasoning">?</span></label>
             </div>
             <span class="dd-default-badge" id="setReasoningBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
             <button type="button" id="resetReasoning" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
           </div>
         </div>
+        <div class="field" id="modelActionsBlock">
+          <hr class="settings-divider" id="modelActionsHr">
+          <div class="model-actions">
+            <button type="button" id="addModelBtn" class="ghost-btn" data-i18n="settings.add_model">+ Добавить модель</button>
+            <button type="button" id="deleteModelBtn" class="danger-btn" data-i18n="settings.delete_model">Удалить выбранную модель</button>
+          </div>
+        </div>
         <div class="field">
-          <button type="button" id="addModelBtn" class="ghost-btn" data-i18n="settings.add_model">+ Добавить модель</button>
           <div id="addModelForm" style="display:none;margin-top:8px">
             <input type="text" id="amSystemName" placeholder="Название в системе (id)" data-i18n-placeholder="settings.model_system_name">
             <input type="text" id="amLabel" placeholder="Удобное название" data-i18n-placeholder="settings.model_name">
@@ -167,36 +176,47 @@
               <div class="dd-wrap" id="amSchemeDD"></div>
             </div>
             <div class="modal-actions">
-              <button type="button" id="amSubmit" class="primary-btn" data-i18n="common.add">Добавить</button>
-              <button type="button" id="amCancel" class="ghost-btn" data-i18n="common.cancel">Отмена</button>
+              <button type="button" id="amSubmit" class="primary-btn" data-i18n="settings.add">Добавить</button>
+              <button type="button" id="amCancel" class="ghost-btn" data-i18n="settings.cancel">Отмена</button>
             </div>
           </div>
         </div>
       </div>
       <div id="tabGeneral" style="display:none">
         <div class="field">
-          <label for="setNotes" data-i18n="settings.notes">Заметки для контекста (видны агенту)</label>
+          <label for="setNotes"><span data-i18n="settings.notes">Заметки для контекста (видны агенту)</span> <span class="help-icon" data-i18n-tooltip="settings.help_notes" data-i18n-title="settings.help_notes">?</span></label>
           <textarea id="setNotes" class="notes-textarea" placeholder="Например: температура PETG откалибрована по температурной башне — не предлагай калибровку" data-i18n-placeholder="settings.notes_placeholder"></textarea>
         </div>
+        <hr class="settings-divider">
+        <div class="settings-subtitle" data-i18n="settings.default_model_title">Дефолтные настройки моделей</div>
+        <div class="settings-hint" data-i18n="settings.default_model_hint">Если у модели изменены параметры, используются именно они, а не дефолтные</div>
         <div class="field">
-          <label for="setGlobalTemperature"><span data-i18n="settings.temperature">Температура:</span> <span id="setGlobalTemperatureValue" class="range-value">0.7</span></label>
+          <label for="setGlobalTemperature"><span data-i18n="settings.temperature">Температура:</span> <span id="setGlobalTemperatureValue" class="range-value">0.7</span> <span class="help-icon" data-i18n-tooltip="settings.help_temperature" data-i18n-title="settings.help_temperature">?</span></label>
           <input type="range" id="setGlobalTemperature" min="0" max="2" step="0.1" value="0.7">
         </div>
-        <div class="field">
-          <label for="setGlobalMaxTokens" data-i18n="settings.max_tokens">Максимум токенов</label>
+        <div class="field field-inline field-gap">
+          <label for="setGlobalMaxTokens"><span data-i18n="settings.max_tokens">Максимум токенов</span> <span class="help-icon" data-i18n-tooltip="settings.help_max_tokens" data-i18n-title="settings.help_max_tokens">?</span></label>
           <input type="number" id="setGlobalMaxTokens" min="1" max="100000" step="1" value="4096">
         </div>
         <div class="field">
           <div class="check-row">
             <input type="checkbox" id="setGlobalReasoning">
-            <label for="setGlobalReasoning" data-i18n="settings.reasoning">Расширенное мышление</label>
+            <label for="setGlobalReasoning"><span data-i18n="settings.reasoning">Расширенное мышление</span> <span class="help-icon" data-i18n-tooltip="settings.help_reasoning" data-i18n-title="settings.help_reasoning">?</span></label>
           </div>
+        </div>
+        <div class="field">
+          <label for="setPresetContextDD"><span data-i18n="settings.preset_context">Контекст пресетов</span> <span class="help-icon" data-i18n-tooltip="settings.help_preset_context" data-i18n-title="settings.help_preset_context">?</span></label>
+          <div class="dd-wrap" id="setPresetContextDD"></div>
         </div>
       </div>
       <div id="tabAppearance" style="display:none">
         <div class="field">
           <label data-i18n="settings.theme">Тема</label>
-          <div class="dd-wrap" id="setThemeDD"></div>
+          <div class="theme-switch">
+            <button type="button" class="theme-switch-btn" data-theme="auto" data-i18n="theme.auto">Авто</button>
+            <button type="button" class="theme-switch-btn" data-theme="light" data-i18n="theme.light">Светлая</button>
+            <button type="button" class="theme-switch-btn" data-theme="dark" data-i18n="theme.dark">Тёмная</button>
+          </div>
         </div>
         <div class="field">
           <label for="setFontSize"><span data-i18n="settings.font_size">Размер шрифта:</span> <span id="setFontSizeValue">14</span> px</label>
@@ -207,7 +227,7 @@
           <div class="dd-wrap" id="setFontStyleDD"></div>
         </div>
         <div class="field">
-          <label data-i18n="settings.language">Язык</label>
+          <label><span data-i18n="settings.language">Язык</span> <span class="help-icon" data-i18n-tooltip="settings.help_language" data-i18n-title="settings.help_language">?</span></label>
           <div class="dd-wrap" id="setLanguageDD"></div>
         </div>
       </div>
@@ -241,7 +261,7 @@
 <div class="modal-overlay" id="modelPickerModal" style="display:none">
   <div class="mp-modal">
     <div class="modal-header">
-      <span data-i18n="mp.title">Выбор модели</span>
+      <span data-i18n="mp.title">Выбор активной модели</span>
       <button type="button" id="mpClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
     </div>
     <input type="text" id="mpSearch" class="mp-search" placeholder="Поиск модели или провайдера…" data-i18n-placeholder="mp.search">

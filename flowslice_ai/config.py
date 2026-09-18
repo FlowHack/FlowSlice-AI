@@ -14,6 +14,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "font_size": 14,
     "font_style": "system",
     "language": "en",
+    "preset_context": "changed",
     "temperature": 0.7,
     "max_tokens": 4096,
     "reasoning": False,
@@ -33,6 +34,7 @@ SETTINGS_KEYS: tuple[str, ...] = (
     "font_size",
     "font_style",
     "language",
+    "preset_context",
 )
 
 # Служебные команды чата: единый источник для /help и state.
