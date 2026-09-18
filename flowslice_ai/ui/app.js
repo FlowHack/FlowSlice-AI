@@ -181,6 +181,7 @@
       "mp.default": "Default",
       "mp.default_set": "Set as default model",
       "mp.vision_supported": "Supports image analysis",
+      "mp.vision_none": "Does not accept images",
       "mp.need_key": "Set an API key for one of the providers or add your own model",
       "mp.no_model": "No model configured",
       "mp.open_settings": "Open settings",
@@ -343,7 +344,7 @@
       "settings.vision_yes": "Есть",
       "settings.vision_no": "Нет",
       "settings.vision_unknown": "Не знаю",
-      "settings.vision_from_provider": "Провайдер подтвердил",
+      "settings.vision_from_provider": "Подтверждено провайдером",
       "settings.vision_manual": "Задано вручную",
       "settings.help_notes": "Дополнительная информация, которую агент учитывает при ответах",
       "settings.help_language": "Язык интерфейса плагина",
@@ -366,6 +367,7 @@
       "mp.default": "По умолчанию",
       "mp.default_set": "Сделать моделью по умолчанию",
       "mp.vision_supported": "Поддерживает анализ изображений",
+      "mp.vision_none": "Не принимает изображения",
       "mp.need_key": "Укажите для одного из провайдеров токен или внесите свою модель",
       "mp.no_model": "Модель не настроена",
       "mp.open_settings": "Открыть настройки",
@@ -528,7 +530,7 @@
       "settings.vision_yes": "Ima",
       "settings.vision_no": "Nema",
       "settings.vision_unknown": "Ne znam",
-      "settings.vision_from_provider": "Provajder potvrdio",
+      "settings.vision_from_provider": "Potvrđeno od provajdera",
       "settings.vision_manual": "Ručno podešeno",
       "settings.help_notes": "Dodatne informacije koje agent uzima u obzir pri odgovaranju",
       "settings.help_language": "Jezik interfejsa dodatka",
@@ -551,6 +553,7 @@
       "mp.default": "Podrazumevano",
       "mp.default_set": "Postavi kao podrazumevani model",
       "mp.vision_supported": "Podržava analizu slika",
+      "mp.vision_none": "Ne prihvata slike",
       "mp.need_key": "Postavite token za jednog od provajdera ili dodajte sopstveni model",
       "mp.no_model": "Model nije podešen",
       "mp.open_settings": "Otvori podešavanja",
@@ -866,6 +869,8 @@
 
   /* ===== Модель-пикер ===== */
   function renderModelChip() {
+    var visionSlot = byId("modelChipVision");
+    visionSlot.innerHTML = "";
     var s = state.settings || {};
     var provider = providerById(s.active_provider);
     // Нет ключа — конкретная модель неактуальна, показываем нейтральный текст.
@@ -875,26 +880,39 @@
     }
     var providerName = provider ? provider.name : (s.active_provider || "—");
     var modelName = s.active_model || "—";
+    var model = null;
     if (provider) {
       var models = provider.models || [];
       for (var i = 0; i < models.length; i++) {
         if (models[i].id === s.active_model) {
+          model = models[i];
           modelName = models[i].name || models[i].id;
           break;
         }
       }
     }
     byId("modelChipLabel").textContent = providerName + " · " + modelName;
+    // Значок зрения активной модели прямо на кнопке выбора модели.
+    var eye = visionEye(model);
+    if (eye) {
+      visionSlot.appendChild(eye);
+    }
   }
 
-  // Значок «модель понимает изображения» с подсказкой; иначе null.
+  // Значок зрения модели: 👁 — принимает изображения, перечёркнутый 👁 —
+  // не принимает, null — поддержка неизвестна (ничего не рисуем).
   function visionEye(model) {
-    if (!model || model.vision !== true) {
+    if (!model || model.vision === null || model.vision === undefined) {
       return null;
     }
-    var eye = el("span", "mp-vision", "👁");
-    eye.title = t("mp.vision_supported");
-    return eye;
+    if (model.vision) {
+      var eye = el("span", "mp-vision", "👁");
+      eye.title = t("mp.vision_supported");
+      return eye;
+    }
+    var noEye = el("span", "mp-vision mp-vision-no", "👁");
+    noEye.title = t("mp.vision_none");
+    return noEye;
   }
 
   // Значение зрения для отправки на бэкенд: true/false/null (не знаю).
@@ -929,6 +947,7 @@
 
   function renderModelPicker() {
     var list = byId("mpList");
+    var prevScroll = list.scrollTop;
     list.innerHTML = "";
     var query = byId("mpSearch").value.trim().toLowerCase();
     var providers = state.providers || [];
@@ -993,9 +1012,6 @@
           });
         })(prov.id, item.id);
         row.appendChild(star);
-        if (isActive) {
-          row.appendChild(el("span", "mp-check", "✓"));
-        }
         (function (pid, mid) {
           row.addEventListener("click", function () {
             post({ type: "set_model", provider: pid, model: mid });
@@ -1028,6 +1044,9 @@
         list.appendChild(settingsBtn);
       }
     }
+    // Фоновое обновление (например, уточнение зрения) не должно сбрасывать
+    // прокрутку у открытого списка.
+    list.scrollTop = prevScroll;
   }
 
   /* ===== Sidebar ===== */
@@ -2011,6 +2030,7 @@
     var open = false;
 
     function renderList() {
+      var prevScroll = list.scrollTop;
       list.innerHTML = "";
       var q = search ? search.value.trim().toLowerCase() : "";
       var shown = 0;
@@ -2027,9 +2047,6 @@
         } else {
           item.appendChild(el("span", "dd-item-label", o.label));
         }
-        if (o.value === current) {
-          item.appendChild(el("span", "dd-check", "✓"));
-        }
         (function (val) {
           item.addEventListener("click", function () {
             setSelected(val);
@@ -2045,6 +2062,8 @@
       if (shown === 0) {
         list.appendChild(el("div", "dd-empty", t("common.nothing")));
       }
+      // Сохраняем позицию прокрутки при фоновом обновлении списка.
+      list.scrollTop = prevScroll;
     }
 
     function openPopup() {

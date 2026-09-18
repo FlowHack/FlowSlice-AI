@@ -342,6 +342,8 @@ class HandlersMixin:
         # в UI должен сразу увидеть has_key, иначе он остаётся пустым.
         self._send_state()
         self._post({"type": "toast", "text": self._t("settings.saved"), "kind": "ok"})
+        # Ключ мог появиться в текущей сессии: уточняем зрение в фоне.
+        self._schedule_vision_refresh()
 
     def _handle_reset_settings(self: "_ChatEngine", message: dict) -> None:
         """Сбрасывает к заводским значениям только ключи текущей вкладки настроек."""
@@ -377,6 +379,7 @@ class HandlersMixin:
         self._persist_config()
         self._send_state()
         self._post({"type": "toast", "text": self._t("settings.models_reset"), "kind": "ok"})
+        self._schedule_vision_refresh()
 
     def _handle_reset_custom_models(self: "_ChatEngine") -> None:
         """Удаляет всех пользовательских провайдеров и их модели."""

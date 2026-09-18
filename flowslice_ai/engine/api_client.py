@@ -10,6 +10,7 @@
 # pylint: disable=too-many-public-methods,too-few-public-methods
 
 import json
+import threading
 import time
 from typing import TYPE_CHECKING, Any
 import urllib.error
@@ -254,6 +255,17 @@ class ApiClientMixin:
             if provider_id != "openrouter" and not str(prov.get("api_key", "")).strip():
                 continue
             self._refresh_provider_vision(provider_id)
+
+    def _schedule_vision_refresh(self: "_ChatEngine") -> None:
+        """Запускает фоновое уточнение зрения после смены ключей или моделей.
+
+        Обычно зрение определяется один раз при старте UI, поэтому без этого
+        вызова ключ, добавленный в текущей сессии, не влиял бы на значки до
+        перезапуска плагина.
+        """
+        if self._post_sink is None:
+            return
+        threading.Thread(target=self._refresh_all_vision, daemon=True).start()
 
     def _resolve_vision_for(self: "_ChatEngine", provider_id: str, model_id: str) -> bool | None:
         """Пытается определить поддержку изображений через API провайдера.
