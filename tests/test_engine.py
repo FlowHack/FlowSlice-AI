@@ -215,3 +215,73 @@ def test_collect_preset_data_all_differs_from_changed(engine, monkeypatch) -> No
         "nozzle_diameter": "0.4",
         "printable_height": "390",
     }
+
+
+def test_collect_preset_data_changed_filters_inherited(engine, monkeypatch) -> None:
+    """Режим "changed" оставляет только отличия от разрешённого конфига предков."""
+
+    class _Preset:
+        """Заглушка пресета, чей config уже содержит унаследованные ключи."""
+
+        def __init__(self, name: str, values: dict) -> None:
+            self.name = name
+            self._values = values
+
+        def config_keys(self):
+            """Возвращает ключи пресета."""
+            return list(self._values)
+
+        def config_value(self, key: str):
+            """Возвращает значение ключа."""
+            return self._values.get(key)
+
+    class _Collection:
+        """Заглушка коллекции пресетов с выбранным пресетом."""
+
+        def __init__(self, presets: dict[str, _Preset], selected: _Preset) -> None:
+            self._presets = presets
+            self._selected = selected
+
+        def get_selected_preset_name(self) -> str:
+            """Возвращает имя выбранного пресета."""
+            return self._selected.name
+
+        def get_selected_preset(self):
+            """Возвращает выбранный пресет."""
+            return self._selected
+
+        def find_preset(self, name: str):
+            """Возвращает пресет по имени."""
+            return self._presets.get(name)
+
+    class _Bundle:
+        """Заглушка бандла с тремя коллекциями."""
+
+        def __init__(self, collection: _Collection) -> None:
+            self.printers = collection
+            self.filaments = collection
+            self.prints = collection
+
+        def full_config_value(self, key: str):
+            """Объединённый конфиг в заглушке пуст."""
+            return None
+
+    base = _Preset("Base @P", {"printer_model": "MyPrinter", "nozzle_diameter": "0.4"})
+    user = _Preset(
+        "User @P",
+        {
+            "inherits": "Base @P",
+            "printer_model": "MyPrinter",
+            "nozzle_diameter": "0.6",
+        },
+    )
+    bundle = _Bundle(_Collection({"Base @P": base, "User @P": user}, user))
+    monkeypatch.setattr(
+        "flowslice_ai.engine.slicer_context.orca",
+        types.SimpleNamespace(
+            host=types.SimpleNamespace(preset_bundle=lambda: bundle)
+        ),
+    )
+
+    changed = engine._collect_preset_data({"printer": "changed"})
+    assert changed["printer"]["params"] == {"nozzle_diameter": "0.6"}

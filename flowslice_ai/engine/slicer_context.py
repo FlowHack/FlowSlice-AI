@@ -283,17 +283,32 @@ class SlicerContextMixin:
             section["name"] = str(name) if name else str(getattr(preset, "name", "") or "")
             # Цепочка наследования от корня к текущему пресету.
             chain = self._preset_inheritance_chain(collection, preset)
+            # Собственные параметры выбранного пресета. В разных сборках Orca
+            # preset.config может быть как списком изменений, так и уже
+            # разрешённым конфигом, поэтому ниже вычисляем разницу с предками.
+            selected = self._preset_config_items(preset)
             # Полный конфиг: merge по цепочке в обратном порядке (от корня),
             # значения текущего пресета перекрывают унаследованные.
             full: dict[str, Any] = {}
             for item in reversed(chain):
                 for fkey, fval in self._preset_config_items(item).items():
-                    full[fkey] = self._json_safe(fval)
+                    full[fkey] = fval
+            # Разрешённый конфиг предков (вся цепочка без выбранного пресета).
+            parent_full: dict[str, Any] = {}
+            for item in reversed(chain[1:]):
+                for fkey, fval in self._preset_config_items(item).items():
+                    parent_full[fkey] = fval
+            # Изменённые: собственные ключи выбранного пресета, значения которых
+            # отличаются от разрешённого конфига предков.
             changed = {
-                fkey: self._json_safe(fval)
-                for fkey, fval in self._preset_config_items(preset).items()
+                fkey: fval
+                for fkey, fval in selected.items()
+                if parent_full.get(fkey) != fval
             }
-            params = dict(full if mode == "all" else changed)
+            params = {
+                fkey: self._json_safe(fval)
+                for fkey, fval in (full if mode == "all" else changed).items()
+            }
             # Уточняем значения по объединённому конфигу Orca: он отдаёт
             # уже разрешённые значения (с учётом наследования и вычислений).
             if has_full_value:
