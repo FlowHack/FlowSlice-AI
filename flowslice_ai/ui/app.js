@@ -493,7 +493,58 @@
     });
     scope.querySelectorAll("[data-i18n-tooltip]").forEach(function (el) {
       el.setAttribute("data-tooltip", t(el.getAttribute("data-i18n-tooltip")));
+      // Нативный title не нужен: подсказка показывается собственным элементом.
+      el.removeAttribute("title");
     });
+  }
+
+  /* ===== Всплывающие подсказки «?» =====
+     Рендерятся порталом в body с position:fixed, поэтому их не обрезают
+     границы модалок (overflow) и они прижимаются к краям окна. */
+  var helpTipEl = null;
+
+  function hideHelpTip() {
+    if (helpTipEl) {
+      helpTipEl.classList.remove("show");
+    }
+  }
+
+  function showHelpTip(icon) {
+    var text = icon.getAttribute("data-tooltip") || t(icon.getAttribute("data-i18n-tooltip"));
+    if (!text) {
+      return;
+    }
+    if (!helpTipEl) {
+      helpTipEl = el("div", "help-tip");
+      document.body.appendChild(helpTipEl);
+    }
+    helpTipEl.textContent = text;
+    // Размеры считываем до показа: opacity на layout не влияет.
+    var rect = icon.getBoundingClientRect();
+    var tipWidth = helpTipEl.offsetWidth;
+    var tipHeight = helpTipEl.offsetHeight;
+    var gap = 8;
+    var left = rect.left + rect.width / 2 - tipWidth / 2;
+    left = Math.max(gap, Math.min(left, window.innerWidth - tipWidth - gap));
+    var top = rect.top - tipHeight - gap;
+    if (top < gap) {
+      top = rect.bottom + gap;
+    }
+    helpTipEl.style.left = left + "px";
+    helpTipEl.style.top = top + "px";
+    helpTipEl.classList.add("show");
+  }
+
+  function initHelpTooltips() {
+    var icons = document.querySelectorAll(".help-icon");
+    for (var i = 0; i < icons.length; i++) {
+      icons[i].addEventListener("mouseenter", function () {
+        showHelpTip(this);
+      });
+      icons[i].addEventListener("mouseleave", hideHelpTip);
+    }
+    window.addEventListener("scroll", hideHelpTip, true);
+    window.addEventListener("resize", hideHelpTip);
   }
 
   var streamTextEl = null; // элемент текста текущего стримингового сообщения
@@ -1716,6 +1767,7 @@
   }
 
   function closeSettings() {
+    hideHelpTip();
     byId("settingsModal").style.display = "none";
   }
 
@@ -2188,6 +2240,7 @@
     if (window.orca && typeof window.orca.onMessage === "function") {
       window.orca.onMessage(onMessage);
     }
+    initHelpTooltips();
     initSettingsDropdowns();
     post({ type: "get_state" });
   }

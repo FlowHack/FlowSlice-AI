@@ -1279,27 +1279,28 @@ details.field summary:hover {
   border-color: var(--orca-accent);
   color: var(--orca-accent);
 }
-.help-icon::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--orca-fg);
-  color: var(--orca-bg);
-  font-size: 11px;
-  line-height: 1.4;
-  padding: 6px 8px;
+/* Подсказка «?» рендерится порталом в body (app.js) с position:fixed:
+   её не обрезают overflow модалок, позиция прижимается к краям окна.
+   Токены темы те же, что у панелей UI, поэтому подсказка в стиле плагина. */
+.help-tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 260px;
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  border: 1px solid var(--orca-border);
   border-radius: 6px;
-  width: 220px;
+  padding: 7px 9px;
+  font-size: 11px;
+  line-height: 1.45;
   text-align: left;
-  opacity: 0;
+  white-space: normal;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   pointer-events: none;
-  transition: opacity 0.15s;
-  z-index: 120;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.12s;
 }
-.help-icon:hover::after {
+.help-tip.show {
   opacity: 1;
 }
 
