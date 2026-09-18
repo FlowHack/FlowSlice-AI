@@ -57,6 +57,7 @@
       "attach.default_name": "file",
       "attach.limit_count": "Attachment limit reached (max {n}).",
       "attach.limit_size": "File \"{name}\" is too large.",
+      "attach.reading": "File is still being read, try again in a moment.",
       "common.stop": "Stop",
       "common.send": "Send",
       "common.choose_model": "Choose model",
@@ -225,6 +226,7 @@
       "attach.default_name": "файл",
       "attach.limit_count": "Достигнут предел вложений (не более {n}).",
       "attach.limit_size": "Файл «{name}» слишком большой.",
+      "attach.reading": "Файл ещё читается, повторите через мгновение.",
       "common.stop": "Остановить генерацию",
       "common.send": "Отправить",
       "common.choose_model": "Выбрать модель",
@@ -393,6 +395,7 @@
       "attach.default_name": "datoteka",
       "attach.limit_count": "Dostignut limit priloga (najviše {n}).",
       "attach.limit_size": "Datoteka \"{name}\" je prevelika.",
+      "attach.reading": "Datoteka se još čita, pokušajte ponovo za trenutak.",
       "common.stop": "Zaustavi",
       "common.send": "Pošalji",
       "common.choose_model": "Izaberi model",
@@ -1533,6 +1536,7 @@
             attachments.push({
               kind: "image",
               name: name,
+              ready: true,
               data: canvas.toDataURL("image/jpeg", 0.85)
             });
             renderAttachments();
@@ -1547,6 +1551,7 @@
           attachments.push({
             kind: "text",
             name: name,
+            ready: true,
             data: String(e.target.result)
           });
           renderAttachments();
@@ -1564,25 +1569,28 @@
       return;
     }
     for (var i = 0; i < attachments.length; i++) {
-      post({
-        type: "attach_file",
-        kind: attachments[i].kind,
-        name: attachments[i].name,
-        data: attachments[i].data
-      });
+      if (!attachments[i].ready) {
+        showToast(t("attach.reading"), "err");
+        return;
+      }
     }
-    attachments = [];
-    renderAttachments();
     var editId = pendingEditId;
     pendingEditId = null;
     var payload = { type: "chat", text: text };
+    // Вложения уходят тем же сообщением, что и текст: отдельные attach_file
+    // могли теряться при быстрой отправке.
+    if (attachments.length) {
+      payload.attachments = attachments.slice();
+    }
     if (editId) {
       payload.edit_id = editId;
     }
     post(payload);
-    input.value = "";
+    attachments = [];
+    renderAttachments();
+    byId("input").value = "";
     autoResize();
-    input.focus();
+    byId("input").focus();
   }
 
   function startEdit(msg) {

@@ -417,3 +417,44 @@ def test_system_prompt_has_parameter_and_language_rules(engine) -> None:
     engine._config["language"] = "en"
     prompt_en = engine._build_system_prompt({})
     assert "Answer strictly in English." in prompt_en
+
+
+def test_chat_message_accepts_inline_attachments(engine, monkeypatch) -> None:
+    """Вложения из payload chat доходят до сообщения и до промпта модели."""
+    monkeypatch.setattr(engine, "_collect_context", lambda flags, modes=None: {})
+    monkeypatch.setattr(engine, "_start_generation", lambda *args, **kwargs: None)
+    engine._config["language"] = "en"
+    engine.handle_message(
+        {
+            "type": "chat",
+            "text": "посмотри файл",
+            "attachments": [
+                {"kind": "text", "name": "a.txt", "data": "СЕКРЕТ_ФАЙЛА"}
+            ],
+        }
+    )
+    chat = engine._active_chat()
+    user_msg = chat["msgs"][-1]
+    assert user_msg["role"] == "user"
+    assert user_msg["attachments"][0]["file"]["text"] == "СЕКРЕТ_ФАЙЛА"
+    messages = engine._build_messages(chat, "посмотри файл")
+    content = messages[-1]["content"]
+    text = content if isinstance(content, str) else content[0]["text"]
+    assert "СЕКРЕТ_ФАЙЛА" in text
+    assert "Attached file: a.txt" in text
+
+
+def test_chat_with_only_attachment_uses_label(engine, monkeypatch) -> None:
+    """Сообщение без текста, но с вложением, всё равно отправляется."""
+    monkeypatch.setattr(engine, "_start_generation", lambda *args, **kwargs: None)
+    engine._config["language"] = "en"
+    engine.handle_message(
+        {
+            "type": "chat",
+            "text": "",
+            "attachments": [{"kind": "text", "name": "a.txt", "data": "X"}],
+        }
+    )
+    user_msg = engine._active_chat()["msgs"][-1]
+    assert user_msg["role"] == "user"
+    assert "a.txt" in user_msg["text"]

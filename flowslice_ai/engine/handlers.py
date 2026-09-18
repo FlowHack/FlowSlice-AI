@@ -93,8 +93,15 @@ class HandlersMixin:
     def _handle_chat(self: "_ChatEngine", message: dict) -> None:
         """Обрабатывает отправку или редактирование сообщения пользователя."""
         text = str(message.get("text", "")).strip()
-        if not text:
+        # Вложения могут прийти вместе с сообщением (основной канал).
+        incoming = message.get("attachments")
+        if incoming:
+            self._accept_attachments(incoming)
+        if not text and not self._pending_attachments:
             return
+        if not text:
+            # Отправка только вложением без текста: даём сообщению метку.
+            text = self._attachment_label()
         has_image = any(att.get("image") for att in self._pending_attachments)
         if has_image and self._model_supports_images() is False:
             self._pending_attachments = []
@@ -404,18 +411,13 @@ class HandlersMixin:
         snap = self._usage_snapshot(period)
         self._post({"type": "usage", **snap})
 
-    def _handle_attach_file(self: "_ChatEngine", message: dict) -> None:
-        """Сохраняет вложение для следующего сообщения.
-
-        Поддерживается несколько вложений: каждое добавляется в список
-        и переносится в сообщение при отправке.
-        """
-        kind = message.get("kind")
-        name = str(message.get("name", self._t("attach.default_name")))
-        data = message.get("data", "")
+    def _checked_attachment(
+        self: "_ChatEngine", kind: Any, name: str, data: Any
+    ) -> dict[str, Any] | None:
+        """Проверяет вложение и возвращает нормализованное представление."""
         if not isinstance(data, str) or not data:
             _LOGGER.warning("Пропущено вложение без данных (kind=%s)", kind)
-            return
+            return None
         if kind == "image":
             if self._model_supports_images() is False:
                 self._post(
@@ -427,7 +429,7 @@ class HandlersMixin:
                         "kind": "err",
                     }
                 )
-                return
+                return None
             if len(data) > MAX_IMAGE_B64:
                 self._post(
                     {
@@ -436,19 +438,52 @@ class HandlersMixin:
                         "kind": "err",
                     }
                 )
-                return
-            self._pending_attachments.append({"image": data, "name": name})
-        else:
-            if len(data) > MAX_FILE_CHARS:
-                self._post(
-                    {
-                        "type": "toast",
-                        "text": self._t("attach.file_too_big"),
-                        "kind": "err",
-                    }
-                )
-                return
-            self._pending_attachments.append(
-                {"file": {"name": name, "text": data}}
+                return None
+            return {"image": data, "name": name}
+        if len(data) > MAX_FILE_CHARS:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("attach.file_too_big"),
+                    "kind": "err",
+                }
             )
-        self._post({"type": "toast", "text": self._t("attach.added"), "kind": "ok"})
+            return None
+        return {"file": {"name": name, "text": data}}
+
+    def _attachment_label(self: "_ChatEngine") -> str:
+        """Возвращает метку для сообщения, отправленного только вложением."""
+        if not self._pending_attachments:
+            return ""
+        first = self._pending_attachments[0]
+        if first.get("image"):
+            return self._t("chat.photo_marker").strip()
+        name = str(first.get("file", {}).get("name", ""))
+        return self._t("chat.file_marker", name=name).strip()
+
+    def _accept_attachments(self: "_ChatEngine", items: Any) -> int:
+        """Добавляет валидные вложения из списка и возвращает число принятых."""
+        if not isinstance(items, list):
+            return 0
+        accepted = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            att = self._checked_attachment(
+                item.get("kind"),
+                str(item.get("name", self._t("attach.default_name"))),
+                item.get("data", ""),
+            )
+            if att is not None:
+                self._pending_attachments.append(att)
+                accepted += 1
+        return accepted
+
+    def _handle_attach_file(self: "_ChatEngine", message: dict) -> None:
+        """Сохраняет вложение для следующего сообщения (legacy-путь).
+
+        Основной канал — поле ``attachments`` в сообщении ``chat``; этот
+        обработчик оставлен для совместимости.
+        """
+        if self._accept_attachments([message]):
+            self._post({"type": "toast", "text": self._t("attach.added"), "kind": "ok"})
