@@ -1305,6 +1305,10 @@
         var att = msg.attachments[ai];
         if (att && att.image) {
           images.push(att.image);
+        } else if (att && att.kind === "image") {
+          bubble.appendChild(
+            el("span", "msg-file", "🖼 " + (att.name || t("common.attachment")))
+          );
         } else if (att && att.file && att.file.name) {
           bubble.appendChild(el("span", "msg-file", "📄 " + att.file.name));
         }

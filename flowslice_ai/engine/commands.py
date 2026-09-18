@@ -133,14 +133,22 @@ class CommandsMixin:
                 + self._t("cmd.context.on" if value else "cmd.context.off")
             )
         lines.append(self._t("cmd.context.data"))
-        lines.append(json.dumps(ctx, ensure_ascii=False, indent=2))
-        lines.append(self._t("cmd.context.history"))
-        history = self._history_messages(chat, MAX_CONTEXT_CHARS, include_last_user=True)
-        if history:
-            for item in history:
-                lines.append("  [" + item["role"] + "] " + item["content"][:200])
+        if any(flags.get(key) for key in ("filament", "printer", "print", "model")):
+            lines.append(json.dumps(ctx, ensure_ascii=False, indent=2))
         else:
-            lines.append(self._t("cmd.context.empty"))
+            lines.append("  " + self._t("cmd.context.disabled"))
+        lines.append(self._t("cmd.context.history"))
+        if not flags.get("history"):
+            lines.append("  " + self._t("cmd.context.disabled"))
+        else:
+            history = self._history_messages(
+                chat, MAX_CONTEXT_CHARS, include_last_user=True
+            )
+            if history:
+                for item in history:
+                    lines.append("  [" + item["role"] + "] " + item["content"][:200])
+            else:
+                lines.append("  " + self._t("cmd.context.empty"))
         lines.append(
             self._t("cmd.context.tokens", v=str(self._estimate_context_tokens(flags, modes)))
         )

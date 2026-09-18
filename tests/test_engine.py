@@ -4,7 +4,12 @@ from __future__ import annotations
 import time
 import types
 
-from flowslice_ai.constants import MAX_ATTACHMENTS, MAX_FILE_CHARS, MAX_TOTAL_FILE_CHARS
+from flowslice_ai.constants import (
+    MAX_ATTACHMENTS,
+    MAX_FILE_CHARS,
+    MAX_PERSISTED_FILE_CHARS,
+    MAX_TOTAL_FILE_CHARS,
+)
 
 
 def test_estimate_tokens(engine) -> None:
@@ -446,20 +451,29 @@ def test_chat_message_accepts_inline_attachments(engine, monkeypatch) -> None:
     assert "Attached file: a.txt" in text
 
 
-def test_chat_with_only_attachment_uses_label(engine, monkeypatch) -> None:
-    """Сообщение без текста, но с вложением, всё равно отправляется."""
+def test_chat_with_only_attachment_keeps_text_empty(engine, monkeypatch) -> None:
+    """Сообщение без текста с вложением отправляется, текст не подменяется."""
     monkeypatch.setattr(engine, "_start_generation", lambda *args, **kwargs: None)
     engine._config["language"] = "en"
     engine.handle_message(
         {
             "type": "chat",
             "text": "",
-            "attachments": [{"kind": "text", "name": "a.txt", "data": "X"}],
+            "attachments": [{"kind": "text", "name": "a.txt", "data": "СЕКРЕТ"}],
         }
     )
-    user_msg = engine._active_chat()["msgs"][-1]
+    chat = engine._active_chat()
+    user_msg = chat["msgs"][-1]
     assert user_msg["role"] == "user"
-    assert "a.txt" in user_msg["text"]
+    # Пользователь не писал метку — текст остаётся пустым, вложение хранится отдельно.
+    assert user_msg["text"] == ""
+    assert user_msg["attachments"][0]["file"]["name"] == "a.txt"
+    # Заголовок чата при этом формируется по имени вложения.
+    assert "a.txt" in chat["title"]
+    # Содержимое вложения попадает в запрос к модели.
+    messages = engine._build_messages(chat, user_msg["text"])
+    content = str(messages[-1]["content"])
+    assert "СЕКРЕТ" in content
 
 
 def test_checked_attachment_rejects_large_file(engine) -> None:
@@ -494,3 +508,56 @@ def test_accept_attachments_total_text_budget(engine) -> None:
     assert accepted == MAX_TOTAL_FILE_CHARS // MAX_FILE_CHARS
     total = sum(len(a["file"]["text"]) for a in engine._pending_attachments)
     assert total <= MAX_TOTAL_FILE_CHARS
+
+
+def test_flatten_keeps_file_content_and_no_markers(engine, monkeypatch) -> None:
+    """При сохранении текст сообщения не засоряется метками, файл сохраняется."""
+    monkeypatch.setattr(engine, "_start_generation", lambda *args, **kwargs: None)
+    engine._config["language"] = "en"
+    engine.handle_message(
+        {
+            "type": "chat",
+            "text": "смотри файл",
+            "attachments": [{"kind": "text", "name": "a.txt", "data": "ТЕЛО"}],
+        }
+    )
+    flat = engine._flatten_chats()
+    flat_msg = flat[0]["msgs"][-1]
+    assert flat_msg["text"] == "смотри файл"
+    assert "[file:" not in flat_msg["text"]
+    assert flat_msg["attachments"][0]["file"]["text"] == "ТЕЛО"
+
+
+def test_attachment_content_survives_reload(engine, monkeypatch) -> None:
+    """После перезагрузки чатов содержимое файла остаётся доступным модели."""
+    monkeypatch.setattr(engine, "_start_generation", lambda *args, **kwargs: None)
+    engine._config["language"] = "en"
+    engine.handle_message(
+        {
+            "type": "chat",
+            "text": "смотри файл",
+            "attachments": [{"kind": "text", "name": "a.txt", "data": "ТЕЛО_ФАЙЛА"}],
+        }
+    )
+    engine._save_chats()
+    engine._load_chats()
+    user = engine._active_chat()["msgs"][-1]
+    assert user["text"] == "смотри файл"
+    assert "[file:" not in user["text"]
+    files = engine._collect_files(user)
+    assert files and files[0]["text"] == "ТЕЛО_ФАЙЛА"
+    messages = engine._build_messages(engine._active_chat(), user["text"])
+    assert "ТЕЛО_ФАЙЛА" in str(messages[-1]["content"])
+
+
+def test_attachment_truncation_is_marked(engine, monkeypatch) -> None:
+    """Усечённое при сохранении вложение помечается для модели."""
+    monkeypatch.setattr(engine, "_start_generation", lambda *args, **kwargs: None)
+    engine._config["language"] = "en"
+    long_text = "x" * (MAX_PERSISTED_FILE_CHARS + 5)
+    engine._accept_attachments([{"kind": "text", "name": "big.txt", "data": long_text}])
+    user_msg = {"role": "user", "text": "файл", "attachments": engine._pending_attachments}
+    engine._pending_attachments = []
+    rendered = engine._render_file(engine._flatten_attachments(user_msg["attachments"])[0]["file"])
+    assert MAX_PERSISTED_FILE_CHARS <= rendered.count("x") < len(long_text)
+    assert "beginning is shown" in rendered

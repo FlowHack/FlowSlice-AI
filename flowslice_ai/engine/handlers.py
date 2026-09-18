@@ -106,9 +106,9 @@ class HandlersMixin:
             self._accept_attachments(incoming)
         if not text and not self._pending_attachments:
             return
-        if not text:
-            # Отправка только вложением без текста: даём сообщению метку.
-            text = self._attachment_label()
+        # Заголовок чата для отправки одним вложением формируем по его метке,
+        # но сам текст сообщения не подменяем: пользователь его не писал.
+        title_text = text or self._attachment_label()
         has_image = any(att.get("image") for att in self._pending_attachments)
         if has_image and self._model_supports_images() is False:
             self._pending_attachments = []
@@ -161,7 +161,7 @@ class HandlersMixin:
             self._pending_attachments = []
         chat["msgs"].append(user_msg)
         if not chat["title"]:
-            chat["title"] = self._auto_title(text)
+            chat["title"] = self._auto_title(title_text)
         chat["updated"] = time.time()
         self._trim_chat(chat)
         self._save_chats()

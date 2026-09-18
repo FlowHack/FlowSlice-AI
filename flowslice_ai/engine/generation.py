@@ -175,11 +175,7 @@ class GenerationMixin:
         last_user = self._last_user_msg(chat)
         if last_user is not None:
             for file_info in self._collect_files(last_user):
-                user_content += self._t(
-                    "prompt.file",
-                    name=str(file_info.get("name", self._t("attach.default_name"))),
-                    text=str(file_info.get("text", "")),
-                )
+                user_content += self._render_file(file_info)
         scheme = self._active_scheme()
         if images and scheme == "anthropic":
             # Нативный Messages API: изображения как base64-блоки.
@@ -261,11 +257,9 @@ class GenerationMixin:
             text = str(msg.get("text", ""))
             if msg.get("image"):
                 text += self._t("chat.photo_marker")
-            if msg.get("file"):
-                text += self._t(
-                    "chat.file_marker",
-                    name=str(msg.get("file", {}).get("name", self._t("attach.default_name"))),
-                )
+            legacy_file = msg.get("file")
+            if isinstance(legacy_file, dict):
+                text += self._render_file(legacy_file)
             attachments = msg.get("attachments")
             if isinstance(attachments, list):
                 for att in attachments:
@@ -274,15 +268,21 @@ class GenerationMixin:
                     if att.get("image"):
                         text += self._t("chat.photo_marker")
                     elif isinstance(att.get("file"), dict):
-                        text += self._t(
-                            "chat.file_marker",
-                            name=str(
-                                att["file"].get("name", self._t("attach.default_name"))
-                            ),
-                        )
+                        text += self._render_file(att["file"])
             if total + len(text) > max_chars:
                 break
             result.append({"role": msg["role"], "content": text})
             total += len(text)
         result.reverse()
         return result
+
+    def _render_file(self: "_ChatEngine", file_info: dict[str, Any]) -> str:
+        """Формирует текстовый блок файла для истории сообщений."""
+        name = str(file_info.get("name", self._t("attach.default_name")))
+        content = str(file_info.get("text", ""))
+        if not content:
+            return self._t("chat.file_marker", name=name)
+        block = self._t("prompt.file", name=name, text=content)
+        if file_info.get("truncated"):
+            block += self._t("prompt.file_truncated")
+        return block

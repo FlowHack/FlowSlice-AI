@@ -27,6 +27,7 @@ from flowslice_ai.config import (
 from flowslice_ai.constants import (
     CONTEXT_OPTIONS,
     MAX_CHAT_MESSAGES,
+    MAX_PERSISTED_FILE_CHARS,
     PRESET_CONTEXT_KEYS,
 )
 from flowslice_ai.i18n import I18N_PY
@@ -366,10 +367,11 @@ class CoreMixin:
         )
 
     def _flatten_chats(self: "_ChatEngine") -> list[dict[str, Any]]:
-        """Возвращает копию чатов без тяжёлых вложений для записи на диск.
+        """Возвращает копию чатов для записи на диск и отправки в UI.
 
-        Фото (data URI) и текст файлов в памяти сохраняются для превью и API
-        текущей сессии, но на диск пишутся только их текстовые пометки.
+        Текст вложений сохраняется (с ограничением), чтобы содержимое файлов
+        не терялось при перезапуске движка. Тяжёлые изображения (data URI) не
+        пишутся: вместо них остаётся пометка с именем.
         """
         result: list[dict[str, Any]] = []
         for chat in self._chats:
@@ -378,35 +380,33 @@ class CoreMixin:
                 flat = dict(msg)
                 if flat.get("image"):
                     flat.pop("image", None)
-                    photo_marker = self._t("chat.photo_marker")
-                    if photo_marker not in str(flat.get("text", "")):
-                        flat["text"] = str(flat.get("text", "")) + photo_marker
+                    flat["attachments"] = self._merge_attachment(
+                        flat.get("attachments"),
+                        {"kind": "image", "name": self._t("attach.photo_name")},
+                    )
                 file_info = flat.get("file")
-                if file_info:
-                    name = str(file_info.get("name", self._t("attach.default_name")))
-                    flat["file"] = {"name": name}
-                    marker = self._t("chat.file_marker", name=name)
-                    if marker not in str(flat.get("text", "")):
-                        flat["text"] = str(flat.get("text", "")) + marker
+                if isinstance(file_info, dict):
+                    content = str(file_info.get("text", ""))
+                    flat["file"] = {
+                        "name": str(file_info.get("name", "")),
+                        "text": content[:MAX_PERSISTED_FILE_CHARS],
+                        "truncated": len(content) > MAX_PERSISTED_FILE_CHARS,
+                    }
                 attachments = flat.get("attachments")
                 if isinstance(attachments, list):
-                    flat["attachments"] = self._flatten_attachments(flat, attachments)
+                    flat["attachments"] = self._flatten_attachments(attachments)
                 flat_msgs.append(flat)
             flat_chat = dict(chat)
             flat_chat["msgs"] = flat_msgs
             result.append(flat_chat)
         return result
 
-    def _flatten_attachments(
-        self: "_ChatEngine", msg: dict[str, Any], attachments: list
-    ) -> list[dict[str, Any]]:
-        """Готовит вложения к записи на диск: без тяжёлых данных, с пометками.
+    def _flatten_attachments(self, attachments: list) -> list[dict[str, Any]]:
+        """Готовит вложения к записи на диск.
 
-        Текст сообщения дополняется маркерами фото/файла, чтобы после перезапуска
-        OrcaSlicer история оставалась читаемой без самих данных вложений.
+        Текст файлов сохраняется с ограничением, изображения — только именем.
         """
         cleaned: list[dict[str, Any]] = []
-        text = str(msg.get("text", ""))
         for att in attachments:
             if not isinstance(att, dict):
                 continue
@@ -414,17 +414,29 @@ class CoreMixin:
                 cleaned.append(
                     {"kind": "image", "name": str(att.get("name", ""))}
                 )
-                marker = self._t("chat.photo_marker")
-                if marker not in text:
-                    text += marker
             elif isinstance(att.get("file"), dict):
-                name = str(att["file"].get("name", self._t("attach.default_name")))
-                cleaned.append({"kind": "text", "file": {"name": name}})
-                marker = self._t("chat.file_marker", name=name)
-                if marker not in text:
-                    text += marker
-        msg["text"] = text
+                file_info = att["file"]
+                content = str(file_info.get("text", ""))
+                cleaned.append(
+                    {
+                        "kind": "text",
+                        "file": {
+                            "name": str(file_info.get("name", "")),
+                            "text": content[:MAX_PERSISTED_FILE_CHARS],
+                            "truncated": len(content) > MAX_PERSISTED_FILE_CHARS,
+                        },
+                    }
+                )
         return cleaned
+
+    @staticmethod
+    def _merge_attachment(attachments: Any, item: dict[str, Any]) -> list[dict[str, Any]]:
+        """Добавляет пометку вложения к существующему списку или создаёт его."""
+        result = [att for att in attachments if isinstance(att, dict)] if isinstance(
+            attachments, list
+        ) else []
+        result.append(item)
+        return result
 
     def _save_chats(self: "_ChatEngine") -> None:
         """Сохраняет историю чатов в файл под блокировкой без тяжёлых вложений."""
