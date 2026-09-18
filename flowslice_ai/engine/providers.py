@@ -117,6 +117,8 @@ class ProvidersMixin:
             value = info.get(key)
             if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
                 entry[key] = float(value)
+        if "price_in" in entry or "price_out" in entry:
+            entry["price_source"] = "provider"
         models[model_id] = entry
         return True
 
@@ -336,6 +338,13 @@ class ProvidersMixin:
             if isinstance(reasoning, str):
                 reasoning = reasoning.strip().lower() in ("1", "true", "yes", "on")
             entry["reasoning"] = bool(reasoning)
+        # Цена за 1М токенов (необязательно): у персональных моделей её взять неоткуда.
+        for price_key in ("price_in", "price_out"):
+            price_value = self._normalize_price(message.get(price_key))
+            if price_value is not None:
+                entry[price_key] = price_value
+        if "price_in" in entry or "price_out" in entry:
+            entry["price_source"] = "manual"
         # URL/ключ/схема — только для пользовательских провайдеров.
         if not prov.get("builtin", False):
             if message.get("base_url") is not None:
@@ -381,6 +390,22 @@ class ProvidersMixin:
         mdef["vision_source"] = "provider"
         self._persist_config()
         self._send_state()
+
+    @staticmethod
+    def _normalize_price(value: Any) -> float | None:
+        """Нормализует цену за 1М токенов.
+
+        Возвращает None, если значение пустое, не число или вне разумных границ.
+        """
+        if value is None:
+            return None
+        try:
+            price = float(value)
+        except (TypeError, ValueError):
+            return None
+        if price < 0 or price > 100000:
+            return None
+        return round(price, 4)
 
     def _handle_update_model(self: "_ChatEngine", message: dict) -> None:
         """Обновляет поля пользовательской модели.
@@ -429,6 +454,20 @@ class ProvidersMixin:
                 mdef["vision"] = bool(vision)
             # Значение выставлено пользователем вручную.
             mdef["vision_source"] = "manual"
+        if "price_in" in message or "price_out" in message:
+            # Цена может быть задана вручную: у части провайдеров её нет в API,
+            # а у персональных моделей — неоткуда взять.
+            for price_key in ("price_in", "price_out"):
+                if price_key in message:
+                    price_value = self._normalize_price(message.get(price_key))
+                    if price_value is None:
+                        mdef.pop(price_key, None)
+                    else:
+                        mdef[price_key] = price_value
+            if mdef.get("price_in") is None and mdef.get("price_out") is None:
+                mdef.pop("price_source", None)
+            else:
+                mdef["price_source"] = "manual"
         if mdef.get("builtin", False):
             if any(
                 message.get(key) is not None

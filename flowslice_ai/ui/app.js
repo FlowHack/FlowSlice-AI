@@ -171,6 +171,12 @@
       "settings.vision_unknown": "Unknown",
       "settings.vision_from_provider": "Confirmed by provider",
       "settings.vision_manual": "Set manually",
+      "settings.price_in": "Input price, USD per 1M tokens",
+      "settings.price_out": "Output price, USD per 1M tokens",
+      "settings.price_from_provider": "Price from provider",
+      "settings.price_manual": "Price set manually",
+      "settings.price_hint": "Leave empty if unknown. Used to estimate the cost of replies.",
+      "msg.usage_title": "Estimated tokens and cost of this reply, USD",
       "settings.help_notes": "Additional info the agent takes into account when answering",
       "settings.help_language": "Plugin UI language",
       "settings.help_preset_context": "What goes into the slicer context: only changed preset parameters or all of them",
@@ -366,6 +372,12 @@
       "settings.vision_unknown": "Не знаю",
       "settings.vision_from_provider": "Подтверждено провайдером",
       "settings.vision_manual": "Задано вручную",
+      "settings.price_in": "Цена входа, USD за 1 млн токенов",
+      "settings.price_out": "Цена выхода, USD за 1 млн токенов",
+      "settings.price_from_provider": "Цена от провайдера",
+      "settings.price_manual": "Цена задана вручную",
+      "settings.price_hint": "Оставьте пустым, если цена неизвестна. По ней оценивается стоимость ответов.",
+      "msg.usage_title": "Оценка токенов и стоимости ответа, USD",
       "settings.help_notes": "Дополнительная информация, которую агент учитывает при ответах",
       "settings.help_language": "Язык интерфейса плагина",
       "settings.help_preset_context": "Что попадает в контекст слайсера: только изменённые параметры пресетов или все",
@@ -561,6 +573,12 @@
       "settings.vision_unknown": "Ne znam",
       "settings.vision_from_provider": "Potvrđeno od provajdera",
       "settings.vision_manual": "Ručno podešeno",
+      "settings.price_in": "Cena ulaza, USD za 1M tokena",
+      "settings.price_out": "Cena izlaza, USD za 1M tokena",
+      "settings.price_from_provider": "Cena od provajdera",
+      "settings.price_manual": "Cena ručno podešena",
+      "settings.price_hint": "Ostavite prazno ako cena nije poznata. Koristi se za procenu cene odgovora.",
+      "msg.usage_title": "Procena tokena i cene odgovora, USD",
       "settings.help_notes": "Dodatne informacije koje agent uzima u obzir pri odgovaranju",
       "settings.help_language": "Jezik interfejsa dodatka",
       "settings.help_preset_context": "Šta ulazi u kontekst slajsera: samo izmenjeni parametri preseta ili svi",
@@ -810,6 +828,49 @@
     var h = d.getHours();
     var m = d.getMinutes();
     return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+  }
+
+  function formatTokens(value) {
+    var n = Number(value) || 0;
+    if (n >= 1000000) {
+      return (n / 1000000).toFixed(1) + "M";
+    }
+    if (n >= 1000) {
+      return (n / 1000).toFixed(1) + "K";
+    }
+    return String(n);
+  }
+
+  function formatCost(value) {
+    var text = Number(value).toFixed(6);
+    text = text.replace(/0+$/, "").replace(/\.$/, "");
+    if (!text) {
+      text = "0";
+    }
+    return "$" + text;
+  }
+
+  function usageMeta(msg) {
+    if (!msg || msg.role !== "assistant") {
+      return null;
+    }
+    var hasTokens = msg.tokens_in !== undefined || msg.tokens_out !== undefined;
+    var hasCost = msg.cost !== undefined && msg.cost !== null;
+    if (!hasTokens && !hasCost) {
+      return null;
+    }
+    var parts = [];
+    if (hasTokens) {
+      parts.push(
+        "≈ " + formatTokens(msg.tokens_in || 0) + " ↑ / " + formatTokens(msg.tokens_out || 0) + " ↓"
+      );
+    }
+    if (hasCost) {
+      parts.push(formatCost(msg.cost));
+    }
+    var span = el("span", "msg-meta", " · " + parts.join(" · "));
+    span.title = t("msg.usage_title");
+    return span;
   }
 
   /* ===== Тема и шрифт ===== */
@@ -1602,7 +1663,12 @@
     var textNode = el("div", "msg-text");
     setMessageText(textNode, msg.text || "", msg.role === "assistant");
     bubble.appendChild(textNode);
-    bubble.appendChild(el("div", "msg-time", formatTime(msg.ts)));
+    var timeRow = el("div", "msg-time", formatTime(msg.ts));
+    var meta = usageMeta(msg);
+    if (meta) {
+      timeRow.appendChild(meta);
+    }
+    bubble.appendChild(timeRow);
     wrap.appendChild(bubble);
     var actions = el("div", "msg-actions");
     if (msg.role === "assistant") {
@@ -2773,6 +2839,18 @@
     } else {
       ctVisionSource.style.display = "none";
     }
+    byId("ctPriceIn").value = (model.price_in === null || model.price_in === undefined) ? "" : String(model.price_in);
+    byId("ctPriceOut").value = (model.price_out === null || model.price_out === undefined) ? "" : String(model.price_out);
+    var ctPriceSource = byId("ctPriceSource");
+    if (model.price_source === "provider") {
+      ctPriceSource.textContent = t("settings.price_from_provider");
+      ctPriceSource.style.display = "inline-block";
+    } else if (model.price_source === "manual") {
+      ctPriceSource.textContent = t("settings.price_manual");
+      ctPriceSource.style.display = "inline-block";
+    } else {
+      ctPriceSource.style.display = "none";
+    }
     byId("ctModelName").value = model.name || "";
     byId("ctModelSystemName").value = model.id || "";
     ctModelDirty = false;
@@ -2877,6 +2955,13 @@
     }
     if (ctVisionDD.getSelected() !== modelVisionChoice(modelById(pid, mid))) {
       payload.vision = visionPayload(ctVisionDD.getSelected());
+    }
+    var ctPriceIn = parsePriceField("ctPriceIn");
+    var ctPriceOut = parsePriceField("ctPriceOut");
+    var ctModel = modelById(pid, mid);
+    if (ctModel && (ctPriceIn !== ctModel.price_in || ctPriceOut !== ctModel.price_out)) {
+      payload.price_in = ctPriceIn;
+      payload.price_out = ctPriceOut;
     }
     post(payload);
     ctModelDirty = false;
@@ -2991,6 +3076,33 @@
     badge.style.display = "inline-block";
   }
 
+  function parsePriceField(id) {
+    var raw = byId(id).value.trim();
+    if (!raw) {
+      return null;
+    }
+    var value = parseFloat(raw);
+    if (isNaN(value) || value < 0) {
+      return null;
+    }
+    return value;
+  }
+
+  function onPriceEdit() {
+    // Цена правится вручную — помечаем модель как изменённую.
+    perModelDirty = true;
+    var badge = byId("setPriceSource");
+    badge.textContent = t("settings.price_manual");
+    badge.style.display = "inline-block";
+  }
+
+  function onCtPriceEdit() {
+    ctModelDirty = true;
+    var badge = byId("ctPriceSource");
+    badge.textContent = t("settings.price_manual");
+    badge.style.display = "inline-block";
+  }
+
   function onModelChange() {
     // Сохраняем черновик предыдущей модели, если форма была изменена.
     if (currentModelKey && perModelDirty) {
@@ -2998,7 +3110,9 @@
         temperature: parseFloat(byId("setTemperature").value),
         max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
         reasoning: byId("setReasoning").checked,
-        vision: setVisionDD.getSelected()
+        vision: setVisionDD.getSelected(),
+        price_in: parsePriceField("setPriceIn"),
+        price_out: parsePriceField("setPriceOut")
       };
     }
     var provider = setProviderDD.getSelected();
@@ -3054,6 +3168,21 @@
       visionSource.style.display = "inline-block";
     } else {
       visionSource.style.display = "none";
+    }
+    // Цена модели за 1 млн токенов: из подгруженного списка или задана вручную.
+    var priceIn = draft ? draft.price_in : model.price_in;
+    var priceOut = draft ? draft.price_out : model.price_out;
+    byId("setPriceIn").value = (priceIn === null || priceIn === undefined) ? "" : String(priceIn);
+    byId("setPriceOut").value = (priceOut === null || priceOut === undefined) ? "" : String(priceOut);
+    var priceSource = byId("setPriceSource");
+    if (model.price_source === "provider") {
+      priceSource.textContent = t("settings.price_from_provider");
+      priceSource.style.display = "inline-block";
+    } else if (model.price_source === "manual") {
+      priceSource.textContent = t("settings.price_manual");
+      priceSource.style.display = "inline-block";
+    } else {
+      priceSource.style.display = "none";
     }
     // Дополнительные поля пользовательской модели (URL/ключ/название/схема).
     var prov = providerById(provider);
@@ -3224,6 +3353,10 @@
       if (draft.vision !== undefined && draft.vision !== modelVisionChoice(drafted)) {
         modelPayload.vision = visionPayload(draft.vision);
       }
+      if (drafted && (draft.price_in !== drafted.price_in || draft.price_out !== drafted.price_out)) {
+        modelPayload.price_in = draft.price_in;
+        modelPayload.price_out = draft.price_out;
+      }
       post(modelPayload);
     }
     // Текущая модель, если изменена вручную.
@@ -3240,6 +3373,14 @@
       };
       if (setVisionDD.getSelected() !== modelVisionChoice(currentModel)) {
         currentPayload.vision = visionPayload(setVisionDD.getSelected());
+      }
+      if (currentModel) {
+        var curPriceIn = parsePriceField("setPriceIn");
+        var curPriceOut = parsePriceField("setPriceOut");
+        if (curPriceIn !== currentModel.price_in || curPriceOut !== currentModel.price_out) {
+          currentPayload.price_in = curPriceIn;
+          currentPayload.price_out = curPriceOut;
+        }
       }
       post(currentPayload);
     }
@@ -3751,6 +3892,8 @@
       perModelDirty = true;
       byId("setReasoningBadge").style.display = "none";
     });
+    byId("setPriceIn").addEventListener("input", onPriceEdit);
+    byId("setPriceOut").addEventListener("input", onPriceEdit);
     byId("resetTemperature").addEventListener("click", function () {
       resetPerModelField("temperature");
     });
@@ -3847,6 +3990,8 @@
       ctModelDirty = true;
       byId("ctReasoningBadge").style.display = "none";
     });
+    byId("ctPriceIn").addEventListener("input", onCtPriceEdit);
+    byId("ctPriceOut").addEventListener("input", onCtPriceEdit);
     byId("ctTemperatureReset").addEventListener("click", function () {
       resetCtModelField("temperature");
     });

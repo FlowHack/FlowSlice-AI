@@ -623,3 +623,94 @@ def test_attachment_truncation_is_marked(engine, monkeypatch) -> None:
     rendered = engine._render_file(engine._flatten_attachments(user_msg["attachments"])[0]["file"])
     assert MAX_PERSISTED_FILE_CHARS <= rendered.count("x") < len(long_text)
     assert "beginning is shown" in rendered
+
+
+def test_normalize_price_validates_bounds(engine) -> None:
+    """Нормализация цены отсекает пустые, отрицательные и завышенные значения."""
+    assert engine._normalize_price(None) is None
+    assert engine._normalize_price("abc") is None
+    assert engine._normalize_price(-1) is None
+    assert engine._normalize_price(100001) is None
+    assert engine._normalize_price("2.5") == 2.5
+    assert engine._normalize_price(0.123456) == 0.1235
+
+
+def test_update_model_sets_manual_price(engine) -> None:
+    """Ручная цена модели помечается источником manual."""
+    engine._handle_update_model(
+        {"provider": "deepseek", "model_id": "deepseek-chat", "price_in": 1.5, "price_out": 2.0}
+    )
+    model = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    assert model["price_in"] == 1.5
+    assert model["price_out"] == 2.0
+    assert model["price_source"] == "manual"
+
+
+def test_update_model_price_keeps_untouched_field(engine) -> None:
+    """Обновление только входной цены не затирает выходную."""
+    engine._handle_update_model(
+        {"provider": "deepseek", "model_id": "deepseek-chat", "price_in": 1.0, "price_out": 2.0}
+    )
+    engine._handle_update_model(
+        {"provider": "deepseek", "model_id": "deepseek-chat", "price_in": 3.0}
+    )
+    model = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    assert model["price_in"] == 3.0
+    assert model["price_out"] == 2.0
+
+
+def test_update_model_clears_price(engine) -> None:
+    """Сброс обеих цен удаляет их и источник."""
+    engine._handle_update_model(
+        {"provider": "deepseek", "model_id": "deepseek-chat", "price_in": 1.0, "price_out": 2.0}
+    )
+    engine._handle_update_model(
+        {"provider": "deepseek", "model_id": "deepseek-chat", "price_in": None, "price_out": None}
+    )
+    model = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    assert "price_in" not in model
+    assert "price_out" not in model
+    assert "price_source" not in model
+
+
+def test_estimate_messages_tokens_counts_text_and_images(engine) -> None:
+    """Оценка токенов считает текст и добавляет фиксированную оценку за изображение."""
+    messages = [
+        {"role": "user", "content": "abcd" * 25},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "abcd" * 25},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAA"}},
+            ],
+        },
+    ]
+    assert engine._estimate_messages_tokens(messages) == 25 + 25 + 1100
+
+
+def test_estimate_cost_unknown_price_returns_none(engine) -> None:
+    """Без цен стоимость не подменяется нулём — возвращается None."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    engine._config["providers"]["deepseek"]["models"]["deepseek-chat"].pop("price_in", None)
+    engine._config["providers"]["deepseek"]["models"]["deepseek-chat"].pop("price_out", None)
+    assert engine._estimate_cost(1000, 500) is None
+
+
+def test_estimate_cost_calculates_usd(engine) -> None:
+    """При известных ценах стоимость считается из токенов за 1М."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    model = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    model["price_in"] = 1.0
+    model["price_out"] = 2.0
+    assert engine._estimate_cost(1_000_000, 500_000) == 2.0
+
+
+def test_update_model_from_api_marks_provider_price(engine) -> None:
+    """Скопированная из API цена помечается источником provider."""
+    info = {"name": "Test", "vision": True, "price_in": 0.5, "price_out": 1.5}
+    assert engine._ensure_model_from_api("deepseek", "deepseek-new", info) is True
+    model = engine._config["providers"]["deepseek"]["models"]["deepseek-new"]
+    assert model["price_source"] == "provider"
+    assert model["price_in"] == 0.5

@@ -43,6 +43,58 @@ class GenerationMixin:
             target=self._worker, args=(chat_id, user_text, user_msg_id), daemon=True
         ).start()
 
+    @staticmethod
+    def _estimate_messages_tokens(messages: list[dict[str, Any]]) -> int:
+        """Оценивает токены запроса по уже собранным сообщениям.
+
+        Тексты считаются грубо (4 символа на токен), изображения — фиксированной
+        оценкой: точное число токенов зависит от провайдера.
+        """
+        total = 0
+        for message in messages:
+            content = message.get("content")
+            if isinstance(content, str):
+                total += len(content) // 4
+            elif isinstance(content, list):
+                for block in content:
+                    if not isinstance(block, dict):
+                        continue
+                    text = block.get("text")
+                    if isinstance(text, str):
+                        total += len(text) // 4
+                    elif block.get("type") in ("image_url", "image"):
+                        total += 1100
+        return total
+
+    def _active_model_prices(self: "_ChatEngine") -> tuple[float | None, float | None]:
+        """Возвращает цены активной модели за 1М токенов (вход, выход)."""
+        providers = self._config.get("providers", {})
+        provider = providers.get(str(self._config.get("active_provider", "")))
+        if not isinstance(provider, dict):
+            return None, None
+        mdef = provider.get("models", {}).get(str(self._config.get("active_model", "")))
+        if not isinstance(mdef, dict):
+            return None, None
+
+        def _number(value: Any) -> float | None:
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                return float(value)
+            return None
+
+        return _number(mdef.get("price_in")), _number(mdef.get("price_out"))
+
+    def _estimate_cost(self: "_ChatEngine", in_tokens: int, out_tokens: int) -> float | None:
+        """Оценивает стоимость запроса в USD.
+
+        Возвращает None, если цены модели неизвестны: тогда стоимость просто
+        не показывается, а не подменяется нулём.
+        """
+        price_in, price_out = self._active_model_prices()
+        if price_in is None and price_out is None:
+            return None
+        total = in_tokens * (price_in or 0.0) + out_tokens * (price_out or 0.0)
+        return total / 1_000_000.0
+
     def _worker(self: "_ChatEngine", chat_id: int, user_text: str, user_msg_id: int) -> None:
         """Выполняет запрос к API в фоновом потоке и стримит ответ."""
         chat = self._chat_by_id(chat_id)
@@ -58,14 +110,21 @@ class GenerationMixin:
         self._send_state()
         try:
             messages = self._build_messages(chat, user_text)
+            in_tokens = self._estimate_messages_tokens(messages)
             full_text, reasoning = self._call_api(messages, chat_id)
             if not full_text.strip():
                 full_text = self._t("gen.empty_reply")
+            out_tokens = len(full_text) // 4
+            cost = self._estimate_cost(in_tokens, out_tokens)
             msg = self._find_msg(chat, msg_id)
             if msg is not None:
                 msg["text"] = full_text
                 if reasoning:
                     msg["reasoning"] = reasoning
+                msg["tokens_in"] = in_tokens
+                msg["tokens_out"] = out_tokens
+                if cost is not None:
+                    msg["cost"] = cost
             self._post(
                 {
                     "type": "reply",
@@ -73,6 +132,9 @@ class GenerationMixin:
                     "text": full_text,
                     "ok": True,
                     "reasoning": reasoning,
+                    "tokens_in": in_tokens,
+                    "tokens_out": out_tokens,
+                    "cost": cost,
                 }
             )
             self._record_usage(user_text, full_text)

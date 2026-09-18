@@ -383,6 +383,9 @@ select option {
   color: var(--orca-muted);
   margin-top: 3px;
 }
+.msg-meta {
+  opacity: 0.85;
+}
 .msg-image {
   max-width: 100%;
   max-height: 240px;
@@ -1386,6 +1389,10 @@ select option {
 .per-model-controls input[type="range"],
 .per-model-controls input[type="number"] {
   flex: 1;
+  min-width: 0;
+}
+.per-model-controls input.price-input {
+  flex: 0 0 84px;
   min-width: 0;
 }
 .provider-model-row {
