@@ -145,7 +145,9 @@ class GenerationMixin:
         flags = chat.get("context_flags", {})
         modes = chat.get("context_modes", {})
         ctx = self._collect_context(flags, modes)
-        system = self._build_system_prompt(ctx)
+        # Изображения собираем заранее: от их наличия зависит системный промпт.
+        images = self._collect_context_images(chat)
+        system = self._build_system_prompt(ctx, has_images=bool(images))
         if len(system) > MAX_CONTEXT_CHARS:
             system = system[:MAX_CONTEXT_CHARS]
         messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
@@ -160,7 +162,6 @@ class GenerationMixin:
                     name=str(file_info.get("name", self._t("attach.default_name"))),
                     text=str(file_info.get("text", "")),
                 )
-        images = self._collect_context_images(chat)
         scheme = self._active_scheme()
         if images and scheme == "anthropic":
             # Нативный Messages API: изображения как base64-блоки.

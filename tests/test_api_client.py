@@ -139,3 +139,33 @@ def test_worker_stores_reasoning(engine, monkeypatch) -> None:
     assert states, "воркер обязан отправить state после генерации"
     sent_chat = next(c for c in states[-1]["chats"] if c["id"] == chat["id"])
     assert sent_chat["msgs"][-1]["text"] == "ответ"
+
+
+def test_build_messages_adds_image_hints(engine) -> None:
+    """При наличии изображения промпт требует разбор дефектов и запрещает выдумки."""
+    chat = engine._active_chat()
+    engine._config["language"] = "en"
+    chat["msgs"] = [
+        {
+            "id": 1,
+            "role": "user",
+            "text": "что не так с печатью?",
+            "ts": 0,
+            "attachments": [{"image": "data:image/jpeg;base64,AAAA", "name": "a.jpg"}],
+        }
+    ]
+    messages = engine._build_messages(chat, "что не так с печатью?")
+    system = messages[0]["content"]
+    assert "Visually analyze the defects" in system
+    assert "cannot process images" in system
+
+
+def test_build_messages_without_images_has_no_hints(engine) -> None:
+    """Без изображений подсказки про анализ дефектов в промпт не попадают."""
+    chat = engine._active_chat()
+    engine._config["language"] = "en"
+    chat["msgs"] = [{"id": 1, "role": "user", "text": "привет", "ts": 0}]
+    messages = engine._build_messages(chat, "привет")
+    system = messages[0]["content"]
+    assert "Visually analyze the defects" not in system
+    assert "cannot process images" not in system

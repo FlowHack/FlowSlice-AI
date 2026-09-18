@@ -21,7 +21,12 @@ try:
 except ImportError:
     orca = None  # type: ignore[assignment]
 
-from flowslice_ai.constants import MAX_CONTEXT_CHARS, SYSTEM_PROMPT
+from flowslice_ai.constants import (
+    IMAGE_ANALYSIS_HINT,
+    MAX_CONTEXT_CHARS,
+    NO_VISION_HINT,
+    SYSTEM_PROMPT,
+)
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _HAS_NUMPY, _np
 from flowslice_ai.slicer_context import (
@@ -511,16 +516,25 @@ class SlicerContextMixin:
                     return value
         return None
 
-    def _build_system_prompt(self: "_ChatEngine", ctx: dict[str, Any], include_data: bool = True) -> str:
+    def _build_system_prompt(
+        self: "_ChatEngine",
+        ctx: dict[str, Any],
+        include_data: bool = True,
+        has_images: bool = False,
+    ) -> str:
         """Собирает системный промпт с данными контекста слайсера.
 
         При include_data=False возвращается только персона, язык, заметки и
         данные — без JSON-данных слайсера (используется командой /context,
-        которая выводит данные отдельным блоком).
+        которая выводит данные отдельным блоком). При has_images=True
+        добавляются правила анализа изображений дефектов печати.
         """
         parts = [SYSTEM_PROMPT]
         # Язык ответа задаётся отдельно: базовый промпт всегда на английском.
         parts.append(self._t("prompt.language"))
+        if has_images:
+            parts.append(IMAGE_ANALYSIS_HINT)
+            parts.append(NO_VISION_HINT)
         notes = str(self._config.get("notes", "")).strip()
         if notes:
             parts.append(self._t("prompt.notes", notes=notes))

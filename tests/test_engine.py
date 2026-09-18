@@ -318,7 +318,7 @@ def test_build_messages_sends_images_over_openai(engine, monkeypatch) -> None:
     engine._config["active_provider"] = "deepseek"
     engine._config["active_model"] = "deepseek-chat"
     monkeypatch.setattr(engine, "_collect_context", lambda flags, modes=None: {})
-    monkeypatch.setattr(engine, "_build_system_prompt", lambda ctx: "sys")
+    monkeypatch.setattr(engine, "_build_system_prompt", lambda ctx, **kwargs: "sys")
     chat = {
         "msgs": [
             {"role": "user", "text": "hi", "image": "data:image/jpeg;base64,AAA"}

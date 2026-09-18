@@ -48,5 +48,22 @@ MAX_CONTEXT_CHARS = 60_000
 
 CONTEXT_OPTIONS = ("filament", "printer", "print", "model", "history")
 
+# Дополнение к системному промпту, когда в запросе есть изображение.
+IMAGE_ANALYSIS_HINT = (
+    "An image of a print is attached. Visually analyze the defects (for example "
+    "stringing, warping, under-extrusion, layer shifting, poor first layer) and "
+    "correlate them with the slicer settings and material provided. Point out the "
+    "most likely cause and the exact parameters to change, using their OrcaSlicer "
+    "interface labels."
+)
+
+# Инструкция для моделей без поддержки изображений: не выдумывать ответ.
+NO_VISION_HINT = (
+    "If you cannot process images, do not guess and do not give any advice based "
+    "on the image: explicitly state that you cannot analyze images, ask the user "
+    "to describe the problem in words and send the message again without the "
+    "attachment, and write nothing else."
+)
+
 # Разделы пресетов, для которых режим выгрузки (changed/all) выбирается отдельно.
 PRESET_CONTEXT_KEYS = ("filament", "printer", "print")
