@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
 from flowslice_ai.constants import HTTP_HEADERS, STREAM_THROTTLE, TIMEOUT
-from flowslice_ai.errors import ApiError, NetworkError
+from flowslice_ai.errors import ApiError, NetworkError, StreamError
 from flowslice_ai.logging import _LOGGER
 
 _OR_MODELS_TTL = 600.0  # секунд: срок жизни кэша списка моделей OpenRouter
@@ -35,6 +35,19 @@ _VISION_API_PROVIDERS = ("openrouter", "anthropic", "mistral", "xai")
 _VISION_CACHE_TTL = 600.0  # секунд: срок жизни кэша зрения по провайдеру
 _VISION_TIMEOUT = 8  # секунд
 _ANTHROPIC_VERSION = "2023-06-01"
+
+# Повторы временных сбоев: количество попыток и паузы между ними (секунды).
+_RETRY_ATTEMPTS = 3
+_RETRY_BACKOFF = (1.0, 2.0)
+_RETRY_STATUSES = (429, 500, 502, 503, 504)
+_RETRY_MAX_WAIT = 15.0
+
+# Подгрузка реального списка моделей провайдера в UI.
+_MODELS_CACHE_TTL = 600.0  # секунд: срок жизни кэша списка моделей провайдера
+_MODELS_TIMEOUT = 10  # секунд: запрос списка моделей не должен блокировать UI
+# Подстроки в идентификаторе модели, по которым отсекаются заведомо
+# нетекстовые модели (распознавание речи, эмбеддинги, генерация картинок).
+_NON_TEXT_MODEL_HINTS = ("whisper", "tts", "embedding", "dall-e", "moderation", "image")
 
 
 class ApiClientMixin:
@@ -126,7 +139,30 @@ class ApiClientMixin:
             return base + "/models?limit=1000"
         if provider_id == "xai":
             return base + "/language-models"
+        if provider_id == "google":
+            # base_url указывает на OpenAI-совместимый префикс, а список
+            # моделей живёт в нативном /v1beta/models.
+            suffix = "/openai"
+            if base.endswith(suffix):
+                base = base[: -len(suffix)]
+            return base + "/models"
         return base + "/models"
+
+    def _provider_models_headers(
+        self: "_ChatEngine", provider_id: str, api_key: str
+    ) -> dict[str, str]:
+        """Возвращает заголовки запроса списка моделей с учётом схемы провайдера."""
+        headers = dict(HTTP_HEADERS)
+        if not api_key:
+            return headers
+        if provider_id == "anthropic":
+            headers["x-api-key"] = api_key
+            headers["anthropic-version"] = _ANTHROPIC_VERSION
+        elif provider_id == "google":
+            headers["x-goog-api-key"] = api_key
+        else:
+            headers["Authorization"] = "Bearer " + api_key
+        return headers
 
     @staticmethod
     def _vision_from_entry(entry: dict[str, Any]) -> bool | None:
@@ -178,13 +214,7 @@ class ApiClientMixin:
         if not base_url:
             return {}
         api_key = str(prov.get("api_key", "")).strip()
-        headers = dict(HTTP_HEADERS)
-        if api_key:
-            if provider_id == "anthropic":
-                headers["x-api-key"] = api_key
-                headers["anthropic-version"] = _ANTHROPIC_VERSION
-            else:
-                headers["Authorization"] = "Bearer " + api_key
+        headers = self._provider_models_headers(provider_id, api_key)
         url = self._provider_models_url(provider_id, base_url)
         result: dict[str, bool] = {}
         try:
@@ -217,6 +247,177 @@ class ApiClientMixin:
             if model_id and value is not None:
                 result[model_id] = value
         return result
+
+    @staticmethod
+    def _is_text_model(provider_id: str, entry: dict[str, Any]) -> bool:
+        """Проверяет, умеет ли модель отвечать текстом.
+
+        Отсекает распознавание речи, синтез, эмбеддинги и генерацию изображений,
+        чтобы в списке выбора не было заведомо непригодных моделей.
+        """
+        arch = entry.get("architecture")
+        outputs = arch.get("output_modalities") if isinstance(arch, dict) else None
+        if isinstance(outputs, list):
+            return "text" in outputs
+        caps = entry.get("capabilities")
+        if isinstance(caps, dict) and isinstance(caps.get("completion_chat"), bool):
+            return bool(caps["completion_chat"])
+        methods = entry.get("supportedGenerationMethods")
+        if isinstance(methods, list):
+            return "generateContent" in methods
+        model_id = str(entry.get("id") or entry.get("name") or entry.get("model") or "").lower()
+        return not any(hint in model_id for hint in _NON_TEXT_MODEL_HINTS)
+
+    @staticmethod
+    def _model_price(
+        provider_id: str, entry: dict[str, Any]
+    ) -> tuple[float | None, float | None]:
+        """Возвращает (цена ввода, цена вывода) за 1M токенов.
+
+        Цена есть только у OpenRouter (в поле ``pricing`` она указана за токен).
+        Для остальных провайдеров возвращается (None, None).
+        """
+        if provider_id != "openrouter":
+            return None, None
+        pricing = entry.get("pricing")
+        if not isinstance(pricing, dict):
+            return None, None
+
+        def _per_million(value: Any) -> float | None:
+            try:
+                return round(float(value) * 1_000_000, 4)
+            except (TypeError, ValueError):
+                return None
+
+        return _per_million(pricing.get("prompt")), _per_million(pricing.get("completion"))
+
+    @staticmethod
+    def _model_display_name(entry: dict[str, Any], model_id: str) -> str:
+        """Возвращает человекочитаемое имя модели из ответа провайдера."""
+        display = str(
+            entry.get("display_name")
+            or entry.get("displayName")
+            or entry.get("name")
+            or ""
+        ).strip()
+        # У Google поле name содержит "models/...", а не название.
+        if not display or display == model_id or display.startswith("models/"):
+            return model_id
+        return display
+
+    def _parse_models_payload(
+        self: "_ChatEngine", provider_id: str, payload: Any
+    ) -> list[dict[str, Any]]:
+        """Разбирает ответ провайдера в список моделей для UI."""
+        if not isinstance(payload, dict):
+            return []
+        items = payload.get("data")
+        if not isinstance(items, list):
+            items = payload.get("models")
+        if not isinstance(items, list):
+            return []
+        result: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            model_id = str(
+                entry.get("id") or entry.get("name") or entry.get("model") or ""
+            ).strip()
+            if provider_id == "google" and model_id.startswith("models/"):
+                model_id = model_id[len("models/") :]
+            if not model_id or model_id in seen:
+                continue
+            if not self._is_text_model(provider_id, entry):
+                continue
+            seen.add(model_id)
+            price_in, price_out = self._model_price(provider_id, entry)
+            result.append(
+                {
+                    "id": model_id,
+                    "name": self._model_display_name(entry, model_id),
+                    "vision": self._vision_from_entry(entry),
+                    "price_in": price_in,
+                    "price_out": price_out,
+                }
+            )
+        result.sort(key=lambda item: str(item.get("name", "")).lower())
+        return result
+
+    def _fetch_provider_models(
+        self: "_ChatEngine", provider_id: str, force: bool = False
+    ) -> tuple[list[dict[str, Any]], str]:
+        """Загружает список моделей провайдера.
+
+        Возвращает (список моделей, текст ошибки). Результат кэшируется на
+        _MODELS_CACHE_TTL секунд; при сбое возвращается прежний кэш (если был),
+        а вторым элементом — понятное пользователю описание ошибки.
+        """
+        now = time.time()
+        cached = self._api_models_cache.get(provider_id)
+        if cached and not force and now - cached[0] < _MODELS_CACHE_TTL:
+            return cached[1], ""
+        prov = self._config.get("providers", {}).get(provider_id)
+        if not isinstance(prov, dict):
+            return [], self._t("models.provider_missing")
+        base_url = str(prov.get("base_url", "")).strip()
+        if not base_url:
+            return [], self._t("models.no_base_url")
+        api_key = str(prov.get("api_key", "")).strip()
+        if not api_key and provider_id != "openrouter":
+            return [], self._t("models.need_key")
+        url = self._provider_models_url(provider_id, base_url)
+        headers = self._provider_models_headers(provider_id, api_key)
+        stale = cached[1] if cached else []
+        try:
+            request = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(request, timeout=_MODELS_TIMEOUT) as response:
+                payload = json.loads(response.read().decode("utf-8", "replace"))
+            models = self._parse_models_payload(provider_id, payload)
+        except urllib.error.HTTPError as exc:
+            detail = self._http_error_detail(exc)
+            _LOGGER.warning(
+                "Не удалось получить список моделей %s: HTTP %s %s",
+                provider_id,
+                exc.code,
+                detail,
+            )
+            return stale, detail or self._t("models.fetch_failed")
+        except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+            _LOGGER.warning("Не удалось получить список моделей %s: %s", provider_id, exc)
+            return stale, self._t("models.fetch_failed")
+        if models:
+            self._api_models_cache[provider_id] = (now, models)
+        return models, ""
+
+    def _handle_refresh_models(self: "_ChatEngine", message: dict) -> None:
+        """Запускает фоновую загрузку списка моделей провайдера по запросу UI."""
+        provider_id = str(message.get("provider", ""))
+        if not provider_id:
+            return
+        force = bool(message.get("force", False))
+        if self._post_sink is None:
+            return
+        self._post({"type": "models_loading", "provider": provider_id, "loading": True})
+        threading.Thread(
+            target=self._models_refresh_worker,
+            args=(provider_id, force),
+            daemon=True,
+        ).start()
+
+    def _models_refresh_worker(
+        self: "_ChatEngine", provider_id: str, force: bool
+    ) -> None:
+        """Фоновая загрузка списка моделей провайдера и отправка его в UI."""
+        models, error = self._fetch_provider_models(provider_id, force=force)
+        self._post(
+            {
+                "type": "api_models",
+                "provider": provider_id,
+                "models": models,
+                "error": error,
+            }
+        )
 
     def _refresh_provider_vision(self: "_ChatEngine", provider_id: str) -> None:
         """Фоновое уточнение зрения моделей провайдера и сохранение в конфиг."""
@@ -303,6 +504,87 @@ class ApiClientMixin:
         """Возвращает идентификатор активной модели."""
         return str(self._config.get("active_model", ""))
 
+    @staticmethod
+    def _retry_backoff(attempt: int) -> float:
+        """Возвращает паузу перед повтором по номеру попытки (0 — первая)."""
+        index = min(attempt, len(_RETRY_BACKOFF) - 1)
+        return _RETRY_BACKOFF[index]
+
+    @staticmethod
+    def _retry_after_seconds(exc: urllib.error.HTTPError) -> float:
+        """Читает заголовок Retry-After, если сервер его прислал."""
+        try:
+            value = exc.headers.get("Retry-After") if exc.headers else None
+        except (AttributeError, TypeError):
+            return 0.0
+        if not value:
+            return 0.0
+        try:
+            return max(0.0, float(str(value).strip()))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _notify_retry(
+        self: "_ChatEngine", provider_id: str, attempt: int, wait: float, reason: str
+    ) -> None:
+        """Сообщает в лог и UI о повторной попытке запроса."""
+        _LOGGER.warning(
+            "Повтор запроса к %s (попытка %d из %d) через %.1f с: %s",
+            provider_id,
+            attempt,
+            _RETRY_ATTEMPTS,
+            wait,
+            reason,
+        )
+        self._post(
+            {
+                "type": "toast",
+                "text": self._t("gen.retry", sec=str(int(round(wait)))),
+                "kind": "warn",
+            }
+        )
+
+    def _wait_retry(self: "_ChatEngine", wait: float) -> None:
+        """Пауза перед повтором с возможностью прервать ожидание кнопкой «Стоп»."""
+        remaining = max(0.0, wait)
+        while remaining > 0 and self._gen:
+            step = min(0.2, remaining)
+            time.sleep(step)
+            remaining -= step
+
+    def _open_with_retry(
+        self: "_ChatEngine", request: urllib.request.Request, provider_id: str
+    ) -> Any:
+        """Открывает соединение, повторяя временные сбои (сеть, 429, 5xx).
+
+        Повтор выполняется только до чтения потока, поэтому частично
+        полученный ответ никогда не дублируется. Ошибки аутентификации,
+        неверного запроса и песочницы не повторяются.
+        """
+        attempt = 0
+        while True:
+            if not self._gen:
+                raise StreamError(self._t("gen.stopped"))
+            try:
+                return urllib.request.urlopen(request, timeout=TIMEOUT)
+            except urllib.error.HTTPError as exc:
+                if exc.code not in _RETRY_STATUSES or attempt >= _RETRY_ATTEMPTS - 1:
+                    raise
+                wait = self._retry_after_seconds(exc) or self._retry_backoff(attempt)
+                reason = "HTTP " + str(exc.code)
+            except PermissionError:
+                # Песочница Orca: повтор не поможет.
+                raise
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
+                if attempt >= _RETRY_ATTEMPTS - 1:
+                    raise
+                wait = self._retry_backoff(attempt)
+                reason = str(exc)
+            wait = min(wait, _RETRY_MAX_WAIT)
+            attempt += 1
+            self._notify_retry(provider_id, attempt, wait, reason)
+            self._wait_retry(wait)
+
     def _call_api(
         self: "_ChatEngine", messages: list[dict[str, Any]], chat_id: int
     ) -> tuple[str, str]:
@@ -328,6 +610,7 @@ class ApiClientMixin:
             return self._call_anthropic(
                 messages,
                 chat_id,
+                provider_id,
                 base_url,
                 api_key,
                 model,
@@ -357,7 +640,8 @@ class ApiClientMixin:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
+            resp = self._open_with_retry(request, provider_id)
+            with resp:
                 return self._read_sse(resp, chat_id)
         except urllib.error.HTTPError as exc:
             body = self._http_error_detail(exc)
@@ -377,6 +661,7 @@ class ApiClientMixin:
         self: "_ChatEngine",
         messages: list[dict[str, Any]],
         chat_id: int,
+        provider_id: str,
         base_url: str,
         api_key: str,
         model: str,
@@ -419,7 +704,8 @@ class ApiClientMixin:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
+            resp = self._open_with_retry(request, provider_id)
+            with resp:
                 return self._read_sse_anthropic(resp, chat_id)
         except urllib.error.HTTPError as exc:
             body = self._http_error_detail(exc)

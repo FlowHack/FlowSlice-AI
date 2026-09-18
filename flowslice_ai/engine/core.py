@@ -58,6 +58,8 @@ class CoreMixin:
         self._or_models_cache: dict[str, bool] = {}
         self._or_vision_started = False
         self._vision_cache: dict[str, tuple[float, dict[str, bool]]] = {}
+        # Кэш реальных списков моделей провайдеров (id → (время, список моделей))
+        self._api_models_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
         self._or_models_ts = 0.0
         self._load_chats()
 
@@ -690,6 +692,8 @@ class CoreMixin:
                         "has_key": bool(str(mdef.get("api_key", "")).strip()),
                         "vision": vision,
                         "vision_source": vision_source,
+                        "price_in": mdef.get("price_in"),
+                        "price_out": mdef.get("price_out"),
                     }
                     if not mdef.get("builtin", False):
                         entry["base_url"] = str(mdef.get("base_url", ""))

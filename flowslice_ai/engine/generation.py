@@ -77,8 +77,16 @@ class GenerationMixin:
             )
             self._record_usage(user_text, full_text)
         except FlowSliceError as exc:
-            _LOGGER.warning("Ошибка генерации (запрос %s): %s", user_msg_id, exc)
-            self._fail_generation(chat, chat_id, msg_id, str(exc))
+            if not self._gen:
+                # Пользователь нажал «Стоп» во время ожидания повтора:
+                # это не ошибка, поэтому не помечаем ответ как сбойный.
+                _LOGGER.info(
+                    "Генерация прервана пользователем (запрос %s): %s", user_msg_id, exc
+                )
+                self._finish_stopped(chat, chat_id, msg_id)
+            else:
+                _LOGGER.warning("Ошибка генерации (запрос %s): %s", user_msg_id, exc)
+                self._fail_generation(chat, chat_id, msg_id, str(exc))
         except Exception as exc:
             _LOGGER.error(
                 "Необработанная ошибка генерации (запрос %s): %s",
@@ -94,6 +102,22 @@ class GenerationMixin:
             # Полный state: UI получает финальный текст ответа (нужен, например,
             # для экспорта чата, где используется state.chats, а не DOM).
             self._send_state()
+
+    def _finish_stopped(
+        self: "_ChatEngine", chat: dict[str, Any], chat_id: int, msg_id: int
+    ) -> None:
+        """Завершает прерванную пользователем генерацию без пометки об ошибке.
+
+        Если частичный текст уже пришёл, он сохраняется; иначе в сообщение
+        записывается отметка об остановке, чтобы не оставалось пустого пузыря.
+        """
+        msg = self._find_msg(chat, msg_id)
+        text = str(msg.get("text", "")) if msg is not None else ""
+        if not text.strip():
+            text = self._t("gen.stopped")
+            if msg is not None:
+                msg["text"] = text
+        self._post({"type": "reply", "chat_id": chat_id, "text": text, "ok": True})
 
     def _fail_generation(
         self: "_ChatEngine",

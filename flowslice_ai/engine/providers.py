@@ -57,15 +57,127 @@ class ProvidersMixin:
         provider = str(message.get("provider", ""))
         model = str(message.get("model", ""))
         providers = self._config.get("providers", {})
-        if provider not in providers or model not in providers[provider].get("models", {}):
+        prov = providers.get(provider)
+        if not isinstance(prov, dict):
             self._post({"type": "toast", "text": self._t("model.not_found"), "kind": "err"})
             return
+        if model not in prov.get("models", {}):
+            # Модель могла быть выбрана из подгруженного списка провайдера —
+            # в этом случае сначала добавляем её в конфиг.
+            info = self._api_model_by_id(provider, model)
+            if info is None or not self._ensure_model_from_api(provider, model, info):
+                self._post(
+                    {"type": "toast", "text": self._t("model.not_found"), "kind": "err"}
+                )
+                return
         self._config["default_model"] = provider + "::" + model
         self._config = self._normalize_config(self._config)
         self._persist_config()
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("model.default_set", name=model), "kind": "ok"}
+        )
+
+    def _api_model_by_id(
+        self: "_ChatEngine", provider: str, model_id: str
+    ) -> dict[str, Any] | None:
+        """Ищет модель в кэше подгруженного списка провайдера."""
+        cached = self._api_models_cache.get(provider)
+        if not cached:
+            return None
+        for item in cached[1]:
+            if isinstance(item, dict) and str(item.get("id", "")) == model_id:
+                return item
+        return None
+
+    def _ensure_model_from_api(
+        self: "_ChatEngine", provider: str, model_id: str, info: dict[str, Any] | None = None
+    ) -> bool:
+        """Добавляет модель из подгруженного списка в конфиг, если её там нет.
+
+        Переносит подтверждённые провайдером признаки (зрение, цену), чтобы
+        выбранная модель вела себя так же, как при ручном добавлении.
+        """
+        info = info or {}
+        prov = self._config.get("providers", {}).get(provider)
+        if not isinstance(prov, dict):
+            return False
+        models = prov.setdefault("models", {})
+        if model_id in models:
+            return True
+        entry: dict[str, Any] = {
+            "name": str(info.get("name") or model_id),
+            "builtin": False,
+        }
+        vision = info.get("vision")
+        if isinstance(vision, bool):
+            entry["vision"] = vision
+            entry["vision_source"] = "provider"
+        for key in ("price_in", "price_out"):
+            value = info.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                entry[key] = float(value)
+        models[model_id] = entry
+        return True
+
+    def _handle_set_api_model(self: "_ChatEngine", message: dict) -> None:
+        """Делает активной модель, выбранную из подгруженного списка провайдера."""
+        provider = str(message.get("provider", ""))
+        model_id = str(message.get("model_id", "")).strip()
+        if not model_id:
+            self._post({"type": "toast", "text": self._t("model.id_required"), "kind": "err"})
+            return
+        if provider not in self._config.get("providers", {}):
+            self._post(
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
+            )
+            return
+        info = self._api_model_by_id(provider, model_id)
+        if info is None:
+            info = {
+                "name": message.get("name"),
+                "vision": message.get("vision"),
+                "price_in": message.get("price_in"),
+                "price_out": message.get("price_out"),
+            }
+        self._ensure_model_from_api(provider, model_id, info)
+        self._config["active_provider"] = provider
+        self._config["active_model"] = model_id
+        self._config = self._normalize_config(self._config)
+        self._persist_config()
+        self._send_state()
+        self._post(
+            {"type": "toast", "text": self._t("model.selected", name=model_id), "kind": "ok"}
+        )
+
+    def _handle_import_api_model(self: "_ChatEngine", message: dict) -> None:
+        """Добавляет модель из подгруженного списка в конфиг, не делая активной.
+
+        Используется во вкладке настроек «Модели», чтобы можно было открыть
+        настройки модели, не переключая модель текущего чата.
+        """
+        provider = str(message.get("provider", ""))
+        model_id = str(message.get("model_id", "")).strip()
+        if not model_id:
+            self._post({"type": "toast", "text": self._t("model.id_required"), "kind": "err"})
+            return
+        if provider not in self._config.get("providers", {}):
+            self._post(
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
+            )
+            return
+        info = self._api_model_by_id(provider, model_id) or {
+            "name": message.get("name"),
+            "vision": message.get("vision"),
+            "price_in": message.get("price_in"),
+            "price_out": message.get("price_out"),
+        }
+        self._ensure_model_from_api(provider, model_id, info)
+        self._config = self._normalize_config(self._config)
+        self._persist_config()
+        self._send_state()
+        self._post(
+            {"type": "toast", "text": self._t("model.added", name=model_id), "kind": "ok"}
         )
 
     def _handle_add_provider(self: "_ChatEngine", message: dict) -> None:

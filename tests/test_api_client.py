@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 import pytest
 
@@ -349,3 +350,154 @@ def test_http_error_detail_extracts_message(engine) -> None:
     assert engine._http_error_detail(make(b'{"error":"nope"}')) == "nope"
     assert engine._http_error_detail(make(b"plain text")) == "plain text"
     assert engine._http_error_detail(make(b"")) == ""
+
+
+def test_parse_models_payload_filters_and_prices(engine) -> None:
+    """Список моделей провайдера: нетекстовые отсеяны, цена взята у OpenRouter."""
+    payload = {
+        "data": [
+            {
+                "id": "vendor/chat",
+                "name": "Vendor Chat",
+                "architecture": {
+                    "input_modalities": ["text", "image"],
+                    "output_modalities": ["text"],
+                },
+                "pricing": {"prompt": "0.0000005", "completion": "0.0000015"},
+            },
+            {
+                "id": "vendor/image",
+                "name": "Vendor Image",
+                "architecture": {
+                    "input_modalities": ["text"],
+                    "output_modalities": ["image"],
+                },
+            },
+            {"id": "vendor/embedding", "name": "Embedding"},
+        ]
+    }
+    models = engine._parse_models_payload("openrouter", payload)
+    assert [m["id"] for m in models] == ["vendor/chat"]
+    assert models[0]["vision"] is True
+    assert models[0]["price_in"] == 0.5
+    assert models[0]["price_out"] == 1.5
+
+
+def test_parse_models_payload_google_prefix(engine) -> None:
+    """Google: префикс models/ убран, имя из displayName, фильтр по методам."""
+    payload = {
+        "models": [
+            {
+                "name": "models/gemini-2.5-flash",
+                "displayName": "Gemini 2.5 Flash",
+                "supportedGenerationMethods": ["generateContent"],
+            },
+            {
+                "name": "models/text-embedding-004",
+                "supportedGenerationMethods": ["embedContent"],
+            },
+        ]
+    }
+    models = engine._parse_models_payload("google", payload)
+    assert models == [
+        {
+            "id": "gemini-2.5-flash",
+            "name": "Gemini 2.5 Flash",
+            "vision": None,
+            "price_in": None,
+            "price_out": None,
+        }
+    ]
+
+
+def test_fetch_provider_models_requires_key(engine) -> None:
+    """Без ключа список моделей провайдера не запрашивается."""
+    engine._config["providers"]["deepseek"]["api_key"] = ""
+    models, error = engine._fetch_provider_models("deepseek")
+    assert models == []
+    assert error == engine._t("models.need_key")
+
+
+def test_fetch_provider_models_parses_and_caches(engine, monkeypatch) -> None:
+    """Список моделей кэшируется: повторный вызов не идёт в сеть."""
+    engine._config["providers"]["deepseek"]["api_key"] = "sk-test"
+    calls = []
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(
+                {"data": [{"id": "deepseek-chat", "name": "Chat"}]}
+            ).encode("utf-8")
+
+    def fake_urlopen(request, timeout=0):
+        calls.append(request.full_url)
+        return _Resp()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    models, error = engine._fetch_provider_models("deepseek", force=True)
+    assert error == ""
+    assert models[0]["id"] == "deepseek-chat"
+    assert calls == ["https://api.deepseek.com/v1/models"]
+    # Второй вызов берёт результат из кэша и не трогает сеть.
+    models_cached, error_cached = engine._fetch_provider_models("deepseek")
+    assert models_cached == models
+    assert error_cached == ""
+    assert calls == ["https://api.deepseek.com/v1/models"]
+
+
+def test_fetch_provider_models_keeps_stale_on_error(engine, monkeypatch) -> None:
+    """При сбое сети возвращается прежний кэш и текст ошибки."""
+    engine._config["providers"]["deepseek"]["api_key"] = "sk-test"
+    engine._api_models_cache["deepseek"] = (
+        time.time(),
+        [{"id": "old", "name": "Old", "vision": None, "price_in": None, "price_out": None}],
+    )
+
+    def fail_urlopen(request, timeout=0):
+        raise OSError("network down")
+
+    monkeypatch.setattr("urllib.request.urlopen", fail_urlopen)
+    models, error = engine._fetch_provider_models("deepseek", force=True)
+    assert models[0]["id"] == "old"
+    assert error == engine._t("models.fetch_failed")
+
+
+def test_ensure_model_from_api_copies_metadata(engine) -> None:
+    """Модель из списка API добавляется в конфиг с зрением и ценой."""
+    info = {
+        "id": "vendor/chat",
+        "name": "Vendor Chat",
+        "vision": True,
+        "price_in": 0.5,
+        "price_out": 1.5,
+    }
+    engine._api_models_cache["openrouter"] = (time.time(), [info])
+    assert engine._handle_set_api_model(
+        {"provider": "openrouter", "model_id": "vendor/chat"}
+    ) is None
+    entry = engine._config["providers"]["openrouter"]["models"]["vendor/chat"]
+    assert entry["name"] == "Vendor Chat"
+    assert entry["vision"] is True
+    assert entry["vision_source"] == "provider"
+    assert entry["price_in"] == 0.5
+    assert entry["price_out"] == 1.5
+    assert engine._config["active_provider"] == "openrouter"
+    assert engine._config["active_model"] == "vendor/chat"
+
+
+def test_set_default_model_imports_api_model(engine) -> None:
+    """Звёздочка у модели из списка API добавляет её и ставит по умолчанию."""
+    engine._api_models_cache["openrouter"] = (
+        time.time(),
+        [{"id": "vendor/chat", "name": "Vendor Chat", "vision": None}],
+    )
+    engine._handle_set_default_model({"provider": "openrouter", "model": "vendor/chat"})
+    assert engine._config["default_model"] == "openrouter::vendor/chat"
+    assert "vendor/chat" in engine._config["providers"]["openrouter"]["models"]
+

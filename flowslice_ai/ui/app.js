@@ -29,8 +29,15 @@
     commands: [],
     context_flags: {},
     context_tokens: 0,
-    status: "idle"
+    status: "idle",
+    // Подгруженные через API списки моделей: { providerId: { models, error } }.
+    apiModels: {}
   };
+
+  // Провайдеры, для которых уже запрошен список моделей в текущей сессии.
+  var apiModelsRequested = {};
+  // Модели, для которых уже отправлен запрос на добавление из списка API.
+  var apiModelsImporting = {};
 
   /* ===== Локализация (i18n) ===== */
   var I18N = {
@@ -59,6 +66,7 @@
       "common.remove_attachment": "Remove attachment",
       "common.attach_file": "Attach file",
       "attach.default_name": "file",
+      "attach.drop_hint": "Drop a file here to attach it",
       "attach.limit_count": "Attachment limit reached (max {n}).",
       "attach.limit_size": "File \"{name}\" is too large.",
       "attach.reading": "File is still being read, try again in a moment.",
@@ -76,7 +84,7 @@
       "common.stats": "Statistics",
       "common.no_active_chat": "No active chat",
       "sidebar.chats": "Chats",
-      "sidebar.search": "Search chats...",
+      "sidebar.search": "Search chats and messages...",
       "sidebar.pinned": "Pinned",
       "sidebar.today": "Today",
       "sidebar.yesterday": "Yesterday",
@@ -147,6 +155,7 @@
       "settings.preset_context_all": "All parameters (changed ones are marked)",
       "settings.help_provider": "API provider used to send requests to models",
       "settings.help_model": "Active model for new messages",
+      "settings.refresh_models": "Refresh model list from provider",
       "settings.help_url": "API server address of the provider",
       "settings.help_model_name": "Model name in the provider system (id)",
       "settings.help_model_alias": "Friendly model name shown in the UI",
@@ -169,7 +178,6 @@
       "settings.font_style": "Font style",
       "settings.language": "Language",
       "settings.theme": "Theme",
-      "settings.export": "Export chat",
       "settings.saved": "Settings saved",
       "settings.reset_done": "Settings reset",
       "usage.title": "Usage Statistics",
@@ -184,6 +192,9 @@
       "mp.default_set": "Set as default model",
       "mp.vision_supported": "Supports image analysis",
       "mp.vision_none": "Does not accept images",
+      "mp.refresh": "Refresh model list",
+      "mp.price_title": "Price per 1M tokens (input/output), USD",
+      "mp.free": "Free",
       "mp.need_key": "Set an API key for one of the providers or add your own model",
       "mp.no_model": "No model configured",
       "mp.open_settings": "Open settings",
@@ -218,7 +229,12 @@
       "key.invalid": "API key is invalid",
       "export.user": "User",
       "export.title": "Chat",
-      "export.chat": "Export chat"
+      "export.chat": "Export chat",
+      "export.system": "System",
+      "export.failed": "Failed to prepare the export.",
+      "export.fmt_md": "Markdown",
+      "export.fmt_txt": "Plain text",
+      "export.fmt_json": "JSON"
     },
     ru: {
       "common.close": "Закрыть",
@@ -245,6 +261,7 @@
       "common.remove_attachment": "Убрать вложение",
       "common.attach_file": "Прикрепить файл",
       "attach.default_name": "файл",
+      "attach.drop_hint": "Перетащите файл сюда, чтобы прикрепить",
       "attach.limit_count": "Достигнут предел вложений (не более {n}).",
       "attach.limit_size": "Файл «{name}» слишком большой.",
       "attach.reading": "Файл ещё читается, повторите через мгновение.",
@@ -262,7 +279,7 @@
       "common.stats": "Статистика",
       "common.no_active_chat": "Нет активного чата",
       "sidebar.chats": "Чаты",
-      "sidebar.search": "Поиск чатов…",
+      "sidebar.search": "Поиск по чатам и сообщениям…",
       "sidebar.pinned": "Закреплённые",
       "sidebar.today": "Сегодня",
       "sidebar.yesterday": "Вчера",
@@ -333,6 +350,7 @@
       "settings.preset_context_all": "Все параметры (изменённые помечены)",
       "settings.help_provider": "Провайдер API, через который отправляются запросы к моделям",
       "settings.help_model": "Активная модель для новых сообщений",
+      "settings.refresh_models": "Обновить список моделей у провайдера",
       "settings.help_url": "Адрес API-сервера провайдера",
       "settings.help_model_name": "Название модели в системе провайдера (id)",
       "settings.help_model_alias": "Удобное имя модели для отображения в интерфейсе",
@@ -355,7 +373,6 @@
       "settings.font_style": "Стиль шрифта",
       "settings.language": "Язык",
       "settings.theme": "Тема",
-      "settings.export": "Экспорт чата",
       "settings.saved": "Настройки сохранены",
       "settings.reset_done": "Настройки сброшены",
       "usage.title": "Статистика использования",
@@ -370,6 +387,9 @@
       "mp.default_set": "Сделать моделью по умолчанию",
       "mp.vision_supported": "Поддерживает анализ изображений",
       "mp.vision_none": "Не принимает изображения",
+      "mp.refresh": "Обновить список моделей",
+      "mp.price_title": "Цена за 1 млн токенов (вход/выход), USD",
+      "mp.free": "Бесплатно",
       "mp.need_key": "Укажите для одного из провайдеров токен или внесите свою модель",
       "mp.no_model": "Модель не настроена",
       "mp.open_settings": "Открыть настройки",
@@ -404,7 +424,12 @@
       "key.invalid": "Ключ недействителен",
       "export.user": "Пользователь",
       "export.title": "Чат",
-      "export.chat": "Экспорт чата"
+      "export.chat": "Экспорт чата",
+      "export.system": "Система",
+      "export.failed": "Не удалось подготовить экспорт.",
+      "export.fmt_md": "Markdown",
+      "export.fmt_txt": "Обычный текст",
+      "export.fmt_json": "JSON"
     },
     sr: {
       "common.close": "Zatvori",
@@ -431,6 +456,7 @@
       "common.remove_attachment": "Ukloni prilog",
       "common.attach_file": "Priloži datoteku",
       "attach.default_name": "datoteka",
+      "attach.drop_hint": "Prevucite datoteku ovde da je priložite",
       "attach.limit_count": "Dostignut limit priloga (najviše {n}).",
       "attach.limit_size": "Datoteka \"{name}\" je prevelika.",
       "attach.reading": "Datoteka se još čita, pokušajte ponovo za trenutak.",
@@ -448,7 +474,7 @@
       "common.stats": "Statistika",
       "common.no_active_chat": "Nema aktivnog razgovora",
       "sidebar.chats": "Razgovori",
-      "sidebar.search": "Pretraga razgovora…",
+      "sidebar.search": "Pretraga razgovora i poruka…",
       "sidebar.pinned": "Zakačeni",
       "sidebar.today": "Danas",
       "sidebar.yesterday": "Juče",
@@ -519,6 +545,7 @@
       "settings.preset_context_all": "Svi parametri (izmenjeni su označeni)",
       "settings.help_provider": "API provajder kroz koji se šalju zahtevi ka modelima",
       "settings.help_model": "Aktivni model za nove poruke",
+      "settings.refresh_models": "Osveži listu modela od provajdera",
       "settings.help_url": "Adresa API servera provajdera",
       "settings.help_model_name": "Naziv modela u sistemu provajdera (id)",
       "settings.help_model_alias": "Prikazano ime modela u interfejsu",
@@ -541,7 +568,6 @@
       "settings.font_style": "Stil fonta",
       "settings.language": "Jezik",
       "settings.theme": "Tema",
-      "settings.export": "Izvezi razgovor",
       "settings.saved": "Podešavanja sačuvana",
       "settings.reset_done": "Podešavanja resetovana",
       "usage.title": "Statistika korišćenja",
@@ -556,6 +582,9 @@
       "mp.default_set": "Postavi kao podrazumevani model",
       "mp.vision_supported": "Podržava analizu slika",
       "mp.vision_none": "Ne prihvata slike",
+      "mp.refresh": "Osveži listu modela",
+      "mp.price_title": "Cena za 1M tokena (ulaz/izlaz), USD",
+      "mp.free": "Besplatno",
       "mp.need_key": "Postavite token za jednog od provajdera ili dodajte sopstveni model",
       "mp.no_model": "Model nije podešen",
       "mp.open_settings": "Otvori podešavanja",
@@ -590,7 +619,12 @@
       "key.invalid": "API ključ nije važeći",
       "export.user": "Korisnik",
       "export.title": "Ćaskanje",
-      "export.chat": "Izvezi razgovor"
+      "export.chat": "Izvezi razgovor",
+      "export.system": "Sistem",
+      "export.failed": "Izrada izvoza nije uspela.",
+      "export.fmt_md": "Markdown",
+      "export.fmt_txt": "Običan tekst",
+      "export.fmt_json": "JSON"
     }
   };
 
@@ -846,6 +880,127 @@
     return null;
   }
 
+  /* ===== Подгрузка списков моделей провайдеров через API ===== */
+
+  function apiModelsFor(providerId) {
+    var cached = state.apiModels[providerId];
+    return cached && cached.models ? cached.models : [];
+  }
+
+  function apiModelById(providerId, modelId) {
+    var models = apiModelsFor(providerId);
+    for (var i = 0; i < models.length; i++) {
+      if (models[i].id === modelId) {
+        return models[i];
+      }
+    }
+    return null;
+  }
+
+  function requestApiModels(providerId, force) {
+    if (!providerId) {
+      return;
+    }
+    if (!force && apiModelsRequested[providerId]) {
+      return;
+    }
+    apiModelsRequested[providerId] = true;
+    if (!state.apiModels[providerId]) {
+      state.apiModels[providerId] = { models: [], error: "" };
+    }
+    state.apiModels[providerId].loading = true;
+    post({ type: "refresh_models", provider: providerId, force: !!force });
+  }
+
+  function requestModelsForProviders(force) {
+    var providers = state.providers || [];
+    for (var i = 0; i < providers.length; i++) {
+      var provider = providers[i];
+      // OpenRouter отдаёт список публично, остальным нужен ключ.
+      if (!provider.has_key && provider.id !== "openrouter") {
+        continue;
+      }
+      requestApiModels(provider.id, force);
+    }
+  }
+
+  /* Слияние моделей конфига и подгруженного списка: конфиг первым. */
+  function mergedModels(provider) {
+    var result = [];
+    var seen = {};
+    var configModels = provider.models || [];
+    for (var i = 0; i < configModels.length; i++) {
+      var item = configModels[i];
+      result.push({ id: item.id, name: item.name || item.id, model: item, api: false });
+      seen[item.id] = true;
+    }
+    var apiModels = apiModelsFor(provider.id);
+    for (var j = 0; j < apiModels.length; j++) {
+      var entry = apiModels[j];
+      if (seen[entry.id]) {
+        continue;
+      }
+      result.push({ id: entry.id, name: entry.name || entry.id, model: entry, api: true });
+    }
+    return result;
+  }
+
+  /* Компактная подпись цены: только когда провайдер отдал числа. */
+  function priceLabel(model) {
+    if (!model || model.price_in === null || model.price_in === undefined) {
+      return null;
+    }
+    var inPrice = Number(model.price_in);
+    var outPrice = model.price_out === null || model.price_out === undefined
+      ? inPrice : Number(model.price_out);
+    if (!isFinite(inPrice) || !isFinite(outPrice)) {
+      return null;
+    }
+    if (inPrice === 0 && outPrice === 0) {
+      return el("span", "mp-price mp-free", t("mp.free"));
+    }
+    var span = el("span", "mp-price", "$" + formatPrice(inPrice) + " / $" + formatPrice(outPrice));
+    span.title = t("mp.price_title");
+    return span;
+  }
+
+  function formatPrice(value) {
+    if (value === 0) {
+      return "0";
+    }
+    if (value < 0.01) {
+      return value.toFixed(3);
+    }
+    return value.toFixed(2);
+  }
+
+  /* Подпись модели для дропдауна настроек: имя плюс цена, если она известна. */
+  function modelOptionLabel(model) {
+    var label = model.name || model.id;
+    if (!model || model.price_in === null || model.price_in === undefined) {
+      return label;
+    }
+    var inPrice = Number(model.price_in);
+    var outPrice = model.price_out === null || model.price_out === undefined
+      ? inPrice : Number(model.price_out);
+    if (!isFinite(inPrice) || !isFinite(outPrice)) {
+      return label;
+    }
+    if (inPrice === 0 && outPrice === 0) {
+      return label + "  · " + t("mp.free");
+    }
+    return label + "  · $" + formatPrice(inPrice) + "/$" + formatPrice(outPrice);
+  }
+
+  function settingsModelOptions(provider) {
+    var merged = mergedModels(provider);
+    var options = [];
+    for (var i = 0; i < merged.length; i++) {
+      options.push({ value: merged[i].id, label: modelOptionLabel(merged[i].model) });
+    }
+    return options;
+  }
+
   function renderHeader() {
     var s = state.settings || {};
     var provider = providerById(s.active_provider);
@@ -941,6 +1096,7 @@
 
   function openModelPicker() {
     byId("mpSearch").value = "";
+    requestModelsForProviders(false);
     renderModelPicker();
     byId("modelPickerModal").style.display = "flex";
     byId("mpSearch").focus();
@@ -948,6 +1104,11 @@
 
   function closeModelPicker() {
     byId("modelPickerModal").style.display = "none";
+  }
+
+  function refreshModelPicker() {
+    requestModelsForProviders(true);
+    renderModelPicker();
   }
 
   function renderModelPicker() {
@@ -958,11 +1119,11 @@
     var providers = state.providers || [];
     var withModels = [];
     for (var i = 0; i < providers.length; i++) {
-      var provModels = providers[i].models || [];
+      var prov = providers[i];
       // Показываем только провайдеров с непустым API-ключом и хотя бы одной моделью.
-      var hasKey = !!providers[i].has_key;
-      if (provModels.length > 0 && hasKey) {
-        withModels.push(providers[i]);
+      var hasKey = !!prov.has_key;
+      if (mergedModels(prov).length > 0 && hasKey) {
+        withModels.push(prov);
       }
     }
     var s = state.settings || {};
@@ -971,10 +1132,14 @@
     var single = withModels.length <= 1;
     var shown = 0;
     for (var p = 0; p < withModels.length; p++) {
-      var prov = withModels[p];
-      var provName = prov.name || prov.id;
+      var provider = withModels[p];
+      var provName = provider.name || provider.id;
+      var cached = state.apiModels[provider.id];
+      if (cached && cached.loading && apiModelsFor(provider.id).length === 0) {
+        provName += " …";
+      }
       var provMatch = query && provName.toLowerCase().indexOf(query) !== -1;
-      var models = (prov.models || []).slice().sort(function (a, b) {
+      var models = mergedModels(provider).slice().sort(function (a, b) {
         var na = (a.name || a.id).toLowerCase();
         var nb = (b.name || b.id).toLowerCase();
         return na < nb ? -1 : (na > nb ? 1 : 0);
@@ -996,15 +1161,19 @@
       }
       for (var k = 0; k < groupItems.length; k++) {
         var item = groupItems[k];
-        var isActive = prov.id === activeProvider && item.id === activeModel;
-        var isDefault = (prov.id + "::" + item.id) === (s.default_model || "");
+        var isActive = provider.id === activeProvider && item.id === activeModel;
+        var isDefault = (provider.id + "::" + item.id) === (s.default_model || "");
         var row = el("div", "mp-item" + (isActive ? " active" : ""));
-        row.setAttribute("data-provider", prov.id);
+        row.setAttribute("data-provider", provider.id);
         row.setAttribute("data-model", item.id);
         row.appendChild(el("span", "mp-item-name", item.name || item.id));
-        var eye = visionEye(item);
+        var eye = visionEye(item.model);
         if (eye) {
           row.appendChild(eye);
+        }
+        var price = priceLabel(item.model);
+        if (price) {
+          row.appendChild(price);
         }
         row.appendChild(el("code", "mp-item-id", item.id));
         var star = el("button", "mp-star" + (isDefault ? " active" : ""), isDefault ? "★" : "☆");
@@ -1015,14 +1184,19 @@
             e.stopPropagation();
             post({ type: "set_default_model", provider: pid, model: mid });
           });
-        })(prov.id, item.id);
+        })(provider.id, item.id);
         row.appendChild(star);
-        (function (pid, mid) {
+        (function (pid, mid, isApi) {
           row.addEventListener("click", function () {
-            post({ type: "set_model", provider: pid, model: mid });
+            // Модель из подгруженного списка сначала добавляется в конфиг.
+            post(
+              isApi
+                ? { type: "set_api_model", provider: pid, model_id: mid }
+                : { type: "set_model", provider: pid, model: mid }
+            );
             closeModelPicker();
           });
-        })(prov.id, item.id);
+        })(provider.id, item.id, item.api);
         list.appendChild(row);
         shown++;
       }
@@ -1031,7 +1205,7 @@
       // Различаем «ключ не задан» и «ничего не нашлось по поиску».
       var hasAnyKey = false;
       for (var q = 0; q < providers.length; q++) {
-        if (providers[q].has_key && (providers[q].models || []).length > 0) {
+        if (providers[q].has_key && mergedModels(providers[q]).length > 0) {
           hasAnyKey = true;
           break;
         }
@@ -1132,16 +1306,31 @@
     return item;
   }
 
+  // Поиск по заголовку и по тексту сообщений чата.
+  function chatMatches(chat, query) {
+    if ((chat.title || "").toLowerCase().indexOf(query) !== -1) {
+      return true;
+    }
+    var msgs = chat.msgs || [];
+    for (var i = 0; i < msgs.length; i++) {
+      var text = msgs[i] && typeof msgs[i].text === "string" ? msgs[i].text : "";
+      if (text.toLowerCase().indexOf(query) !== -1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function renderSidebar() {
     var list = byId("chatList");
     list.innerHTML = "";
     var query = byId("searchInput").value.trim().toLowerCase();
     var chats = state.chats || [];
     if (query) {
-      // Режим поиска: плоский список совпадений
+      // Режим поиска: плоский список совпадений по названию и тексту сообщений
       var filtered = [];
       for (var i = 0; i < chats.length; i++) {
-        if ((chats[i].title || "").toLowerCase().indexOf(query) !== -1) {
+        if (chatMatches(chats[i], query)) {
           filtered.push(chats[i]);
         }
       }
@@ -1757,6 +1946,83 @@
         };
         textReader.readAsText(file);
       }
+    });
+  }
+
+  /* Вставка изображения из буфера обмена (Ctrl+V). Текстовую вставку не трогаем. */
+  function handlePaste(e) {
+    if (!e.clipboardData || !e.clipboardData.items) {
+      return;
+    }
+    var files = [];
+    for (var i = 0; i < e.clipboardData.items.length; i++) {
+      var item = e.clipboardData.items[i];
+      if (item.kind === "file") {
+        var file = item.getAsFile();
+        if (file) {
+          files.push(file);
+        }
+      }
+    }
+    if (files.length > 0) {
+      e.preventDefault();
+      handleFiles(files);
+    }
+  }
+
+  /* Перетаскивание файлов на область чата. */
+  function dragHasFiles(e) {
+    var types = (e.dataTransfer && e.dataTransfer.types) || [];
+    for (var i = 0; i < types.length; i++) {
+      if (types[i] === "Files") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function setupDragDrop() {
+    var main = document.querySelector(".main");
+    if (!main) {
+      return;
+    }
+    var depth = 0; // dragenter/dragleave приходят и для дочерних элементов
+    main.addEventListener("dragenter", function (e) {
+      if (!dragHasFiles(e)) {
+        return;
+      }
+      e.preventDefault();
+      depth += 1;
+      main.classList.add("drag-over");
+    });
+    main.addEventListener("dragover", function (e) {
+      if (!dragHasFiles(e)) {
+        return;
+      }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+    main.addEventListener("dragleave", function () {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) {
+        main.classList.remove("drag-over");
+      }
+    });
+    main.addEventListener("drop", function (e) {
+      if (!dragHasFiles(e)) {
+        return;
+      }
+      e.preventDefault();
+      depth = 0;
+      main.classList.remove("drag-over");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+    // Сброс подсветки, если файл уронили вне области чата.
+    window.addEventListener("drop", function () {
+      depth = 0;
+      main.classList.remove("drag-over");
     });
   }
 
@@ -2635,9 +2901,9 @@
     // Режим пользовательского провайдера (Custom): добавление/удаление моделей.
     // force=true: при смене провайдера принудительно закрываем форму добавления.
     updateCustomMode(provider, models, true);
-    setModelDD.setOptions(models.map(function (m) {
-      return { value: m.id, label: m.name || m.id };
-    }));
+    // Список моделей дополняем подгруженными по API (без дублей).
+    setModelDD.setOptions(settingsModelOptions(provider));
+    requestApiModels(provider.id, false);
     var s = state.settings || {};
     var matched = false;
     for (var i = 0; i < models.length; i++) {
@@ -2738,10 +3004,20 @@
     var provider = setProviderDD.getSelected();
     var model = modelById(provider, setModelDD.getSelected());
     if (!model) {
+      // Возможно, выбрана модель из подгруженного списка: добавляем её в конфиг,
+      // чтобы появились поля настройки (повторно не отправляем до обновления данных).
+      var selectedId = setModelDD.getSelected();
+      var importKey = provider + "::" + selectedId;
+      if (apiModelById(provider, selectedId) && !apiModelsImporting[importKey]) {
+        apiModelsImporting[importKey] = true;
+        post({ type: "import_api_model", provider: provider, model_id: selectedId });
+      }
       currentModelKey = null;
       byId("modelSettingsBlock").style.display = "none";
       return;
     }
+    // Модель уже в конфиге — снимаем блокировку повторного импорта.
+    delete apiModelsImporting[provider + "::" + model.id];
     byId("modelSettingsBlock").style.display = "block";
     var key = provider + "::" + model.id;
     currentModelKey = key;
@@ -3000,23 +3276,125 @@
     closeSettings();
   }
 
-  function exportChat() {
+  /* ===== Экспорт чата ===== */
+  // Имена вложений сообщения без тяжёлых данных (data URI не экспортируем).
+  function exportAttachments(msg) {
+    var result = [];
+    if (msg.image) {
+      result.push({ kind: "image", name: t("attach.photo_name") });
+    }
+    if (msg.file && msg.file.name) {
+      result.push({ kind: "text", name: msg.file.name });
+    }
+    var list = msg.attachments || [];
+    for (var i = 0; i < list.length; i++) {
+      var att = list[i];
+      if (!att || typeof att !== "object") {
+        continue;
+      }
+      if (att.image || att.kind === "image") {
+        result.push({ kind: "image", name: att.name || t("attach.photo_name") });
+      } else if (att.file && att.file.name) {
+        result.push({ kind: "text", name: att.file.name });
+      } else if (att.kind === "text") {
+        result.push({ kind: "text", name: att.name || "" });
+      }
+    }
+    return result;
+  }
+
+  function exportRoleLabel(role) {
+    if (role === "user") {
+      return t("export.user");
+    }
+    if (role === "assistant") {
+      return "FlowSlice AI";
+    }
+    return t("export.system");
+  }
+
+  function buildExport(chat, fmt) {
+    var msgs = chat.msgs || [];
+    var title = chat.title || t("common.new_chat");
+    if (fmt === "json") {
+      var payload = {
+        app: "FlowSlice AI",
+        title: title,
+        exported_at: new Date().toISOString(),
+        messages: []
+      };
+      for (var j = 0; j < msgs.length; j++) {
+        var jm = msgs[j];
+        var item = {
+          role: jm.role,
+          text: jm.text || "",
+          ts: jm.ts || null,
+          attachments: exportAttachments(jm)
+        };
+        if (jm.reasoning) {
+          item.reasoning = jm.reasoning;
+        }
+        payload.messages.push(item);
+      }
+      return JSON.stringify(payload, null, 2);
+    }
+    var lines = [];
+    if (fmt === "md") {
+      lines.push("# " + title);
+      lines.push("");
+      for (var k = 0; k < msgs.length; k++) {
+        var km = msgs[k];
+        lines.push("## " + exportRoleLabel(km.role));
+        lines.push("");
+        var atts = exportAttachments(km);
+        if (atts.length) {
+          lines.push("_" + atts.map(function (a) { return a.name; }).join(", ") + "_");
+          lines.push("");
+        }
+        lines.push(km.text || "");
+        lines.push("");
+      }
+      return lines.join("\n");
+    }
+    // Обычный текст
+    lines.push(t("export.title") + ": " + title);
+    for (var n = 0; n < msgs.length; n++) {
+      lines.push(exportRoleLabel(msgs[n].role) + ": " + (msgs[n].text || ""));
+    }
+    return lines.join("\n\n");
+  }
+
+  function exportChat(fmt) {
     var chat = getActiveChat();
     if (!chat) {
       showToast(t("common.no_active_chat"), "err");
       return;
     }
-    var lines = [t("export.title") + ": " + (chat.title || t("common.new_chat"))];
-    var msgs = chat.msgs || [];
-    for (var i = 0; i < msgs.length; i++) {
-      var m = msgs[i];
-      if (m.role === "user") {
-        lines.push(t("export.user") + ": " + (m.text || ""));
-      } else if (m.role === "assistant") {
-        lines.push("FlowSlice AI: " + (m.text || ""));
-      }
+    var text;
+    try {
+      text = buildExport(chat, fmt || "md");
+    } catch (err) {
+      // Экспорт не должен падать молча: сообщаем и пишем в лог.
+      console.error("Ошибка экспорта чата:", err);
+      showToast(t("export.failed"), "err");
+      return;
     }
-    copyText(lines.join("\n\n"));
+    copyText(text);
+  }
+
+  function closeExportMenu() {
+    var menu = byId("exportMenu");
+    if (menu) {
+      menu.style.display = "none";
+    }
+  }
+
+  function toggleExportMenu() {
+    var menu = byId("exportMenu");
+    if (!menu) {
+      return;
+    }
+    menu.style.display = menu.style.display === "none" ? "flex" : "none";
   }
 
   function renderUsage(msg) {
@@ -3209,6 +3587,32 @@
       case "key_test":
         showToast(msg.text || (msg.ok ? t("key.valid") : t("key.invalid")), msg.ok ? "ok" : "err");
         break;
+      case "models_loading":
+        if (!state.apiModels[msg.provider]) {
+          state.apiModels[msg.provider] = { models: [], error: "" };
+        }
+        state.apiModels[msg.provider].loading = true;
+        if (byId("modelPickerModal").style.display !== "none") {
+          renderModelPicker();
+        }
+        break;
+      case "api_models":
+        state.apiModels[msg.provider] = {
+          models: msg.models || [],
+          error: msg.error || "",
+          loading: false
+        };
+        // Ошибку показываем только когда показать нечего: иначе работает кэш.
+        if (msg.error && (msg.models || []).length === 0) {
+          showToast(msg.error, "err");
+        }
+        if (byId("modelPickerModal").style.display !== "none") {
+          renderModelPicker();
+        }
+        if (byId("settingsModal").style.display !== "none") {
+          refreshSettingsModels();
+        }
+        break;
       case "usage":
         renderUsage(msg);
         break;
@@ -3222,12 +3626,11 @@
     }
     var models = provider.models || [];
     var current = setModelDD.getSelected();
-    setModelDD.setOptions(models.map(function (m) {
-      return { value: m.id, label: m.name || m.id };
-    }));
+    setModelDD.setOptions(settingsModelOptions(provider));
     var still = false;
-    for (var i = 0; i < models.length; i++) {
-      if (models[i].id === current) {
+    var merged = mergedModels(provider);
+    for (var i = 0; i < merged.length; i++) {
+      if (merged[i].id === current) {
         still = true;
         break;
       }
@@ -3255,6 +3658,9 @@
       handleFiles(this.files);
       this.value = "";
     });
+    // Вставка изображения из буфера и перетаскивание файлов в чат.
+    document.addEventListener("paste", handlePaste);
+    setupDragDrop();
     byId("input").addEventListener("keydown", onInputKey);
     byId("input").addEventListener("input", function () {
       // Ручной ввод завершает навигацию по истории.
@@ -3360,7 +3766,23 @@
     byId("setFontSize").addEventListener("input", function () {
       byId("setFontSizeValue").textContent = this.value;
     });
-    byId("exportBtn").addEventListener("click", exportChat);
+    byId("exportBtn").addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleExportMenu();
+    });
+    var exportOptions = document.querySelectorAll(".export-opt");
+    for (var eo = 0; eo < exportOptions.length; eo++) {
+      exportOptions[eo].addEventListener("click", function () {
+        closeExportMenu();
+        exportChat(this.getAttribute("data-fmt"));
+      });
+    }
+    document.addEventListener("click", function (e) {
+      var wrap = document.querySelector(".composer-export");
+      if (wrap && !wrap.contains(e.target)) {
+        closeExportMenu();
+      }
+    });
     byId("addModelBtn").addEventListener("click", function () {
       var provider = providerById(setProviderDD.getSelected());
       byId("amCustomFields").style.display = (provider && !provider.builtin) ? "block" : "none";
@@ -3450,6 +3872,13 @@
     });
     byId("modelChip").addEventListener("click", openModelPicker);
     byId("mpClose").addEventListener("click", closeModelPicker);
+    byId("mpRefresh").addEventListener("click", refreshModelPicker);
+    byId("setModelsRefresh").addEventListener("click", function () {
+      var pid = setProviderDD.getSelected();
+      if (pid) {
+        requestApiModels(pid, true);
+      }
+    });
     byId("modelPickerModal").addEventListener("click", function (e) {
       if (e.target === this) {
         closeModelPicker();

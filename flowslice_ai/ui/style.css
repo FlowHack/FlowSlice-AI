@@ -183,6 +183,28 @@ select option {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  position: relative;
+}
+/* Подсветка и подсказка при перетаскивании файла в чат. */
+.main.drag-over {
+  outline: 2px dashed var(--orca-accent);
+  outline-offset: -6px;
+}
+.drop-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
+  color: var(--orca-fg);
+  background: var(--orca-bg);
+  pointer-events: none;
+  z-index: 50;
+}
+.main.drag-over .drop-hint {
+  display: flex;
 }
 .main-header {
   display: flex;
@@ -936,6 +958,11 @@ select option {
   background: var(--orca-accent);
   color: var(--orca-accent-fg);
 }
+.toast-warn {
+  background: var(--orca-fg);
+  color: var(--orca-bg);
+  border: 1px solid var(--orca-accent);
+}
 .toast-hide {
   opacity: 0;
 }
@@ -947,6 +974,47 @@ select option {
   justify-content: space-between;
   gap: 8px;
   margin-top: 8px;
+}
+/* Кнопка экспорта по центру под полем ввода. */
+.composer-export {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+.export-btn {
+  font-size: 12px;
+  padding: 3px 14px;
+}
+.export-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--orca-input);
+  border: 1px solid var(--orca-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  z-index: 60;
+}
+.export-opt {
+  border: 0;
+  background: transparent;
+  color: var(--orca-fg);
+  font-family: var(--orca-font);
+  font-size: 12px;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.export-opt:hover {
+  background: var(--orca-accent);
+  color: #fff;
 }
 .model-chip {
   display: inline-flex;
@@ -1009,6 +1077,29 @@ select option {
 /* Отступ заголовка от левого края — как в остальных модалках (.modal: padding 16px) */
 .mp-modal .modal-header {
   padding: 16px 16px 0;
+}
+.modal-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.model-row .dd-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.mp-price {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--orca-muted);
+  white-space: nowrap;
+}
+.mp-price.mp-free {
+  color: var(--orca-accent);
 }
 .mp-search {
   margin: 0 12px 8px;
