@@ -10,6 +10,7 @@
 # pylint: disable=too-many-locals,too-many-public-methods,too-few-public-methods,line-too-long
 
 import secrets
+import threading
 from typing import TYPE_CHECKING, Any
 
 from flowslice_ai.config import normalize_max_tokens, normalize_temperature
@@ -108,6 +109,8 @@ class ProvidersMixin:
         self._post(
             {"type": "toast", "text": self._t("provider.added", name=name), "kind": "ok"}
         )
+        if model_id:
+            self._start_vision_lookup(pid, model_id)
 
     def _handle_update_provider(self: "_ChatEngine", message: dict) -> None:
         """Обновляет поля пользовательского провайдера."""
@@ -238,6 +241,34 @@ class ProvidersMixin:
         self._post(
             {"type": "toast", "text": self._t("model.added", name=model_id), "kind": "ok"}
         )
+        # Пытаемся уточнить поддержку изображений у провайдера (OpenRouter).
+        self._start_vision_lookup(provider, model_id)
+
+    def _start_vision_lookup(self: "_ChatEngine", provider: str, model_id: str) -> None:
+        """Запускает фоновое определение поддержки изображений у модели."""
+        thread = threading.Thread(
+            target=self._vision_lookup_worker,
+            args=(provider, model_id),
+            daemon=True,
+        )
+        thread.start()
+
+    def _vision_lookup_worker(self: "_ChatEngine", provider: str, model_id: str) -> None:
+        """Уточняет зрение модели через API провайдера и сохраняет результат."""
+        value = self._resolve_vision_for(provider, model_id)
+        if value is None:
+            return
+        prov = self._config.get("providers", {}).get(provider)
+        if not isinstance(prov, dict):
+            return
+        mdef = prov.get("models", {}).get(model_id)
+        if not isinstance(mdef, dict):
+            return
+        mdef["vision"] = bool(value)
+        # Значение подтверждено самим провайдером.
+        mdef["vision_source"] = "provider"
+        self._persist_config()
+        self._send_state()
 
     def _handle_update_model(self: "_ChatEngine", message: dict) -> None:
         """Обновляет поля пользовательской модели.
@@ -276,6 +307,16 @@ class ProvidersMixin:
                 if isinstance(reasoning, str):
                     reasoning = reasoning.strip().lower() in ("1", "true", "yes", "on")
                 mdef["reasoning"] = bool(reasoning)
+        if "vision" in message:
+            vision = message.get("vision")
+            if vision is None:
+                mdef["vision"] = None
+            elif isinstance(vision, str):
+                mdef["vision"] = vision.strip().lower() in ("1", "true", "yes", "on")
+            else:
+                mdef["vision"] = bool(vision)
+            # Значение выставлено пользователем вручную.
+            mdef["vision_source"] = "manual"
         if mdef.get("builtin", False):
             if any(
                 message.get(key) is not None

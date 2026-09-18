@@ -153,6 +153,13 @@
       "settings.help_temperature": "Response randomness: lower is more precise, higher is more creative",
       "settings.help_max_tokens": "Maximum response length in tokens",
       "settings.help_reasoning": "Enable extended model reasoning before answering",
+      "settings.vision": "Vision",
+      "settings.help_vision": "Whether the model can analyze images. Unknown sends both instructions.",
+      "settings.vision_yes": "Yes",
+      "settings.vision_no": "No",
+      "settings.vision_unknown": "Unknown",
+      "settings.vision_from_provider": "Confirmed by provider",
+      "settings.vision_manual": "Set manually",
       "settings.help_notes": "Additional info the agent takes into account when answering",
       "settings.help_language": "Plugin UI language",
       "settings.help_preset_context": "What goes into the slicer context: only changed preset parameters or all of them",
@@ -331,6 +338,13 @@
       "settings.help_temperature": "Случайность ответов: ниже — точнее, выше — креативнее",
       "settings.help_max_tokens": "Максимальная длина ответа в токенах",
       "settings.help_reasoning": "Включить расширенное мышление модели перед ответом",
+      "settings.vision": "Зрение",
+      "settings.help_vision": "Умеет ли модель распознавать изображения. «Не знаю» — отправляются обе инструкции.",
+      "settings.vision_yes": "Есть",
+      "settings.vision_no": "Нет",
+      "settings.vision_unknown": "Не знаю",
+      "settings.vision_from_provider": "Провайдер подтвердил",
+      "settings.vision_manual": "Задано вручную",
       "settings.help_notes": "Дополнительная информация, которую агент учитывает при ответах",
       "settings.help_language": "Язык интерфейса плагина",
       "settings.help_preset_context": "Что попадает в контекст слайсера: только изменённые параметры пресетов или все",
@@ -509,6 +523,13 @@
       "settings.help_temperature": "Nasumičnost odgovora: niže — preciznije, više — kreativnije",
       "settings.help_max_tokens": "Maksimalna dužina odgovora u tokenima",
       "settings.help_reasoning": "Uključi produženo razmišljanje modela pre odgovora",
+      "settings.vision": "Vid",
+      "settings.help_vision": "Da li model analizira slike. „Ne znam“ šalje obe instrukcije.",
+      "settings.vision_yes": "Ima",
+      "settings.vision_no": "Nema",
+      "settings.vision_unknown": "Ne znam",
+      "settings.vision_from_provider": "Provajder potvrdio",
+      "settings.vision_manual": "Ručno podešeno",
       "settings.help_notes": "Dodatne informacije koje agent uzima u obzir pri odgovaranju",
       "settings.help_language": "Jezik interfejsa dodatka",
       "settings.help_preset_context": "Šta ulazi u kontekst slajsera: samo izmenjeni parametri preseta ili svi",
@@ -866,6 +887,35 @@
     byId("modelChipLabel").textContent = providerName + " · " + modelName;
   }
 
+  // Значок «модель понимает изображения» с подсказкой; иначе null.
+  function visionEye(model) {
+    if (!model || model.vision !== true) {
+      return null;
+    }
+    var eye = el("span", "mp-vision", "👁");
+    eye.title = t("mp.vision_supported");
+    return eye;
+  }
+
+  // Значение зрения для отправки на бэкенд: true/false/null (не знаю).
+  function visionPayload(value) {
+    if (value === "true") {
+      return true;
+    }
+    if (value === "false") {
+      return false;
+    }
+    return null;
+  }
+
+  // Текущий выбор зрения модели в виде строки для дропдауна.
+  function modelVisionChoice(model) {
+    if (!model || model.vision === null || model.vision === undefined) {
+      return "unknown";
+    }
+    return model.vision ? "true" : "false";
+  }
+
   function openModelPicker() {
     byId("mpSearch").value = "";
     renderModelPicker();
@@ -928,9 +978,8 @@
         row.setAttribute("data-provider", prov.id);
         row.setAttribute("data-model", item.id);
         row.appendChild(el("span", "mp-item-name", item.name || item.id));
-        if (item.vision === true) {
-          var eye = el("span", "mp-vision", "👁");
-          eye.title = t("mp.vision_supported");
+        var eye = visionEye(item);
+        if (eye) {
           row.appendChild(eye);
         }
         row.appendChild(el("code", "mp-item-id", item.id));
@@ -1912,6 +1961,7 @@
   var ddDocListenerAdded = false; // флаг: document click listener уже добавлен
   var setProviderDD = null;
   var setModelDD = null;
+  var setVisionDD = null;
   var setSchemeDD = null;
   var setFontStyleDD = null;
   var setLanguageDD = null;
@@ -2087,11 +2137,15 @@
   function initSettingsDropdowns() {
     setProviderDD = makeDropdown("setProviderDD", [], "", onProviderChange, t("dd.provider_search"));
     setModelDD = makeDropdown("setModelDD", [], "", onModelChange, t("dd.model_search"), undefined, function (item, o) {
-      // Кастомный рендер: имя модели + кнопка удаления для пользовательских моделей.
+      // Кастомный рендер: имя модели + глазик зрения + кнопка удаления.
       item.appendChild(el("span", "dd-item-label", o.label));
       var provider = setProviderDD.getSelected();
       var prov = providerById(provider);
       var model = prov ? modelById(provider, o.value) : null;
+      var eye = visionEye(model);
+      if (eye) {
+        item.appendChild(eye);
+      }
       if (prov && !prov.builtin && model && !model.builtin) {
         var rm = el("button", "dd-remove", "✕");
         rm.type = "button";
@@ -2109,6 +2163,11 @@
       { value: "openai", label: t("scheme.openai") },
       { value: "anthropic", label: t("scheme.anthropic") }
     ], "openai", null, t("dd.scheme_search"));
+    setVisionDD = makeDropdown("setVisionDD", [
+      { value: "true", label: t("settings.vision_yes") },
+      { value: "false", label: t("settings.vision_no") },
+      { value: "unknown", label: t("settings.vision_unknown") }
+    ], "unknown", onVisionSelect, null, false);
     setFontStyleDD = makeDropdown("setFontStyleDD", [
       { value: "system", label: t("font.system") },
       { value: "mono", label: t("font.mono") },
@@ -2140,6 +2199,7 @@
   /* ===== Вкладка «Персональные модели» ===== */
   var ctProviderDD = null;
   var ctModelDD = null;
+  var ctVisionDD = null;
   var ctSchemeDD = null;
   var ctNewSchemeDD = null;
   var ctEmptyMode = false; // флаг: у выбранного персонального провайдера нет моделей
@@ -2160,6 +2220,11 @@
       { value: "openai", label: t("scheme.openai") },
       { value: "anthropic", label: t("scheme.anthropic") }
     ], "openai", null, t("dd.scheme_search"));
+    ctVisionDD = makeDropdown("ctVisionDD", [
+      { value: "true", label: t("settings.vision_yes") },
+      { value: "false", label: t("settings.vision_no") },
+      { value: "unknown", label: t("settings.vision_unknown") }
+    ], "unknown", null, null, false);
     ctProviderDD = makeDropdown("ctProviderDD", [], "", onCtProviderChange, t("dd.provider_search"), undefined, function (item, o) {
       // Кастомный рендер: имя персонального провайдера + корзина удаления.
       item.appendChild(el("span", "dd-item-label", o.label));
@@ -2176,6 +2241,10 @@
     });
     ctModelDD = makeDropdown("ctModelDD", [], "", onCtModelChange, t("dd.model_search"), undefined, function (item, o) {
       item.appendChild(el("span", "dd-item-label", o.label));
+      var ctEye = visionEye(modelById(ctProviderDD.getSelected(), o.value));
+      if (ctEye) {
+        item.appendChild(ctEye);
+      }
       var rm = el("button", "dd-remove", "✕");
       rm.type = "button";
       rm.title = t("settings.delete_model_title");
@@ -2300,6 +2369,17 @@
     byId("ctMaxTokensBadge").style.display = hasMax ? "none" : "inline-block";
     byId("ctReasoning").checked = hasReas ? !!model.reasoning : gReas;
     byId("ctReasoningBadge").style.display = hasReas ? "none" : "inline-block";
+    ctVisionDD.setSelected(modelVisionChoice(model));
+    var ctVisionSource = byId("ctVisionSource");
+    if (model.vision_source === "provider") {
+      ctVisionSource.textContent = t("settings.vision_from_provider");
+      ctVisionSource.style.display = "inline-block";
+    } else if (model.vision_source === "manual") {
+      ctVisionSource.textContent = t("settings.vision_manual");
+      ctVisionSource.style.display = "inline-block";
+    } else {
+      ctVisionSource.style.display = "none";
+    }
     byId("ctModelName").value = model.name || "";
     byId("ctModelSystemName").value = model.id || "";
     ctModelDirty = false;
@@ -2401,6 +2481,9 @@
       payload.temperature = parseFloat(byId("ctTemperature").value);
       payload.max_tokens = parseInt(byId("ctMaxTokens").value, 10) || 4096;
       payload.reasoning = byId("ctReasoning").checked;
+    }
+    if (ctVisionDD.getSelected() !== modelVisionChoice(modelById(pid, mid))) {
+      payload.vision = visionPayload(ctVisionDD.getSelected());
     }
     post(payload);
     ctModelDirty = false;
@@ -2507,13 +2590,22 @@
     byId("amApiKey").value = "";
   }
 
+  function onVisionSelect() {
+    // Пользователь изменил зрение вручную — помечаем модель как изменённую.
+    perModelDirty = true;
+    var badge = byId("setVisionSource");
+    badge.textContent = t("settings.vision_manual");
+    badge.style.display = "inline-block";
+  }
+
   function onModelChange() {
     // Сохраняем черновик предыдущей модели, если форма была изменена.
     if (currentModelKey && perModelDirty) {
       perModelDrafts[currentModelKey] = {
         temperature: parseFloat(byId("setTemperature").value),
         max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
-        reasoning: byId("setReasoning").checked
+        reasoning: byId("setReasoning").checked,
+        vision: setVisionDD.getSelected()
       };
     }
     var provider = setProviderDD.getSelected();
@@ -2546,6 +2638,20 @@
     byId("setMaxTokensBadge").style.display = (draft || hasMax) ? "none" : "inline-block";
     byId("setReasoning").checked = !!reas;
     byId("setReasoningBadge").style.display = (draft || hasReas) ? "none" : "inline-block";
+    // Зрение модели: true/false/неизвестно + источник значения.
+    var visionValue = draft && draft.vision !== undefined
+      ? draft.vision : modelVisionChoice(model);
+    setVisionDD.setSelected(visionValue);
+    var visionSource = byId("setVisionSource");
+    if (model.vision_source === "provider") {
+      visionSource.textContent = t("settings.vision_from_provider");
+      visionSource.style.display = "inline-block";
+    } else if (model.vision_source === "manual") {
+      visionSource.textContent = t("settings.vision_manual");
+      visionSource.style.display = "inline-block";
+    } else {
+      visionSource.style.display = "none";
+    }
     // Дополнительные поля пользовательской модели (URL/ключ/название/схема).
     var prov = providerById(provider);
     var customFields = byId("customModelFields");
@@ -2703,26 +2809,36 @@
       var pid = key.substring(0, sep);
       var mid = key.substring(sep + 2);
       var draft = perModelDrafts[key];
-      post({
+      var modelPayload = {
         type: "update_model",
         provider: pid,
         model_id: mid,
         temperature: draft.temperature !== undefined ? draft.temperature : null,
         max_tokens: draft.max_tokens !== undefined ? draft.max_tokens : null,
         reasoning: draft.reasoning !== undefined ? draft.reasoning : null
-      });
+      };
+      var drafted = modelById(pid, mid);
+      if (draft.vision !== undefined && draft.vision !== modelVisionChoice(drafted)) {
+        modelPayload.vision = visionPayload(draft.vision);
+      }
+      post(modelPayload);
     }
     // Текущая модель, если изменена вручную.
     var provider = setProviderDD.getSelected();
     if (perModelDirty && provider) {
-      post({
+      var currentModel = modelById(provider, setModelDD.getSelected());
+      var currentPayload = {
         type: "update_model",
         provider: provider,
         model_id: setModelDD.getSelected(),
         temperature: parseFloat(byId("setTemperature").value),
         max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
         reasoning: byId("setReasoning").checked
-      });
+      };
+      if (setVisionDD.getSelected() !== modelVisionChoice(currentModel)) {
+        currentPayload.vision = visionPayload(setVisionDD.getSelected());
+      }
+      post(currentPayload);
     }
     var prov = providerById(provider);
     if (prov && !prov.builtin) {

@@ -56,6 +56,7 @@ class CoreMixin:
         self._pending_confirm: str | None = None
         # Кэш возможностей моделей OpenRouter (id → поддержка изображений)
         self._or_models_cache: dict[str, bool] = {}
+        self._or_vision_started = False
         self._or_models_ts = 0.0
         self._load_chats()
 
@@ -159,6 +160,17 @@ class CoreMixin:
                         reasoning = reasoning.strip().lower() in ("1", "true", "yes", "on")
                     reasoning = bool(reasoning)
                 mdef["reasoning"] = reasoning
+                # Зрение модели: True/False/None + источник (default/provider/manual).
+                vision = mdef.get("vision")
+                if vision is not None and not isinstance(vision, bool):
+                    if isinstance(vision, str):
+                        vision = vision.strip().lower() in ("1", "true", "yes", "on")
+                    vision = bool(vision)
+                mdef["vision"] = vision
+                source = str(mdef.get("vision_source", "default") or "default")
+                mdef["vision_source"] = (
+                    source if source in ("default", "provider", "manual") else "default"
+                )
                 # Схема модели: нормализуется только у пользовательских провайдеров.
                 if not pdef.get("builtin", False):
                     mdef["scheme"] = (
@@ -642,12 +654,23 @@ class CoreMixin:
         """
         result: list[dict[str, Any]] = []
         providers = self._config.get("providers", {})
+        # Карта модальностей OpenRouter: если кэша нет, уточняем в фоне.
+        # Только при активном UI — иначе (например, в тестах) сеть не трогаем.
+        or_map = self._or_models_cache
+        if not or_map and not self._or_vision_started and self._post_sink is not None:
+            self._or_vision_started = True
+            threading.Thread(target=self._refresh_openrouter_vision, daemon=True).start()
         for pid, pdef in providers.items():
             if not isinstance(pdef, dict):
                 continue
             models: list[dict[str, Any]] = []
             for mid, mdef in pdef.get("models", {}).items():
                 if isinstance(mdef, dict):
+                    vision = mdef.get("vision")
+                    vision_source = str(mdef.get("vision_source", "default"))
+                    if pid == "openrouter" and vision_source != "manual" and mid in or_map:
+                        vision = or_map[mid]
+                        vision_source = "provider"
                     entry: dict[str, Any] = {
                         "id": mid,
                         "name": str(mdef.get("name", mid)),
@@ -657,7 +680,8 @@ class CoreMixin:
                         "reasoning": mdef.get("reasoning"),
                         "scheme": str(mdef.get("scheme") or pdef.get("scheme") or "openai"),
                         "has_key": bool(str(mdef.get("api_key", "")).strip()),
-                        "vision": mdef.get("vision"),
+                        "vision": vision,
+                        "vision_source": vision_source,
                     }
                     if not mdef.get("builtin", False):
                         entry["base_url"] = str(mdef.get("base_url", ""))

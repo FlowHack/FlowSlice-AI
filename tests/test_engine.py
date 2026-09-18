@@ -303,19 +303,72 @@ def test_model_supports_images_static(engine) -> None:
 
 
 def test_model_supports_images_unknown(engine) -> None:
-    """Без флага vision поддержка изображений считается неизвестной."""
+    """Неизвестное значение vision означает неизвестную поддержку изображений."""
     engine._config["active_provider"] = "openai"
     engine._config["active_model"] = "gpt-4o"
+    engine._config["providers"]["openai"]["models"]["gpt-4o"]["vision"] = None
     assert engine._model_supports_images() is None
 
 
-def test_attach_image_kept_without_vision(engine) -> None:
-    """Изображение принимается даже моделью без зрения: решение принимает промпт."""
+def test_model_supports_images_defaults(engine) -> None:
+    """Зрение встроенных моделей берётся из каталога провайдеров."""
+    engine._config["active_provider"] = "google"
+    engine._config["active_model"] = "gemini-2.5-flash"
+    assert engine._model_supports_images() is True
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    assert engine._model_supports_images() is False
+
+
+def test_attach_image_blocked_without_vision(engine) -> None:
+    """Модель без зрения: изображение отклоняется с пояснением."""
     engine._config["active_provider"] = "deepseek"
     engine._config["active_model"] = "deepseek-chat"
     engine._handle_attach_file({"kind": "image", "name": "a.jpg", "data": "data:x"})
+    assert engine._pending_attachments == []
+
+
+def test_vision_lookup_worker_marks_provider(engine, monkeypatch) -> None:
+    """Результат запроса к провайдеру сохраняется с источником provider."""
+    engine._config["providers"]["openrouter"]["models"]["openrouter/auto"]["vision"] = None
+    monkeypatch.setattr(engine, "_resolve_vision_for", lambda provider, model: True)
+    engine._vision_lookup_worker("openrouter", "openrouter/auto")
+    model = engine._config["providers"]["openrouter"]["models"]["openrouter/auto"]
+    assert model["vision"] is True
+    assert model["vision_source"] == "provider"
+
+
+def test_update_model_sets_manual_vision(engine) -> None:
+    """Ручная установка зрения помечается источником manual."""
+    engine._handle_update_model(
+        {"provider": "deepseek", "model_id": "deepseek-chat", "vision": True}
+    )
+    model = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    assert model["vision"] is True
+    assert model["vision_source"] == "manual"
+
+
+def test_chat_send_drops_pending_image_without_vision(engine) -> None:
+    """Если модель сменилась на модель без зрения, картинка не отправляется."""
+    engine._config["active_provider"] = "google"
+    engine._config["active_model"] = "gemini-2.5-flash"
+    engine._handle_attach_file({"kind": "image", "name": "a.jpg", "data": "data:x"})
     assert len(engine._pending_attachments) == 1
-    assert engine._pending_attachments[0]["image"] == "data:x"
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    engine._handle_chat({"text": "смотри"})
+    chat = engine._active_chat()
+    assert engine._pending_attachments == []
+    assert all(not msg.get("attachments") for msg in chat["msgs"])
+
+
+def test_providers_snapshot_includes_vision_source(engine) -> None:
+    """Снимок провайдеров отдаёт зрение модели и его источник."""
+    providers = engine._providers_snapshot()
+    openai = next(p for p in providers if p["id"] == "openai")
+    gpt = next(m for m in openai["models"] if m["id"] == "gpt-4o")
+    assert gpt["vision"] is True
+    assert gpt["vision_source"] == "default"
 
 
 def test_build_messages_sends_images_over_openai(engine, monkeypatch) -> None:

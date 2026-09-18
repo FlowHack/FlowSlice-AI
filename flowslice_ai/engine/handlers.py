@@ -131,6 +131,21 @@ class HandlersMixin:
                 }
             )
             return
+        # Модель могла смениться уже после прикрепления изображения.
+        if any(att.get("image") for att in self._pending_attachments) and (
+            self._model_supports_images() is False
+        ):
+            self._pending_attachments = []
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t(
+                        "attach.image_unsupported", model=self._active_model_id()
+                    ),
+                    "kind": "err",
+                }
+            )
+            return
         self._pending_confirm = None
         chat = self._active_chat()
         edit_id = message.get("edit_id")
@@ -413,8 +428,19 @@ class HandlersMixin:
             _LOGGER.warning("Пропущено вложение без данных (kind=%s)", kind)
             return None
         if kind == "image":
-            # Изображение принимаем всегда: если модель без зрения, оно останется
-            # в чате, а системный промпт попросит честно сообщить об этом.
+            # Модель без зрения: изображение отклонить с понятным пояснением.
+            if self._model_supports_images() is False:
+                self._post(
+                    {
+                        "type": "toast",
+                        "text": self._t(
+                            "attach.image_unsupported",
+                            model=self._active_model_id(),
+                        ),
+                        "kind": "err",
+                    }
+                )
+                return None
             if len(data) > MAX_IMAGE_B64:
                 self._post(
                     {

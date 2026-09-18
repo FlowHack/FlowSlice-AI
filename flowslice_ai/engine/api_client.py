@@ -97,6 +97,39 @@ class ApiClientMixin:
             self._or_models_ts = now
         return result
 
+    def _refresh_openrouter_vision(self: "_ChatEngine") -> None:
+        """Фоновое уточнение зрения моделей OpenRouter и сохранение в конфиг."""
+        mapping = self._openrouter_vision_map()
+        if not mapping:
+            return
+        prov = self._config.get("providers", {}).get("openrouter")
+        if not isinstance(prov, dict):
+            return
+        changed = False
+        for mid, mdef in prov.get("models", {}).items():
+            if not isinstance(mdef, dict) or mdef.get("vision_source") == "manual":
+                continue
+            value = mapping.get(mid)
+            if value is None:
+                continue
+            mdef["vision"] = bool(value)
+            # Значение подтверждено провайдером.
+            mdef["vision_source"] = "provider"
+            changed = True
+        if changed:
+            self._persist_config()
+            self._send_state()
+
+    def _resolve_vision_for(self: "_ChatEngine", provider_id: str, model_id: str) -> bool | None:
+        """Пытается определить поддержку изображений через API провайдера.
+
+        Возвращает True/False, если провайдер отдаёт сведения о модальностях
+        модели (сейчас так умеет OpenRouter), иначе None.
+        """
+        if provider_id == "openrouter":
+            return self._openrouter_vision_map().get(model_id)
+        return None
+
     def _model_supports_images(self: "_ChatEngine") -> bool | None:
         """Определяет поддержку изображений активной моделью.
 

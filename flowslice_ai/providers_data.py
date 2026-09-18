@@ -15,7 +15,6 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
-                "vision": False,
             },
             "deepseek-reasoner": {
                 "name": "DeepSeek V4 Pro",
@@ -23,7 +22,6 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
-                "vision": False,
             },
         },
     },
@@ -195,7 +193,6 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
-                "vision": False,
             },
             "llama-3.1-8b-instant": {
                 "name": "Llama 3.1 8B Instant",
@@ -203,7 +200,6 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
-                "vision": False,
             },
             "deepseek-r1-distill-llama-70b": {
                 "name": "DeepSeek R1 Distill 70B",
@@ -211,7 +207,6 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
-                "vision": False,
             },
         },
     },
@@ -258,7 +253,6 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
-                "vision": False,
             },
             "llama-3.1-8b": {
                 "name": "Llama 3.1 8B",
@@ -266,7 +260,6 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
                 "temperature": None,
                 "max_tokens": None,
                 "reasoning": None,
-                "vision": False,
             },
         },
     },
@@ -317,3 +310,39 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
         },
     },
 }
+
+# Поддержка изображений по умолчанию: True — модель принимает изображения,
+# False — не принимает, None — неизвестно (тогда уходят обе подсказки).
+# Ключ — (id провайдера, id модели); "*" задаёт значение для всех моделей.
+_VISION_BY_MODEL: dict[tuple[str, str], bool | None] = {
+    ("deepseek", "*"): False,
+    ("openrouter", "*"): None,
+    ("google", "*"): True,
+    ("anthropic", "*"): True,
+    ("openai", "*"): True,
+    ("groq", "*"): False,
+    ("glm", "*"): None,
+    ("cerebras", "*"): False,
+    ("mistral", "*"): True,
+    ("xai", "*"): None,
+}
+
+
+def _apply_vision_defaults() -> None:
+    """Проставляет каждой встроенной модели поле vision и его источник.
+
+    ``vision_source`` принимает значения: ``default`` — из этого каталога,
+    ``provider`` — получено запросом к API провайдера, ``manual`` — задано
+    пользователем в настройках.
+    """
+    for provider_id, provider in DEFAULT_PROVIDERS.items():
+        default_vision = _VISION_BY_MODEL.get((provider_id, "*"))
+        for model_id, model in provider["models"].items():
+            if (provider_id, model_id) in _VISION_BY_MODEL:
+                model["vision"] = _VISION_BY_MODEL[(provider_id, model_id)]
+            else:
+                model["vision"] = default_vision
+            model["vision_source"] = "default"
+
+
+_apply_vision_defaults()
