@@ -163,6 +163,7 @@
       "mp.default": "Default",
       "mp.default_set": "Set as default model",
       "mp.need_key": "Set an API key for one of the providers or add your own model",
+      "mp.no_model": "No model configured",
       "mp.open_settings": "Open settings",
       "mp.selected": "Selected",
       "copy.title": "Copy the text manually",
@@ -329,6 +330,7 @@
       "mp.default": "По умолчанию",
       "mp.default_set": "Сделать моделью по умолчанию",
       "mp.need_key": "Укажите для одного из провайдеров токен или внесите свою модель",
+      "mp.no_model": "Модель не настроена",
       "mp.open_settings": "Открыть настройки",
       "mp.selected": "Выбрано",
       "copy.title": "Скопируйте текст вручную",
@@ -495,6 +497,7 @@
       "mp.default": "Podrazumevano",
       "mp.default_set": "Postavi kao podrazumevani model",
       "mp.need_key": "Postavite token za jednog od provajdera ili dodajte sopstveni model",
+      "mp.no_model": "Model nije podešen",
       "mp.open_settings": "Otvori podešavanja",
       "mp.selected": "Izabrano",
       "copy.title": "Kopirajte tekst ručno",
@@ -782,6 +785,11 @@
   function renderHeader() {
     var s = state.settings || {};
     var provider = providerById(s.active_provider);
+    // Провайдер без ключа не может отвечать: показываем нейтральный текст.
+    if (!provider || !provider.has_key) {
+      byId("modelStatus").textContent = t("mp.no_model");
+      return;
+    }
     var providerName = provider ? provider.name : (s.active_provider || "—");
     var modelName = s.active_model || "—";
     var model = null;
@@ -804,6 +812,11 @@
   function renderModelChip() {
     var s = state.settings || {};
     var provider = providerById(s.active_provider);
+    // Нет ключа — конкретная модель неактуальна, показываем нейтральный текст.
+    if (!provider || !provider.has_key) {
+      byId("modelChipLabel").textContent = t("mp.no_model");
+      return;
+    }
     var providerName = provider ? provider.name : (s.active_provider || "—");
     var modelName = s.active_model || "—";
     if (provider) {
@@ -2670,6 +2683,8 @@
       }
     }
     setModelDD.setSelected(still ? current : (models.length > 0 ? models[0].id : ""));
+    // Признак «ключ задан» мог измениться (например, после сброса моделей).
+    setKeyField("setApiKey", !!provider.has_key);
     onModelChange();
     // Обновляем режим добавления моделей (переход «нет моделей» ↔ «есть модели»).
     updateCustomMode(provider, models, false);
