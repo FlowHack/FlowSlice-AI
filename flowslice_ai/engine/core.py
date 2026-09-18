@@ -223,6 +223,11 @@ class CoreMixin:
         if not default_model:
             default_model = active_provider + "::" + active_model
         merged["default_model"] = default_model
+        self._normalize_settings(merged)
+        return merged
+
+    def _normalize_settings(self: "_ChatEngine", merged: dict[str, Any]) -> None:
+        """Приводит скалярные настройки и служебные блоки конфигурации к норме."""
         # Заметки пользователя для контекста.
         merged["notes"] = str(merged.get("notes", ""))
         # Температура: float 0.0–2.0.
@@ -293,7 +298,6 @@ class CoreMixin:
         merged["font_size"] = font_size
         usage = merged.get("usage")
         merged["usage"] = dict(usage) if isinstance(usage, dict) else {}
-        return merged
 
     def _migrate_legacy_config(self: "_ChatEngine", data: dict) -> dict:
         """Преобразует старую схему конфигурации в новую."""

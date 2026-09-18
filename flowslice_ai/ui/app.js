@@ -31,6 +31,7 @@
     providers: [],
     commands: [],
     context_flags: {},
+    context_modes: {},
     context_tokens: 0,
     status: "idle",
     // Подгруженные через API списки моделей: { providerId: { models, error } }.
@@ -75,6 +76,7 @@
       "attach.limit_count": "Attachment limit reached (max {n}).",
       "attach.limit_size": "File \"{name}\" is too large.",
       "attach.reading": "File is still being read, try again in a moment.",
+      "attach.photo_name": "photo",
       "attach.binary_unsupported": "Binary files are not supported: {name}. Attach a text file or an image.",
       "attach.read_failed": "Failed to read file: {name}.",
       "attach.image_failed": "Failed to process image: {name}.",
@@ -293,6 +295,7 @@
       "attach.limit_count": "Достигнут предел вложений (не более {n}).",
       "attach.limit_size": "Файл «{name}» слишком большой.",
       "attach.reading": "Файл ещё читается, повторите через мгновение.",
+      "attach.photo_name": "фото",
       "attach.binary_unsupported": "Бинарные файлы не поддерживаются: {name}. Прикрепите текстовый файл или изображение.",
       "attach.read_failed": "Не удалось прочитать файл: {name}.",
       "attach.image_failed": "Не удалось обработать изображение: {name}.",
@@ -511,6 +514,7 @@
       "attach.limit_count": "Dostignut limit priloga (najviše {n}).",
       "attach.limit_size": "Datoteka \"{name}\" je prevelika.",
       "attach.reading": "Datoteka se još čita, pokušajte ponovo za trenutak.",
+      "attach.photo_name": "foto",
       "attach.binary_unsupported": "Binarne datoteke nisu podržane: {name}. Priložite tekstualnu datoteku ili sliku.",
       "attach.read_failed": "Nije moguće pročitati datoteku: {name}.",
       "attach.image_failed": "Nije moguće obraditi sliku: {name}.",
@@ -726,6 +730,9 @@
     });
     scope.querySelectorAll("[data-i18n-title]").forEach(function (el) {
       el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    scope.querySelectorAll("[data-i18n-aria-label]").forEach(function (el) {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria-label")));
     });
     // Кнопки без явного aria-label получают его из title/текста.
     scope.querySelectorAll("button").forEach(function (btn) {
@@ -1389,6 +1396,9 @@
 
   function chatItem(chat) {
     var item = el("div", "chat-item" + (chat.id === state.active ? " active" : ""));
+    item.tabIndex = 0;
+    item.setAttribute("role", "button");
+    item.setAttribute("aria-label", chat.title || t("common.new_chat"));
     item.appendChild(el("div", "chat-title", chat.title || t("common.new_chat")));
     var actions = el("div", "chat-actions");
     var pinBtn = el("button", "chat-action", "📌");
@@ -1418,6 +1428,12 @@
     item.appendChild(actions);
     item.addEventListener("click", function () {
       post({ type: "pick_chat", id: chat.id });
+    });
+    item.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        post({ type: "pick_chat", id: chat.id });
+      }
     });
     return item;
   }
@@ -2114,7 +2130,6 @@
             attachments.push({
               kind: "image",
               name: name,
-              ready: true,
               tokens: Math.max(85, Math.ceil((w * h) / 750)),
               data: data
             });
@@ -2141,7 +2156,6 @@
           attachments.push({
             kind: "text",
             name: name,
-            ready: true,
             tokens: Math.ceil(text.length / 4),
             data: text
           });
@@ -2242,7 +2256,6 @@
       copy.push({
         kind: att.kind,
         name: att.name,
-        ready: att.ready,
         tokens: att.tokens,
         data: att.data
       });
@@ -3359,6 +3372,7 @@
     fillSettingsForm();
     switchSettingsTab(currentSettingsTab);
     byId("settingsModal").style.display = "flex";
+    focusModal(byId("settingsModal"));
   }
 
   function closeSettings() {
@@ -3389,11 +3403,72 @@
   function openUsage() {
     setPeriodDD.setSelected("all");
     byId("usageModal").style.display = "flex";
+    focusModal(byId("usageModal"));
     post({ type: "get_usage", period: "all" });
   }
 
   function closeUsage() {
     byId("usageModal").style.display = "none";
+  }
+
+  // Порядок модалок от самой верхней к нижней: нужен для Esc и ловушки фокуса.
+  var MODAL_IDS = ["modelPickerModal", "copyModal", "usageModal", "settingsModal"];
+
+  function visibleModal() {
+    for (var i = 0; i < MODAL_IDS.length; i++) {
+      var modal = byId(MODAL_IDS[i]);
+      if (modal && modal.style.display !== "none") {
+        return modal;
+      }
+    }
+    return null;
+  }
+
+  // Удерживает Tab внутри открытой модалки: фокус не уходит на фон.
+  function trapModalFocus(e) {
+    var modal = visibleModal();
+    if (!modal) {
+      return;
+    }
+    var nodes = modal.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    var list = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      if (node.disabled) {
+        continue;
+      }
+      if (node.offsetWidth === 0 && node.offsetHeight === 0 && node !== document.activeElement) {
+        continue;
+      }
+      list.push(node);
+    }
+    if (!list.length) {
+      return;
+    }
+    var first = list[0];
+    var last = list[list.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  // Переводит фокус на первый элемент управления модалки при открытии.
+  function focusModal(modal) {
+    if (!modal) {
+      return;
+    }
+    var node = modal.querySelector(
+      'input, select, textarea, button, [tabindex]:not([tabindex="-1"])'
+    );
+    if (node) {
+      node.focus();
+    }
   }
 
   function resetPerModelField(field) {
@@ -4240,16 +4315,31 @@
       if (e.key === "Escape") {
         if (byId("modelPickerModal").style.display !== "none") {
           closeModelPicker();
+          return;
         }
         if (byId("copyModal").style.display === "flex") {
           closeCopyModal();
+          return;
+        }
+        if (byId("usageModal").style.display === "flex") {
+          closeUsage();
+          return;
+        }
+        if (byId("settingsModal").style.display === "flex") {
+          closeSettings();
+          return;
         }
         if (byId("exportMenu").style.display === "flex") {
           closeExportMenu();
+          return;
         }
         if (cmdSuggestOpen()) {
           closeCmdSuggest();
         }
+        return;
+      }
+      if (e.key === "Tab") {
+        trapModalFocus(e);
         return;
       }
       if (ctrl && (e.key === "k" || e.key === "K")) {
