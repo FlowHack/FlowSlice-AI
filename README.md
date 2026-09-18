@@ -1,9 +1,18 @@
 # FlowSlice AI
 
-Нативный плагин для Orca Slicer: ИИ-ассистент-инженер 3D-печати.
+<p align="center">
+  <img src="assets/preview.png" width="250" alt="FlowSlice AI">
+</p>
 
 <p align="center">
-  <img src="assets/preview.png" width="60" alt="FlowSlice AI">
+  <a href="https://github.com/OrcaSlicer/OrcaSlicer"><img src="https://img.shields.io/badge/OrcaSlicer-Plugin-181717?style=flat&logo=github&logoColor=white" alt="Orca Slicer"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://numpy.org/"><img src="https://img.shields.io/badge/numpy-1.26-4DABCF?logo=numpy&logoColor=white" alt="numpy"></a>
+  <a href="https://github.com/FlowHack/flowslice-ai/actions/workflows/ci.yml"><img src="https://github.com/FlowHack/flowslice-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
+
+<p align="center">
+  Нативный плагин для Orca Slicer: ИИ-ассистент-инженер 3D-печати.
 </p>
 
 ## Возможности
