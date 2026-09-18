@@ -10,7 +10,6 @@ orca.host.model()), активных пресетах печати (orca.host.pr
 # pylint: disable=too-many-locals,too-many-nested-blocks,too-many-public-methods,too-few-public-methods
 
 import json
-import sys
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -515,12 +514,12 @@ class SlicerContextMixin:
     def _build_system_prompt(self: "_ChatEngine", ctx: dict[str, Any], include_data: bool = True) -> str:
         """Собирает системный промпт с данными контекста слайсера.
 
-        При include_data=False возвращается только персона, заметки и
-        окружение — без JSON-данных (используется командой /context,
+        При include_data=False возвращается только персона, язык, заметки и
+        данные — без JSON-данных слайсера (используется командой /context,
         которая выводит данные отдельным блоком).
         """
         parts = [SYSTEM_PROMPT]
-        parts.append(self._t("prompt.parameter_names"))
+        # Язык ответа задаётся отдельно: базовый промпт всегда на английском.
         parts.append(self._t("prompt.language"))
         notes = str(self._config.get("notes", "")).strip()
         if notes:
@@ -540,13 +539,6 @@ class SlicerContextMixin:
                         data=json.dumps(ctx["presets"], ensure_ascii=False, indent=2),
                     )
                 )
-        parts.append(
-            self._t(
-                "prompt.environment",
-                ver=sys.version.split()[0],
-                time=time.strftime("%Y-%m-%d %H:%M"),
-            )
-        )
         return "\n\n".join(parts)
 
     @staticmethod

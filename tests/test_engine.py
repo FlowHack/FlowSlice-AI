@@ -406,12 +406,14 @@ def test_estimate_context_tokens_grows_with_history(engine) -> None:
 
 
 def test_system_prompt_has_parameter_and_language_rules(engine) -> None:
-    """Промпт требует UI-названия параметров и язык интерфейса плагина."""
+    """База промпта — английская (роль и правила), язык ответа локализован."""
     engine._config["language"] = "ru"
     prompt_ru = engine._build_system_prompt({})
-    assert "интерфейсе OrcaSlicer" in prompt_ru
+    assert "senior 3D-printing engineer" in prompt_ru
+    assert "human-readable label" in prompt_ru
     assert "Отвечай строго на русском языке." in prompt_ru
+    # Шум окружения (версия Python) в промпт больше не попадает.
+    assert "Python 3" not in prompt_ru
     engine._config["language"] = "en"
     prompt_en = engine._build_system_prompt({})
     assert "Answer strictly in English." in prompt_en
-    assert "human-readable label" in prompt_en
