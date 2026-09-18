@@ -13,7 +13,7 @@ from flowslice_ai.config import DEFAULT_CONFIG
 from flowslice_ai.engine import _ChatEngine
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _PAGES_BASE, _SCRIPT_BASE
-from flowslice_ai.paths import ICON_FILE
+from flowslice_ai.paths import ICON_FILE, atomic_write_text
 from flowslice_ai.ui import CONFIG_PAGE, HTML_PAGE
 
 
@@ -107,10 +107,10 @@ if _PAGES_BASE is not None:
         def get_icon(self) -> str:
             """Записывает иконку вкладки и возвращает путь к файлу."""
             try:
-                ICON_FILE.write_text(_TAB_ICON_SVG, encoding="utf-8")
+                atomic_write_text(ICON_FILE, _TAB_ICON_SVG)
                 return str(ICON_FILE)
             except OSError as exc:
-                _LOGGER.error("Не удалось записать иконку вкладки: %s", exc)
+                _LOGGER.error("Не удалось записать иконку вкладки: %s", exc, exc_info=True)
                 return ""
 
         def on_message(self, message: dict) -> None:

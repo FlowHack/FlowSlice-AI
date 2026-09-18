@@ -183,7 +183,7 @@ def test_build_messages_adds_image_hints(engine, monkeypatch) -> None:
     """При наличии изображения промпт требует разбор дефектов печати."""
     chat = engine._active_chat()
     engine._config["language"] = "en"
-    monkeypatch.setattr(engine, "_model_supports_images", lambda: True)
+    monkeypatch.setattr(engine, "_model_supports_images", lambda **_kwargs: True)
     chat["msgs"] = [
         {
             "id": 1,
@@ -203,7 +203,7 @@ def test_build_messages_unknown_vision_adds_both_hints(engine, monkeypatch) -> N
     """Если зрение модели неизвестно, картинка уходит, но добавляется обе подсказки."""
     chat = engine._active_chat()
     engine._config["language"] = "en"
-    monkeypatch.setattr(engine, "_model_supports_images", lambda: None)
+    monkeypatch.setattr(engine, "_model_supports_images", lambda **_kwargs: None)
     chat["msgs"] = [
         {
             "id": 1,

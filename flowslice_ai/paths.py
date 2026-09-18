@@ -1,8 +1,28 @@
 """Пути хранения данных плагина (data_dir() — разрешённая зона аудита)."""
 import logging
+import os
 import pathlib
 
 _LOGGER = logging.getLogger("flowslice_ai")
+
+
+def atomic_write_text(path: pathlib.Path, text: str, encoding: str = "utf-8") -> None:
+    """Атомарно записывает текст: временный файл рядом + os.replace.
+
+    Гарантирует, что при сбое (нехватка места, обрыв) не останется
+    повреждённый файл: читатель увидит либо старое, либо новое содержимое.
+    """
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        tmp.write_text(text, encoding=encoding)
+        os.replace(tmp, path)
+    except OSError:
+        # Убираем временный файл, чтобы не мусорить в каталоге данных.
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
 
 
 def _find_data_dir() -> pathlib.Path | None:

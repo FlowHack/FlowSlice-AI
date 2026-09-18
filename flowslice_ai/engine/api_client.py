@@ -103,15 +103,22 @@ class ApiClientMixin:
         except ConfigError as exc:
             raise ConfigError(self._t(str(exc))) from exc
 
-    def _openrouter_vision_map(self: "_ChatEngine") -> dict[str, bool]:
+    def _openrouter_vision_map(
+        self: "_ChatEngine", refresh: bool = False
+    ) -> dict[str, bool]:
         """Возвращает карту «id модели OpenRouter → поддержка изображений».
 
         Список моделей OpenRouter публичный (без ключа), поэтому кэшируется
         на _OR_MODELS_TTL секунд. При сетевой ошибке возвращается прежний кэш.
+        Без refresh сеть не запрашивается — метод безопасен для UI-потока.
         """
         now = time.time()
         cache = self._or_models_cache
         if cache and now - self._or_models_ts < _OR_MODELS_TTL:
+            return cache
+        if not refresh:
+            # Без разрешения на сеть отдаём только актуальный кэш: метод
+            # вызывается из UI-потока, где блокирующий запрос недопустим.
             return cache
         result: dict[str, bool] = {}
         try:
@@ -493,15 +500,18 @@ class ApiClientMixin:
             return self._provider_vision_map(provider_id).get(model_id)
         return None
 
-    def _model_supports_images(self: "_ChatEngine") -> bool | None:
+    def _model_supports_images(
+        self: "_ChatEngine", refresh: bool = False
+    ) -> bool | None:
         """Определяет поддержку изображений активной моделью.
 
-        Возвращает True/False, если поддержку удалось определить, иначе None
+        True/False — если признак известен, None — если данных нет
         (неизвестно — изображения разрешены, решение остаётся за провайдером).
+        Сеть запрашивается только при refresh=True (фоновые потоки).
         """
         provider_id, _base_url, _api_key, model, _scheme = self._active_api_credentials()
         if provider_id == "openrouter":
-            return self._openrouter_vision_map().get(model)
+            return self._openrouter_vision_map(refresh=refresh).get(model)
         prov = self._config.get("providers", {}).get(provider_id)
         if not isinstance(prov, dict):
             return None
@@ -571,10 +581,10 @@ class ApiClientMixin:
     def _wait_retry(self: "_ChatEngine", wait: float) -> None:
         """Пауза перед повтором с возможностью прервать ожидание кнопкой «Стоп»."""
         remaining = max(0.0, wait)
-        while remaining > 0 and self._net_active():
-            step = min(0.2, remaining)
-            time.sleep(step)
-            remaining -= step
+        if remaining <= 0:
+            return
+        # Ждём на событии: «Стоп» разбудит поток мгновенно, без опроса.
+        self._cancel_event.wait(remaining)
 
     def _open_with_retry(
         self: "_ChatEngine", request: urllib.request.Request, provider_id: str

@@ -39,6 +39,7 @@ class GenerationMixin:
                 )
                 return
             self._gen = True
+            self._cancel_event.clear()
         threading.Thread(
             target=self._worker, args=(chat_id, user_text, user_msg_id), daemon=True
         ).start()
@@ -289,7 +290,7 @@ class GenerationMixin:
         ctx = self._collect_context(flags, modes)
         # Изображения собираем заранее: от их наличия зависит системный промпт.
         images = self._collect_context_images(chat)
-        vision = self._model_supports_images()
+        vision = self._model_supports_images(refresh=True)
         no_vision = False
         if vision is False:
             # Модель без зрения: картинку не отправляем, но просим честно
@@ -420,6 +421,10 @@ class GenerationMixin:
                     elif isinstance(att.get("file"), dict):
                         text += self._render_file(att["file"])
             if total + len(text) > max_chars:
+                # Свежее сообщение включаем всегда (при необходимости усекая):
+                # иначе при одном длинном сообщении модель получила бы пустую историю.
+                if not result and max_chars > 0:
+                    result.append({"role": msg["role"], "content": text[:max_chars]})
                 break
             result.append({"role": msg["role"], "content": text})
             total += len(text)

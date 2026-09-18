@@ -293,6 +293,8 @@ class HandlersMixin:
         with self._gen_lock:
             self._gen = False
             self._compacting = False
+        # Будим поток, если он ждёт паузу перед повтором запроса.
+        self._cancel_event.set()
         self._post({"type": "status", "text": ""})
 
     def _handle_context_flags(self: "_ChatEngine", message: dict) -> None:

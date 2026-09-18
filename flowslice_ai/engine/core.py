@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 from flowslice_ai.config import (
     COMMANDS,
+    CONFIG_VERSION,
     DEFAULT_CONFIG,
     SETTINGS_KEYS,
     normalize_max_tokens,
@@ -32,7 +33,7 @@ from flowslice_ai.constants import (
 )
 from flowslice_ai.i18n import I18N_PY
 from flowslice_ai.logging import _LOGGER
-from flowslice_ai.paths import CHATS_FILE
+from flowslice_ai.paths import CHATS_FILE, atomic_write_text
 from flowslice_ai.providers_data import DEFAULT_PROVIDERS
 
 
@@ -44,6 +45,9 @@ class CoreMixin:
         self._cap = cap
         self._persist_lock = threading.Lock()
         self._gen_lock = threading.Lock()
+        # Защищает однократный фоновый запуск уточнения зрения и кэш контекста.
+        self._vision_lock = threading.Lock()
+        self._context_lock = threading.Lock()
         self._config = self._normalize_config(self._read_raw_config())
         self._chats: list[dict[str, Any]] = []
         self._active = 0
@@ -51,6 +55,8 @@ class CoreMixin:
         self._msg_counter = 1
         self._gen = False
         self._compacting = False
+        # Событие отмены: прерывает паузы между повторами запроса без опроса.
+        self._cancel_event = threading.Event()
         # Предыдущие ответы, которые нужно привязать к новому сообщению ассистента
         # после регенерации (ключ — id чата).
         self._pending_variants: dict[int, list[dict[str, Any]]] = {}
@@ -114,6 +120,10 @@ class CoreMixin:
             data = self._migrate_legacy_config(data)
         merged = DEFAULT_CONFIG.copy()
         merged.update(data)
+        # Чистим устаревшие ключи верхнего уровня и фиксируем версию схемы.
+        for legacy_key in ("provider", "base_url", "api_key", "model", "scheme"):
+            merged.pop(legacy_key, None)
+        merged["config_version"] = CONFIG_VERSION
         # Провайдеры: builtin-модели гарантированы, пользовательские сохранены.
         providers = merged.get("providers")
         if not isinstance(providers, dict):
@@ -527,8 +537,8 @@ class CoreMixin:
                     "next_id": self._next_id,
                     "next_msg_id": self._msg_counter,
                 }
-                CHATS_FILE.write_text(
-                    json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+                atomic_write_text(
+                    CHATS_FILE, json.dumps(payload, ensure_ascii=False)
                 )
             except (OSError, TypeError, ValueError) as exc:
                 _LOGGER.error(
@@ -709,8 +719,12 @@ class CoreMixin:
         # активном UI — иначе (например, в тестах) сеть не трогаем.
         or_map = self._or_models_cache
         vision_caches = self._vision_cache
-        if not self._or_vision_started and self._post_sink is not None:
-            self._or_vision_started = True
+        # Фоновое уточнение запускаем ровно один раз, под блокировкой.
+        with self._vision_lock:
+            start_vision = not self._or_vision_started and self._post_sink is not None
+            if start_vision:
+                self._or_vision_started = True
+        if start_vision:
             threading.Thread(target=self._refresh_all_vision, daemon=True).start()
         for pid, pdef in providers.items():
             if not isinstance(pdef, dict):

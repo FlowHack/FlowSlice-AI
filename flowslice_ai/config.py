@@ -4,6 +4,9 @@ from typing import Any
 
 from flowslice_ai.providers_data import DEFAULT_PROVIDERS
 
+# Версия схемы конфигурации: увеличивается при несовместимых миграциях.
+CONFIG_VERSION = 2
+
 DEFAULT_CONFIG: dict[str, Any] = {
     "providers": json.loads(json.dumps(DEFAULT_PROVIDERS)),
     "active_provider": "deepseek",

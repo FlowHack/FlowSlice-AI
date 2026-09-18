@@ -197,15 +197,18 @@ class CompactionMixin:
 
     def _handle_compact(self: "_ChatEngine", message: dict[str, Any]) -> None:
         """Запускает ручное сжатие истории активного чата."""
-        if self._gen or self._compacting:
-            self._toast(self._t("compact.busy"), "warn")
-            return
+        with self._gen_lock:
+            if self._gen or self._compacting:
+                self._toast(self._t("compact.busy"), "warn")
+                return
+            self._compacting = True
+            self._cancel_event.clear()
         chat_id = message.get("chat_id") or self._active
         chat = self._chat_by_id(chat_id)
         if chat is None or self._compact_range(chat) is None:
+            self._compacting = False
             self._toast(self._t("compact.nothing"), "")
             return
-        self._compacting = True
         thread = threading.Thread(
             target=self._compact_worker,
             args=(chat_id,),

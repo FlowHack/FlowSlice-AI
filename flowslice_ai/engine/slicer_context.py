@@ -58,16 +58,18 @@ class SlicerContextMixin:
             json.dumps(modes or {}, sort_keys=True, default=str),
         )
         now = time.monotonic()
-        cache = getattr(self, "_context_cache", None)
-        if not isinstance(cache, dict):
-            cache = {}
-            self._context_cache = cache
-        cached = cache.get(cache_key)
-        if isinstance(cached, tuple) and now - cached[0] < self._CONTEXT_CACHE_TTL:
-            return cached[1]
+        with self._context_lock:
+            cache = getattr(self, "_context_cache", None)
+            if not isinstance(cache, dict):
+                cache = {}
+                self._context_cache = cache
+            cached = cache.get(cache_key)
+            if isinstance(cached, tuple) and now - cached[0] < self._CONTEXT_CACHE_TTL:
+                return cached[1]
         ctx = self._collect_context_uncached(flags, modes)
-        cache.clear()
-        cache[cache_key] = (now, ctx)
+        with self._context_lock:
+            cache.clear()
+            cache[cache_key] = (now, ctx)
         return ctx
 
     def _collect_context_uncached(
@@ -256,7 +258,10 @@ class SlicerContextMixin:
                         self._deep_instance_stats(bbox_min, bbox_max, tri_pts, cross, norm, mesh)
                     )
                 stats["instances"].append(entry)
-        except (ImportError, RuntimeError, ValueError, TypeError):
+        except (ImportError, RuntimeError, ValueError, TypeError) as exc:
+            _LOGGER.warning(
+                "Не удалось вычислить геометрию экземпляров: %s", exc, exc_info=True
+            )
             stats = {}
         return stats
 
@@ -305,7 +310,10 @@ class SlicerContextMixin:
                 result["bbox_fill_ratio"] = round(
                     float(mesh_volume) / bbox_volume, 3
                 )
-        except (RuntimeError, ValueError, TypeError, ZeroDivisionError):
+        except (RuntimeError, ValueError, TypeError, ZeroDivisionError) as exc:
+            _LOGGER.warning(
+                "Не удалось вычислить глубокие метрики экземпляра: %s", exc, exc_info=True
+            )
             result = {}
         return result
 
@@ -337,7 +345,10 @@ class SlicerContextMixin:
                         "mirrored": bool(self._safe_get(inst, "mirror")),
                     }
                 )
-        except (RuntimeError, ValueError, TypeError):
+        except (RuntimeError, ValueError, TypeError) as exc:
+            _LOGGER.warning(
+                "Не удалось собрать локальные характеристики модели: %s", exc, exc_info=True
+            )
             stats = {}
         return stats
 

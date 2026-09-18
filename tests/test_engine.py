@@ -380,7 +380,7 @@ def test_build_messages_sends_images_over_openai(engine, monkeypatch) -> None:
     engine._config["active_model"] = "deepseek-chat"
     monkeypatch.setattr(engine, "_collect_context", lambda flags, modes=None: {})
     monkeypatch.setattr(engine, "_build_system_prompt", lambda ctx, **kwargs: "sys")
-    monkeypatch.setattr(engine, "_model_supports_images", lambda: True)
+    monkeypatch.setattr(engine, "_model_supports_images", lambda **_kwargs: True)
     chat = {
         "msgs": [
             {"role": "user", "text": "hi", "image": "data:image/jpeg;base64,AAA"}
@@ -778,7 +778,7 @@ def test_build_messages_includes_summary(engine, monkeypatch) -> None:
     """Сводка добавляется в системный промпт запроса."""
     monkeypatch.setattr(engine, "_collect_context", lambda flags, modes=None: {})
     monkeypatch.setattr(engine, "_build_system_prompt", lambda ctx, **kwargs: "sys")
-    monkeypatch.setattr(engine, "_model_supports_images", lambda: False)
+    monkeypatch.setattr(engine, "_model_supports_images", lambda **_kwargs: False)
     chat = {
         "msgs": [{"role": "user", "text": "hi"}],
         "summary": "Old context summary",
@@ -1038,5 +1038,56 @@ def test_context_flags_reject_non_dict(engine) -> None:
     engine._active = 7
     engine._handle_context_flags({"flags": "wrong"})
     assert chat["context_flags"] == {"model": False}
+
+
+def test_normalize_config_drops_legacy_keys(engine) -> None:
+    """_normalize_config() вычищает легаси-ключи и фиксирует версию схемы."""
+    from flowslice_ai.config import CONFIG_VERSION
+
+    data = {
+        "provider": "deepseek",
+        "base_url": "https://old.example",
+        "api_key": "secret",
+        "model": "old",
+    }
+    result = engine._normalize_config(data)
+    for key in ("provider", "base_url", "api_key", "model"):
+        assert key not in result
+    assert result["config_version"] == CONFIG_VERSION
+
+
+def test_normalize_config_drops_per_model_credentials(engine) -> None:
+    """Креды моделей удаляются: URL и ключ живут только у провайдера."""
+    data = {
+        "providers": {
+            "deepseek": {
+                "models": {
+                    "deepseek-chat": {
+                        "base_url": "https://evil.example",
+                        "api_key": "leak",
+                        "scheme": "anthropic",
+                    }
+                }
+            }
+        }
+    }
+    result = engine._normalize_config(data)
+    model = result["providers"]["deepseek"]["models"]["deepseek-chat"]
+    for key in ("base_url", "api_key", "scheme"):
+        assert key not in model
+
+
+def test_openrouter_vision_without_refresh_uses_cache(engine, monkeypatch) -> None:
+    """Без refresh карта зрения берётся из кэша, сеть не дёргается."""
+    engine._or_models_cache = {"some/model": True}
+    engine._or_models_ts = 0.0  # кэш просрочен, но refresh не разрешён
+
+    def fail_urlopen(*args, **kwargs):
+        raise AssertionError("сеть не должна вызываться при refresh=False")
+
+    monkeypatch.setattr(
+        "flowslice_ai.engine.api_client.urllib.request.urlopen", fail_urlopen
+    )
+    assert engine._openrouter_vision_map(refresh=False) == {"some/model": True}
 
 
