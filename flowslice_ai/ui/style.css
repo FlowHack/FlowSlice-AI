@@ -11,6 +11,12 @@ body {
 body {
   --orca-accent: #d9534f;
   --orca-accent-fg: #ffffff;
+  /* Orca не предоставляет переменную --orca-input: в режиме «Авто» (без класса
+     темы) она оставалась неопределённой, из-за чего все фоны `var(--orca-input)`
+     вычислялись в прозрачный — hover пунктов списков пропадал. Задаём
+     нейтральную полупрозрачную подложку: она читается и на светлом, и на тёмном
+     фоне Orca. Явные темы .theme-light/.theme-dark ниже перекрывают её. */
+  --orca-input: rgba(127, 127, 127, 0.14);
   background: var(--orca-bg);
   color: var(--orca-fg);
   font-family: var(--orca-font);
