@@ -789,6 +789,54 @@ def test_build_messages_includes_summary(engine, monkeypatch) -> None:
     assert "Old context summary" in messages[0]["content"]
 
 
+def test_regenerate_preserves_previous_answer(engine, monkeypatch) -> None:
+    """Регенерация сохраняет прежний ответ как вариант, а не удаляет его."""
+    captured: dict = {}
+    monkeypatch.setattr(
+        engine,
+        "_start_generation",
+        lambda chat_id, text, msg_id: captured.update(
+            {"chat_id": chat_id, "text": text, "msg_id": msg_id}
+        ),
+    )
+    chat = {
+        "id": 7,
+        "msgs": [
+            {"id": 1, "role": "user", "text": "hi"},
+            {"id": 2, "role": "assistant", "text": "first", "reasoning": "r1"},
+        ],
+        "context_flags": {},
+    }
+    engine._chats = [chat]
+    engine._active = 7
+    engine._handle_regenerate()
+    assert len(chat["msgs"]) == 1
+    assert engine._pending_variants[7] == [{"text": "first", "reasoning": "r1"}]
+    assert captured["chat_id"] == 7
+    assert captured["text"] == "hi"
+
+
+def test_switch_variant_changes_active_text(engine) -> None:
+    """Переключение варианта подменяет активный текст ответа."""
+    msg = {
+        "id": 2,
+        "role": "assistant",
+        "text": "second",
+        "variants": [{"text": "first", "reasoning": "r1"}, {"text": "second", "reasoning": ""}],
+        "variant_index": 1,
+    }
+    chat = {"id": 7, "msgs": [{"id": 1, "role": "user", "text": "hi"}, msg], "context_flags": {}}
+    engine._chats = [chat]
+    engine._active = 7
+    engine._handle_switch_variant({"chat_id": 7, "index": 0})
+    assert msg["text"] == "first"
+    assert msg["variant_index"] == 0
+    assert msg["reasoning"] == "r1"
+    # Некорректный индекс не меняет состояние.
+    engine._handle_switch_variant({"chat_id": 7, "index": 5})
+    assert msg["text"] == "first"
+
+
 class _FakeBBox:
     """Тестовый BoundingBox с полями min/max/size/center."""
 

@@ -43,3 +43,19 @@ jobs:
 
       - name: pytest
         run: pytest tests/ -v
+
+  ui:
+    name: UI (node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Проверка синтаксиса скриптов интерфейса
+        run: node --check flowslice_ai/ui/app.js
+
+      - name: Тесты чистых функций интерфейса
+        run: node tests/js/pure.test.js

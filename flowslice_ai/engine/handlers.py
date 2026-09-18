@@ -58,6 +58,8 @@ class HandlersMixin:
             self._handle_context_flags(message)
         elif msg_type == "regenerate":
             self._handle_regenerate()
+        elif msg_type == "switch_variant":
+            self._handle_switch_variant(message)
         elif msg_type == "save_settings":
             self._handle_save_settings(message)
         elif msg_type == "reset_settings":
@@ -315,9 +317,70 @@ class HandlersMixin:
         if last_user is None:
             return
         index = msgs.index(last_user)
+        # Прежние ответы сохраняем как варианты нового сообщения, чтобы их
+        # можно было листать, а не терять при повторной генерации.
+        variants: list[dict] = []
+        for msg in msgs[index + 1 :]:
+            if msg.get("role") != "assistant" or msg.get("error"):
+                continue
+            text = str(msg.get("text", "") or "")
+            if not text.strip():
+                continue
+            existing = msg.get("variants")
+            if isinstance(existing, list) and existing:
+                variants = [dict(item) for item in existing if isinstance(item, dict)]
+                active = msg.get("variant_index")
+                if not (
+                    isinstance(active, int)
+                    and 0 <= active < len(variants)
+                    and str(variants[active].get("text", "") or "") == text
+                ):
+                    variants.append({"text": text, "reasoning": str(msg.get("reasoning", "") or "")})
+            else:
+                variants.append({"text": text, "reasoning": str(msg.get("reasoning", "") or "")})
         del msgs[index + 1 :]
+        if variants:
+            self._pending_variants[chat["id"]] = variants
+        else:
+            self._pending_variants.pop(chat["id"], None)
         self._save_chats()
         self._start_generation(chat["id"], last_user["text"], last_user["id"])
+
+    def _handle_switch_variant(self: "_ChatEngine", message: dict) -> None:
+        """Переключает отображаемый вариант последнего ответа ассистента."""
+        chat_id = message.get("chat_id")
+        if chat_id is None:
+            chat_id = self._active
+        chat = self._chat_by_id(int(chat_id))
+        if chat is None:
+            return
+        try:
+            index = int(message.get("index", -1))
+        except (TypeError, ValueError):
+            return
+        # Берём последнее сообщение ассистента с сохранёнными вариантами.
+        target = None
+        for msg in reversed(chat["msgs"]):
+            if msg.get("role") == "assistant" and isinstance(msg.get("variants"), list):
+                target = msg
+                break
+        if target is None:
+            return
+        variants = target["variants"]
+        if index < 0 or index >= len(variants):
+            return
+        variant = variants[index]
+        if not isinstance(variant, dict):
+            return
+        target["variant_index"] = index
+        target["text"] = str(variant.get("text", "") or "")
+        reasoning = str(variant.get("reasoning", "") or "")
+        if reasoning:
+            target["reasoning"] = reasoning
+        else:
+            target.pop("reasoning", None)
+        self._save_chats()
+        self._send_state()
 
     def _handle_save_settings(self: "_ChatEngine", message: dict) -> None:
         """Сохраняет настройки, присланные из UI.

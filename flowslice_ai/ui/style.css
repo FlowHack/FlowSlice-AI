@@ -1640,3 +1640,64 @@ details.field summary:hover {
 .dd-remove:hover {
   color: var(--orca-accent);
 }
+
+/* ===== Кнопка возврата к последнему сообщению ===== */
+.scroll-bottom {
+  position: absolute;
+  right: 18px;
+  bottom: 132px;
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--orca-border);
+  background: var(--orca-panel);
+  color: var(--orca-fg);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.scroll-bottom:hover {
+  border-color: var(--orca-accent);
+  color: var(--orca-accent);
+}
+
+/* ===== Блок кода с кнопкой копирования ===== */
+.md-code-wrap {
+  position: relative;
+}
+.md-code-wrap .md-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid var(--orca-border);
+  border-radius: 4px;
+  background: var(--orca-panel);
+  color: var(--orca-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.md-code-wrap:hover .md-copy {
+  opacity: 1;
+}
+.md-code-wrap .md-copy:hover {
+  color: var(--orca-accent);
+  border-color: var(--orca-accent);
+}
+
+/* ===== Листание вариантов ответа ===== */
+.variant-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.variant-pos {
+  font-size: 11px;
+  color: var(--orca-muted);
+  min-width: 28px;
+  text-align: center;
+}

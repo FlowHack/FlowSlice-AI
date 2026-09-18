@@ -102,9 +102,18 @@ class GenerationMixin:
             self._gen = False
             return
         msg_id = self._next_msg_id()
-        chat["msgs"].append(
-            {"id": msg_id, "role": "assistant", "text": "", "ts": time.time()}
-        )
+        assistant_msg: dict[str, Any] = {
+            "id": msg_id,
+            "role": "assistant",
+            "text": "",
+            "ts": time.time(),
+        }
+        pending = self._pending_variants.pop(chat_id, None)
+        if pending:
+            # Предыдущие ответы становятся вариантами; текущий добавится в конце.
+            assistant_msg["variants"] = pending
+            assistant_msg["variant_index"] = len(pending)
+        chat["msgs"].append(assistant_msg)
         self._save_chats()
         # Полный state с пустым ответом ассистента: UI привязывает стрим к нему.
         self._send_state()
@@ -133,6 +142,10 @@ class GenerationMixin:
                 msg["tokens_out"] = out_tokens
                 if cost is not None:
                     msg["cost"] = cost
+                variants = msg.get("variants")
+                if isinstance(variants, list) and variants:
+                    variants.append({"text": full_text, "reasoning": reasoning or ""})
+                    msg["variant_index"] = len(variants) - 1
             self._post(
                 {
                     "type": "reply",

@@ -49,6 +49,8 @@
       "common.search": "Search",
       "common.nothing": "No results",
       "common.copied": "Copied!",
+      "common.copy_code": "Copy code",
+      "js.error": "Interface error",
       "common.copy_failed": "Failed to copy — select the text manually",
       "common.save": "Save",
       "common.reset": "Reset",
@@ -86,6 +88,7 @@
       "common.settings": "Settings",
       "common.stats": "Statistics",
       "common.no_active_chat": "No active chat",
+      "chat.scroll_bottom": "Scroll to last message",
       "sidebar.chats": "Chats",
       "sidebar.search": "Search chats and messages...",
       "sidebar.pinned": "Pinned",
@@ -263,6 +266,8 @@
       "common.search": "Поиск",
       "common.nothing": "Ничего не найдено",
       "common.copied": "Скопировано",
+      "common.copy_code": "Копировать код",
+      "js.error": "Ошибка интерфейса",
       "common.copy_failed": "Не удалось скопировать — выделите текст вручную",
       "common.save": "Сохранить",
       "common.reset": "Сбросить",
@@ -300,6 +305,7 @@
       "common.settings": "Настройки",
       "common.stats": "Статистика",
       "common.no_active_chat": "Нет активного чата",
+      "chat.scroll_bottom": "К последнему сообщению",
       "sidebar.chats": "Чаты",
       "sidebar.search": "Поиск по чатам и сообщениям…",
       "sidebar.pinned": "Закреплённые",
@@ -477,6 +483,8 @@
       "common.search": "Pretraga",
       "common.nothing": "Ništa nije pronađeno",
       "common.copied": "Kopirano!",
+      "common.copy_code": "Kopiraj kod",
+      "js.error": "Greška interfejsa",
       "common.copy_failed": "Kopiranje nije uspelo — označite tekst ručno",
       "common.save": "Sačuvaj",
       "common.reset": "Resetuj",
@@ -514,6 +522,7 @@
       "common.settings": "Podešavanja",
       "common.stats": "Statistika",
       "common.no_active_chat": "Nema aktivnog razgovora",
+      "chat.scroll_bottom": "Na poslednju poruku",
       "sidebar.chats": "Razgovori",
       "sidebar.search": "Pretraga razgovora i poruka…",
       "sidebar.pinned": "Zakačeni",
@@ -1530,6 +1539,21 @@
     return out;
   }
 
+  // Блок кода с кнопкой копирования. Код уже экранирован вызывающей стороной.
+  function codeBlockHtml(code) {
+    return (
+      '<div class="md-code-wrap">' +
+      '<button type="button" class="md-copy" title="' +
+      escapeHtml(t("common.copy_code")) +
+      '">' +
+      escapeHtml(t("common.copy_code")) +
+      "</button>" +
+      '<pre class="md-code"><code>' +
+      code +
+      "</code></pre></div>"
+    );
+  }
+
   function renderMarkdown(raw) {
     var escaped = escapeHtml(raw);
     var lines = escaped.split("\n");
@@ -1558,7 +1582,7 @@
       var line = lines[i];
       if (inCode) {
         if (/^```\s*$/.test(line)) {
-          html.push('<pre class="md-code"><code>' + codeBuf.join("\n") + "</code></pre>");
+          html.push(codeBlockHtml(codeBuf.join("\n")));
           inCode = false;
           codeBuf = [];
         } else {
@@ -1624,7 +1648,7 @@
       html.push("<p>" + mdInline(para.join("<br>")) + "</p>");
     }
     if (inCode) {
-      html.push('<pre class="md-code"><code>' + codeBuf.join("\n") + "</code></pre>");
+      html.push(codeBlockHtml(codeBuf.join("\n")));
     }
     closeList();
     return html.join("");
@@ -1722,6 +1746,26 @@
           post({ type: "regenerate" });
         }));
       }
+      var variants = msg.variants;
+      if (!msg.error && Array.isArray(variants) && variants.length > 1) {
+        var vi = typeof msg.variant_index === "number" ? msg.variant_index : variants.length - 1;
+        if (vi < 0 || vi >= variants.length) {
+          vi = variants.length - 1;
+        }
+        var nav = el("span", "variant-nav");
+        if (vi > 0) {
+          nav.appendChild(actionBtn("‹", function () {
+            post({ type: "switch_variant", chat_id: state.active, index: vi - 1 });
+          }));
+        }
+        nav.appendChild(el("span", "variant-pos", (vi + 1) + "/" + variants.length));
+        if (vi < variants.length - 1) {
+          nav.appendChild(actionBtn("›", function () {
+            post({ type: "switch_variant", chat_id: state.active, index: vi + 1 });
+          }));
+        }
+        actions.appendChild(nav);
+      }
     } else if (msg.role === "user") {
       actions.appendChild(actionBtn(t("common.edit"), function () {
         startEdit(msg);
@@ -1793,13 +1837,25 @@
     var container = byId("messages");
     if (force || !userScrolledUp) {
       container.scrollTop = container.scrollHeight;
+      userScrolledUp = false;
     }
+    updateScrollButton();
   }
 
   function onMessagesScroll() {
     var container = byId("messages");
     var nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     userScrolledUp = !nearBottom;
+    updateScrollButton();
+  }
+
+  // Показывает кнопку возврата к последнему сообщению.
+  function updateScrollButton() {
+    var btn = byId("scrollBottom");
+    if (!btn) {
+      return;
+    }
+    btn.style.display = userScrolledUp ? "flex" : "none";
   }
 
   /* ===== Токены запроса (текст сообщения + вложения) ===== */
@@ -4074,6 +4130,19 @@
       }
     });
     byId("messages").addEventListener("scroll", onMessagesScroll);
+    byId("scrollBottom").addEventListener("click", function () {
+      scrollToBottom(true);
+    });
+    byId("messages").addEventListener("click", function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest(".md-copy") : null;
+      if (!btn || !btn.parentNode) {
+        return;
+      }
+      var code = btn.parentNode.querySelector("code");
+      if (code) {
+        copyText(code.textContent);
+      }
+    });
     byId("copyModalClose").addEventListener("click", closeCopyModal);
     byId("copyModalOk").addEventListener("click", closeCopyModal);
     byId("copyModal").addEventListener("click", function (e) {
@@ -4096,10 +4165,53 @@
       }
     });
     byId("mpSearch").addEventListener("input", renderModelPicker);
+    /* ===== Горячие клавиши ===== */
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && byId("modelPickerModal").style.display !== "none") {
-        closeModelPicker();
+      var ctrl = e.ctrlKey || e.metaKey;
+      if (e.key === "Escape") {
+        if (byId("modelPickerModal").style.display !== "none") {
+          closeModelPicker();
+        }
+        if (byId("copyModal").style.display === "flex") {
+          closeCopyModal();
+        }
+        if (byId("exportMenu").style.display === "flex") {
+          closeExportMenu();
+        }
+        if (cmdSuggestOpen()) {
+          closeCmdSuggest();
+        }
+        return;
       }
+      if (ctrl && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        var search = byId("searchInput");
+        search.focus();
+        search.select();
+        return;
+      }
+      if (ctrl && e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+        return;
+      }
+      if (ctrl && e.shiftKey && (e.key === "n" || e.key === "N")) {
+        e.preventDefault();
+        post({ type: "new_chat" });
+      }
+    });
+
+    /* ===== Глобальный перехват JS-ошибок ===== */
+    window.addEventListener("error", function (event) {
+      var detail = event && event.message ? event.message : String(event);
+      console.error("JS error:", event && event.error ? event.error : detail);
+      showToast(t("js.error") + ": " + detail, "err");
+    });
+    window.addEventListener("unhandledrejection", function (event) {
+      var reason = event ? event.reason : null;
+      var detail = reason && reason.message ? reason.message : String(reason);
+      console.error("Unhandled rejection:", reason);
+      showToast(t("js.error") + ": " + detail, "err");
     });
 
     if (window.orca && typeof window.orca.onMessage === "function") {
@@ -4109,6 +4221,16 @@
     initSettingsDropdowns();
     post({ type: "get_state" });
   }
+
+  // Чистые функции, доступные юнит-тестам node (tests/js/pure.test.js).
+  window.FlowSlicePure = {
+    escapeHtml: escapeHtml,
+    safeHref: safeHref,
+    formatTokens: formatTokens,
+    formatCost: formatCost,
+    formatPrice: formatPrice,
+    codeBlockHtml: codeBlockHtml,
+  };
 
   document.addEventListener("DOMContentLoaded", init);
 })();

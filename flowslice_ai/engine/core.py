@@ -51,6 +51,9 @@ class CoreMixin:
         self._msg_counter = 1
         self._gen = False
         self._compacting = False
+        # Предыдущие ответы, которые нужно привязать к новому сообщению ассистента
+        # после регенерации (ключ — id чата).
+        self._pending_variants: dict[int, list[dict[str, Any]]] = {}
         self._ctx_tokens = 0
         self._post_sink: Any = None
         self._pending_attachments: list[dict[str, Any]] = []
