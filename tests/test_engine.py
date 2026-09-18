@@ -1,6 +1,8 @@
 """Тесты вспомогательных методов движка: токены, i18n, slugify, числа, состояние."""
 from __future__ import annotations
 
+import types
+
 
 def test_estimate_tokens(engine) -> None:
     """_estimate_tokens() оценивает токены как len(text) // 4."""
@@ -101,3 +103,115 @@ def test_preset_inheritance_chain(engine) -> None:
     collection = _FakeCollection({"Base @Printer": root, "Custom @Printer": child})
     chain = engine._preset_inheritance_chain(collection, child)
     assert [item.name for item in chain] == ["Custom @Printer", "Base @Printer"]
+
+
+def test_preset_config_items_uses_public_api(engine) -> None:
+    """_preset_config_items() читает ключи через config_keys()/config_value()."""
+
+    class _FakePreset:
+        """Заглушка пресета с публичным API плагина Orca."""
+
+        def config_keys(self):
+            """Возвращает полный список ключей конфига."""
+            return [
+                "name",
+                "inherits",
+                "layer_height",
+                "wall_loops",
+                "sparse_infill_density",
+            ]
+
+        def config_value(self, key: str):
+            """Возвращает сериализованное значение ключа."""
+            return {
+                "name": "0.20mm Standard",
+                "inherits": "0.20mm Standard @MyPrinter",
+                "layer_height": "0.2",
+                "wall_loops": "",
+                "sparse_infill_density": "15%",
+            }.get(key)
+
+    items = engine._preset_config_items(_FakePreset())
+    assert items == {"layer_height": "0.2", "sparse_infill_density": "15%"}
+
+
+def test_preset_inherits_name_uses_public_api(engine) -> None:
+    """_preset_inherits_name() берёт родителя через config_value()."""
+
+    class _FakePreset:
+        """Заглушка пресета с config_value()."""
+
+        def config_value(self, key: str):
+            """Возвращает имя родителя только для ключа inherits."""
+            return "Base @Printer" if key == "inherits" else None
+
+    assert engine._preset_inherits_name(_FakePreset()) == "Base @Printer"
+
+
+def test_collect_preset_data_all_differs_from_changed(engine, monkeypatch) -> None:
+    """Режим "all" отдаёт унаследованные ключи, режим "changed" — только свои."""
+
+    class _Preset:
+        """Заглушка пресета с публичным API Orca."""
+
+        def __init__(self, name: str, values: dict) -> None:
+            self.name = name
+            self._values = values
+
+        def config_keys(self):
+            """Возвращает ключи пресета."""
+            return list(self._values)
+
+        def config_value(self, key: str):
+            """Возвращает значение ключа."""
+            return self._values.get(key)
+
+    class _Collection:
+        """Заглушка коллекции пресетов с выбранным пресетом."""
+
+        def __init__(self, presets: dict[str, _Preset], selected: _Preset) -> None:
+            self._presets = presets
+            self._selected = selected
+
+        def get_selected_preset_name(self) -> str:
+            """Возвращает имя выбранного пресета."""
+            return self._selected.name
+
+        def get_selected_preset(self):
+            """Возвращает выбранный пресет."""
+            return self._selected
+
+        def find_preset(self, name: str):
+            """Возвращает пресет по имени."""
+            return self._presets.get(name)
+
+    class _Bundle:
+        """Заглушка бандла с тремя коллекциями и объединённым конфигом."""
+
+        def __init__(self, collection: _Collection) -> None:
+            self.printers = collection
+            self.filaments = collection
+            self.prints = collection
+
+        def full_config_value(self, key: str):
+            """Объединённый конфиг в заглушке пуст."""
+            return None
+
+    base = _Preset("Base @P", {"printer_model": "MyPrinter", "nozzle_diameter": "0.4"})
+    user = _Preset("User @P", {"inherits": "Base @P", "printable_height": "390"})
+    bundle = _Bundle(_Collection({"Base @P": base, "User @P": user}, user))
+    monkeypatch.setattr(
+        "flowslice_ai.engine.slicer_context.orca",
+        types.SimpleNamespace(
+            host=types.SimpleNamespace(preset_bundle=lambda: bundle)
+        ),
+    )
+
+    changed = engine._collect_preset_data({"printer": "changed"})
+    full = engine._collect_preset_data({"printer": "all"})
+    assert changed["printer"]["params"] == {"printable_height": "390"}
+    assert full["printer"]["params"] == {
+        "printer_model": "MyPrinter",
+        "nozzle_diameter": "0.4",
+        "printable_height": "390",
+    }

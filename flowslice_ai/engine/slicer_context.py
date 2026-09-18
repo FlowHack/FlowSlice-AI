@@ -293,9 +293,20 @@ class SlicerContextMixin:
                 fkey: self._json_safe(fval)
                 for fkey, fval in self._preset_config_items(preset).items()
             }
-            params = full if mode == "all" else changed
-            # Fallback: конфиг пресета не получен — по списку полей.
-            if len(params) <= 1:
+            params = dict(full if mode == "all" else changed)
+            # Уточняем значения по объединённому конфигу Orca: он отдаёт
+            # уже разрешённые значения (с учётом наследования и вычислений).
+            if has_full_value:
+                for fkey in list(params):
+                    try:
+                        value = bundle.full_config_value(fkey)
+                    except (RuntimeError, TypeError, ValueError):
+                        continue
+                    value = getattr(value, "value", value)
+                    if value not in (None, ""):
+                        params[fkey] = self._json_safe(value)
+            # Fallback: полный конфиг раздела не собран — по списку полей.
+            if not params and mode == "all":
                 for field in fields:
                     value: Any = None
                     if has_full_value:
@@ -316,6 +327,34 @@ class SlicerContextMixin:
         return section
 
     @staticmethod
+    def _preset_inherits_name(preset: Any) -> str:
+        """Возвращает имя родительского пресета из ключа "inherits".
+
+        Основной путь — публичный API плагина Orca (config_value). Резервный
+        путь — прямой доступ к config для совместимости со старыми сборками.
+        """
+        value_fn = getattr(preset, "config_value", None)
+        if callable(value_fn):
+            try:
+                value = value_fn("inherits")
+            except (TypeError, RuntimeError, ValueError):
+                value = None
+            value = getattr(value, "value", value)
+            if value:
+                return str(value)
+        config = getattr(preset, "config", None)
+        if isinstance(config, dict):
+            return str(config.get("inherits", "") or "")
+        if config is not None:
+            getter = getattr(config, "get", None)
+            if callable(getter):
+                try:
+                    return str(getter("inherits") or "")
+                except (TypeError, RuntimeError, ValueError):
+                    return ""
+        return ""
+
+    @staticmethod
     def _preset_inheritance_chain(collection: Any, preset: Any) -> list[Any]:
         """Строит цепочку наследования пресета от корня к текущему.
 
@@ -333,17 +372,7 @@ class SlicerContextMixin:
                 break
             seen.add(cur_name)
             chain.append(cur)
-            parent_name = ""
-            config = getattr(cur, "config", None)
-            if isinstance(config, dict):
-                parent_name = str(config.get("inherits", "") or "")
-            elif config is not None:
-                getter = getattr(config, "get", None)
-                if callable(getter):
-                    try:
-                        parent_name = str(getter("inherits") or "")
-                    except (TypeError, RuntimeError, ValueError):
-                        parent_name = ""
+            parent_name = SlicerContextMixin._preset_inherits_name(cur)
             if not parent_name:
                 break
             finder = getattr(collection, "find_preset", None)
@@ -359,36 +388,55 @@ class SlicerContextMixin:
     def _preset_config_items(preset: Any) -> dict[str, Any]:
         """Возвращает собственные ключи пресета без metadata-ключей.
 
-        Значения-обёртки (объекты с атрибутом value) распаковываются;
-        пустые значения (None, "") отбрасываются.
+        Основной путь — публичный API плагина Orca: config_keys() возвращает
+        список ключей, config_value(key) — значение. Резервный путь — прямой
+        доступ к config для совместимости со старыми сборками. Пустые
+        значения (None, "") отбрасываются.
         """
         result: dict[str, Any] = {}
-        config = getattr(preset, "config", None)
-        items = getattr(config, "items", None)
-        if callable(items):
+        keys_fn = getattr(preset, "config_keys", None)
+        value_fn = getattr(preset, "config_value", None)
+        if callable(keys_fn) and callable(value_fn):
             try:
-                raw: Any = items()
-            except (TypeError, RuntimeError):
-                raw = None
-            if isinstance(raw, dict):
-                source = raw.items()
-            elif raw is not None:
-                # dict_items / прочие итерируемые пары ключ-значение.
+                raw_keys: Any = keys_fn()
+                keys = list(raw_keys)
+            except (TypeError, RuntimeError, ValueError):
+                keys = []
+            for fkey in keys:
                 try:
-                    source = list(raw)
-                except TypeError:
+                    fval = value_fn(str(fkey))
+                except (TypeError, RuntimeError, ValueError):
+                    continue
+                fval = getattr(fval, "value", fval)
+                if fval not in (None, ""):
+                    result[str(fkey)] = fval
+        if not result:
+            config = getattr(preset, "config", None)
+            items = getattr(config, "items", None)
+            if callable(items):
+                try:
+                    raw: Any = items()
+                except (TypeError, RuntimeError):
+                    raw = None
+                if isinstance(raw, dict):
+                    source = raw.items()
+                elif raw is not None:
+                    # dict_items / прочие итерируемые пары ключ-значение.
+                    try:
+                        source = list(raw)
+                    except TypeError:
+                        source = []
+                else:
                     source = []
-            else:
-                source = []
-            for fkey, fval in source:
-                fval = getattr(fval, "value", fval)
-                if fval not in (None, ""):
-                    result[str(fkey)] = fval
-        elif isinstance(config, dict):
-            for fkey, fval in config.items():
-                fval = getattr(fval, "value", fval)
-                if fval not in (None, ""):
-                    result[str(fkey)] = fval
+                for fkey, fval in source:
+                    fval = getattr(fval, "value", fval)
+                    if fval not in (None, ""):
+                        result[str(fkey)] = fval
+            elif isinstance(config, dict):
+                for fkey, fval in config.items():
+                    fval = getattr(fval, "value", fval)
+                    if fval not in (None, ""):
+                        result[str(fkey)] = fval
         return {
             fkey: fval
             for fkey, fval in result.items()
