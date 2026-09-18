@@ -60,6 +60,9 @@ jobs:
       - name: Сборка wheel
         run: python -m build --wheel
 
+      - name: Патч метаданных wheel
+        run: python tools/patch_wheel.py dist/*.whl
+
       - name: Проверка содержимого wheel
         run: |
           python - <<'EOF'

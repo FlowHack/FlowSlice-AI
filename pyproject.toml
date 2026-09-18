@@ -3,12 +3,15 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "flowslice-ai"
+# PEP 508 запрещает пробелы в имени проекта, поэтому в исходнике — валидный
+# "FlowSlice-AI". Человекочитаемое имя "FlowSlice AI" проставляет в METADATA
+# пост-сборочный скрипт tools/patch_wheel.py (Orca читает имя и автора оттуда).
+name = "FlowSlice-AI"
 description = "ИИ-ассистент инженера 3D-печати в OrcaSlicer: механика, Klipper и тонкая настройка материалов."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"
-authors = [{ name = "FlowSlice AI" }]
+authors = [{ name = "FlowHack" }]
 dependencies = ["numpy"]
 dynamic = ["version"]
 
