@@ -78,6 +78,22 @@ if _PAGES_BASE is not None:
             """Имя вкладки."""
             return "FlowSlice AI"
 
+        def get_type(self) -> Any:
+            """Тип capability — страница (вкладка) интерфейса OrcaSlicer.
+
+            Явное значение нужно потому, что встроенная база страниц в некоторых
+            сборках OrcaSlicer возвращает ``Unknown``, из-за чего в диалоге
+            плагинов в колонке «Types» отображается ``unknown`` вместо ``Pages``.
+            """
+            for name in ("Pages", "Page"):
+                value: Any = getattr(orca.PluginType, name, None)
+                if value is not None:
+                    return value
+            getter: Any = getattr(super(), "get_type", None)
+            if getter is not None:
+                return getter()
+            return orca.PluginType.Unknown
+
         def get_ui(self) -> str:
             """HTML-содержимое вкладки."""
             self._ensure_engine()

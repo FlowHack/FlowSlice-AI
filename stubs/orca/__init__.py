@@ -7,6 +7,16 @@
 from typing import Any
 
 
+class PluginType:
+    """Тип capability (аналог orca.PluginType в OrcaSlicer)."""
+
+    Unknown = "unknown"
+    Pages = "pages"
+    Script = "script"
+    SlicingPipeline = "slicing_pipeline"
+    PrinterConnection = "printer_connection"
+
+
 class PluginResult:
     """Результат выполнения capability."""
 
@@ -42,6 +52,10 @@ class ExecutionResult:
 
 class PythonPluginBase:
     """База с конфигурацией плагина."""
+
+    def get_type(self) -> str:
+        """Тип capability (по умолчанию — Unknown)."""
+        return PluginType.Unknown
 
     def get_default_config(self) -> dict:
         """Дефолтная конфигурация."""

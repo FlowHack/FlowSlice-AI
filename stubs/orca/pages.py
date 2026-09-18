@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from . import PythonPluginBase
+from . import PluginType, PythonPluginBase
 
 
 class PagesPluginCapabilityBase(PythonPluginBase):
@@ -11,6 +11,10 @@ class PagesPluginCapabilityBase(PythonPluginBase):
     def get_name(self) -> str:
         """Имя вкладки."""
         return ""
+
+    def get_type(self) -> str:
+        """Тип capability — страница (вкладка)."""
+        return PluginType.Pages
 
     def get_ui(self) -> str:
         """HTML-страница вкладки."""
