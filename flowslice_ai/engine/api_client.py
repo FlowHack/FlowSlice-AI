@@ -27,7 +27,10 @@ _OR_MODELS_TIMEOUT = 6  # секунд: короткий таймаут, что�
 _OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 # Провайдеры, у которых поддержку изображений можно узнать запросом к API.
-_VISION_API_PROVIDERS = ("openrouter", "anthropic", "mistral", "cerebras", "xai")
+# Провайдеры, отдающие машинно-читаемый признак зрения в списке моделей.
+# Cerebras исключён: по официальной доке /v1/models возвращает только
+# id/object/created/owned_by, признака модальностей там нет.
+_VISION_API_PROVIDERS = ("openrouter", "anthropic", "mistral", "xai")
 _VISION_CACHE_TTL = 600.0  # секунд: срок жизни кэша зрения по провайдеру
 _VISION_TIMEOUT = 8  # секунд
 _ANTHROPIC_VERSION = "2023-06-01"
