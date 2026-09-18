@@ -19,6 +19,11 @@ from pathlib import Path
 # Человекочитаемое имя плагина, отображаемое в диалоге плагинов Orca.
 DISPLAY_NAME = "FlowSlice AI"
 
+# Имя импортируемого пакета. Orca выбирает пакет по Import-Name в приоритете
+# над нормализованным Name, поэтому задаём его явно: это снимает зависимость
+# отображения (Name с пробелом) от разрешения пакета.
+IMPORT_NAME = "flowslice_ai"
+
 
 def _record_row(archive_path: str, data: bytes) -> str:
     """Строка RECORD для файла: путь, sha256 в base64 без padding и размер."""
@@ -36,6 +41,12 @@ def patch_wheel(wheel: Path) -> None:
     if meta_path is None or record_path is None:
         raise SystemExit(f"{wheel.name}: не найдены METADATA или RECORD")
 
+    dist_infos = {n.split(".dist-info/", 1)[0] for n in items if ".dist-info/" in n}
+    if len(dist_infos) != 1:
+        raise SystemExit(
+            f"{wheel.name}: ожидается ровно один .dist-info, найдено {len(dist_infos)}"
+        )
+
     meta_lines = items[meta_path].decode("utf-8").splitlines()
     name_found = False
     for index, line in enumerate(meta_lines):
@@ -45,6 +56,13 @@ def patch_wheel(wheel: Path) -> None:
             break
     if not name_found:
         raise SystemExit(f"{wheel.name}: в METADATA отсутствует заголовок Name")
+
+    if not any(line.startswith("Import-Name:") for line in meta_lines):
+        insert_at = next(
+            (i for i, line in enumerate(meta_lines) if line.startswith("Name:")),
+            0,
+        ) + 1
+        meta_lines.insert(insert_at, f"Import-Name: {IMPORT_NAME}")
 
     items[meta_path] = ("\n".join(meta_lines) + "\n").encode("utf-8")
 

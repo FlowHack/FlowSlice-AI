@@ -200,7 +200,7 @@ select option {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #d9534f;
+  background: var(--orca-accent);
 }
 .brand-name {
   font-weight: 700;

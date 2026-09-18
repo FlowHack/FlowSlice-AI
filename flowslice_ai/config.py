@@ -44,7 +44,7 @@ COMMANDS: list[tuple[str, str]] = [
     ("/printer", "сводка профилей печати"),
     ("/stats", "статистика использования"),
     ("/help", "список команд"),
-    ("/reset", "сбросить настройки плагина"),
+    ("/reset", "сбросить настройки плагина (/reset chats — очистить чаты)"),
 ]
 
 # Ключи, сбрасываемые кнопкой «Сбросить» на каждой вкладке настроек.
@@ -54,3 +54,29 @@ RESET_SCOPES: dict[str, tuple[str, ...]] = {
     "general": ("notes", "temperature", "max_tokens", "reasoning"),
     "appearance": ("theme", "font_size", "font_style", "language"),
 }
+
+
+def normalize_temperature(value: Any) -> float | None:
+    """Приводит temperature к float в диапазоне 0..2, иначе None."""
+    if value is None:
+        return None
+    try:
+        temperature = float(value)
+    except (TypeError, ValueError):
+        return None
+    if temperature < 0.0 or temperature > 2.0:
+        return None
+    return temperature
+
+
+def normalize_max_tokens(value: Any) -> int | None:
+    """Приводит max_tokens к int в диапазоне 1..100000, иначе None."""
+    if value is None:
+        return None
+    try:
+        max_tokens = int(value)
+    except (TypeError, ValueError):
+        return None
+    if max_tokens < 1 or max_tokens > 100000:
+        return None
+    return max_tokens

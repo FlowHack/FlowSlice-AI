@@ -1,9 +1,10 @@
-# pyright: ignore[reportGeneralTypeIssues]
 """HTTP-клиент и SSE-стриминг движка FlowSlice AI.
 
 Миксин ApiClientMixin выполняет запросы к API провайдеров (OpenAI-совместимые
 и нативный Messages API Anthropic), читает SSE-потоки и проверяет API-ключи.
 """
+# pyright (миксины _ChatEngine): reportGeneralTypeIssues отключён только здесь.
+# pyright: reportGeneralTypeIssues=false
 # pylint: disable=too-many-lines,too-many-statements,too-many-branches
 # pylint: disable=too-many-locals,too-many-arguments,too-many-positional-arguments
 # pylint: disable=too-many-public-methods,too-few-public-methods

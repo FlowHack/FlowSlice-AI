@@ -1,6 +1,5 @@
 {
   "reportMissingImports": false,
   "reportMissingModuleSource": false,
-  "reportGeneralTypeIssues": false,
   "extraPaths": ["stubs"]
 }

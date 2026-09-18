@@ -3,6 +3,9 @@
 
   /* ===== Константы ===== */
   var CONTEXT_KEYS = ["filament", "printer", "print", "model", "history"];
+  // Клиентские лимиты вложений (синхронизированы с лимитами бэкенда).
+  var MAX_ATTACHMENTS = 4;
+  var MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
   // Разделы пресетов с выбором режима выгрузки (изменённые/все) в панели чата.
   var CONTEXT_MODE_KEYS = ["filament", "printer", "print"];
   var CONTEXT_LABELS = {
@@ -51,6 +54,9 @@
       "common.reasoning": "Reasoning",
       "common.remove_attachment": "Remove attachment",
       "common.attach_file": "Attach file",
+      "attach.default_name": "file",
+      "attach.limit_count": "Attachment limit reached (max {n}).",
+      "attach.limit_size": "File \"{name}\" is too large.",
       "common.stop": "Stop",
       "common.send": "Send",
       "common.choose_model": "Choose model",
@@ -212,6 +218,9 @@
       "common.reasoning": "Размышления",
       "common.remove_attachment": "Убрать вложение",
       "common.attach_file": "Прикрепить файл",
+      "attach.default_name": "файл",
+      "attach.limit_count": "Достигнут предел вложений (не более {n}).",
+      "attach.limit_size": "Файл «{name}» слишком большой.",
       "common.stop": "Остановить генерацию",
       "common.send": "Отправить",
       "common.choose_model": "Выбрать модель",
@@ -373,6 +382,9 @@
       "common.reasoning": "Razmišljanje",
       "common.remove_attachment": "Ukloni prilog",
       "common.attach_file": "Priloži datoteku",
+      "attach.default_name": "datoteka",
+      "attach.limit_count": "Dostignut limit priloga (najviše {n}).",
+      "attach.limit_size": "Datoteka \"{name}\" je prevelika.",
       "common.stop": "Zaustavi",
       "common.send": "Pošalji",
       "common.choose_model": "Izaberi model",
@@ -528,6 +540,7 @@
   }
 
   function applyI18n(root) {
+    document.documentElement.lang = currentLang();
     var scope = root || document;
     scope.querySelectorAll("[data-i18n]").forEach(function (el) {
       el.textContent = t(el.getAttribute("data-i18n"));
@@ -537,6 +550,17 @@
     });
     scope.querySelectorAll("[data-i18n-title]").forEach(function (el) {
       el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    // Кнопки без явного aria-label получают его из title/текста.
+    scope.querySelectorAll("button").forEach(function (btn) {
+      if (btn.getAttribute("aria-label")) {
+        return;
+      }
+      var titleKey = btn.getAttribute("data-i18n-title");
+      var label = titleKey ? t(titleKey) : (btn.textContent || "").trim();
+      if (label) {
+        btn.setAttribute("aria-label", label);
+      }
     });
     scope.querySelectorAll("[data-i18n-tooltip]").forEach(function (el) {
       el.setAttribute("data-tooltip", t(el.getAttribute("data-i18n-tooltip")));
@@ -677,7 +701,17 @@
       document.body.classList.add("theme-light");
     } else if (theme === "dark") {
       document.body.classList.add("theme-dark");
+    } else if (!orcaProvidesTheme()) {
+      // Orca не отдала переменные темы (запуск вне слайсера) — берём системную.
+      var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.body.classList.add(dark ? "theme-dark" : "theme-light");
     }
+  }
+
+  // Проверяет, определила ли Orca базовую переменную фона.
+  function orcaProvidesTheme() {
+    var probe = getComputedStyle(document.body).getPropertyValue("--orca-bg");
+    return probe.trim().length > 0;
   }
 
   function applyFont(settings) {
@@ -784,10 +818,10 @@
     var providers = state.providers || [];
     var withModels = [];
     for (var i = 0; i < providers.length; i++) {
-      var models = providers[i].models || [];
+      var provModels = providers[i].models || [];
       // Показываем только провайдеров с непустым API-ключом и хотя бы одной моделью.
       var hasKey = !!providers[i].has_key;
-      if (models.length > 0 && hasKey) {
+      if (provModels.length > 0 && hasKey) {
         withModels.push(providers[i]);
       }
     }
@@ -1256,6 +1290,14 @@
   function handleFiles(fileList) {
     var files = Array.prototype.slice.call(fileList);
     files.forEach(function (file) {
+      if (attachments.length >= MAX_ATTACHMENTS) {
+        showToast(t("attach.limit_count", { n: MAX_ATTACHMENTS }), "err");
+        return;
+      }
+      if (file.size && file.size > MAX_ATTACHMENT_BYTES) {
+        showToast(t("attach.limit_size", { name: file.name || "" }), "err");
+        return;
+      }
       var name = file.name || t("attach.default_name");
       if (file.type && file.type.indexOf("image/") === 0) {
         // Фото: сжатие через canvas до 1024px по большей стороне

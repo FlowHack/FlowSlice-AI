@@ -1,10 +1,11 @@
-# pyright: ignore[reportGeneralTypeIssues]
 """Генерация и стриминг ответов движка FlowSlice AI.
 
 Миксин GenerationMixin запускает фоновый поток генерации, собирает
 сообщения для запроса (системный промпт, история, вложения) и обрабатывает
 ошибки генерации.
 """
+# pyright (миксины _ChatEngine): reportGeneralTypeIssues отключён только здесь.
+# pyright: reportGeneralTypeIssues=false
 # pylint: disable=too-many-lines,too-many-branches,too-many-statements,broad-exception-caught
 # pylint: disable=too-many-public-methods,too-few-public-methods
 
@@ -169,7 +170,7 @@ class GenerationMixin:
                         "type": "image",
                         "source": {
                             "type": "base64",
-                            "media_type": "image/jpeg",
+                            "media_type": self._image_media_type(img),
                             "data": b64,
                         },
                     }
@@ -184,6 +185,15 @@ class GenerationMixin:
         else:
             messages.append({"role": "user", "content": user_content})
         return messages
+
+    @staticmethod
+    def _image_media_type(data_uri: str) -> str:
+        """Определяет MIME-тип изображения из data URI (по умолчанию JPEG)."""
+        if data_uri.startswith("data:"):
+            header = data_uri[5:].split(";", 1)[0].split(",", 1)[0]
+            if header.startswith("image/"):
+                return header
+        return "image/jpeg"
 
     def _last_user_msg(self: "_ChatEngine", chat: dict[str, Any]) -> dict[str, Any] | None:
         """Возвращает последнее сообщение пользователя в чате."""

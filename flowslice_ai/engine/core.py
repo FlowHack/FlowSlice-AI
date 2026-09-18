@@ -1,9 +1,10 @@
-# pyright: ignore[reportGeneralTypeIssues]
 """Ядро движка FlowSlice AI: конфигурация, чаты, состояние и базовые хелперы.
 
 Миксин CoreMixin собирает методы управления конфигурацией (нормализация,
 миграция, синхронизация), персистом истории чатов и отправкой состояния в UI.
 """
+# pyright (миксины _ChatEngine): reportGeneralTypeIssues отключён только здесь.
+# pyright: reportGeneralTypeIssues=false
 # pylint: disable=too-many-lines,too-many-statements,too-many-branches,broad-exception-caught
 # pylint: disable=too-many-locals,too-many-public-methods,too-many-nested-blocks,too-few-public-methods
 # pylint: disable=too-many-return-statements
@@ -16,7 +17,13 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
-from flowslice_ai.config import COMMANDS, DEFAULT_CONFIG, SETTINGS_KEYS
+from flowslice_ai.config import (
+    COMMANDS,
+    DEFAULT_CONFIG,
+    SETTINGS_KEYS,
+    normalize_max_tokens,
+    normalize_temperature,
+)
 from flowslice_ai.constants import (
     CONTEXT_OPTIONS,
     MAX_CHAT_MESSAGES,
@@ -143,24 +150,8 @@ class CoreMixin:
             for mid, mdef in pdef.get("models", {}).items():
                 if not isinstance(mdef, dict):
                     continue
-                temperature = mdef.get("temperature")
-                if temperature is not None:
-                    try:
-                        temperature = float(temperature)
-                    except (TypeError, ValueError):
-                        temperature = None
-                    if temperature is not None and (temperature < 0.0 or temperature > 2.0):
-                        temperature = None
-                mdef["temperature"] = temperature
-                max_tokens = mdef.get("max_tokens")
-                if max_tokens is not None:
-                    try:
-                        max_tokens = int(max_tokens)
-                    except (TypeError, ValueError):
-                        max_tokens = None
-                    if max_tokens is not None and (max_tokens < 1 or max_tokens > 100000):
-                        max_tokens = None
-                mdef["max_tokens"] = max_tokens
+                mdef["temperature"] = normalize_temperature(mdef.get("temperature"))
+                mdef["max_tokens"] = normalize_max_tokens(mdef.get("max_tokens"))
                 reasoning = mdef.get("reasoning")
                 if reasoning is not None:
                     if isinstance(reasoning, str):

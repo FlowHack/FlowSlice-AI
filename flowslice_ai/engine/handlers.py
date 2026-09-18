@@ -1,9 +1,10 @@
-# pyright: ignore[reportGeneralTypeIssues]
 """Диспетчер UI-сообщений движка FlowSlice AI.
 
 Миксин HandlersMixin разбирает входящие сообщения из webview и направляет
 их в соответствующие хендлеры: чат, управление чатами, настройки, вложения.
 """
+# pyright (миксины _ChatEngine): reportGeneralTypeIssues отключён только здесь.
+# pyright: reportGeneralTypeIssues=false
 # pylint: disable=too-many-lines,too-many-branches,too-many-statements
 # pylint: disable=too-many-public-methods,too-many-nested-blocks,too-few-public-methods
 
@@ -107,8 +108,18 @@ class HandlersMixin:
                 }
             )
             return
-        if text.startswith("/") and self._handle_command(text):
-            self._pending_attachments = []
+        if text.startswith("/"):
+            if self._handle_command(text):
+                self._pending_attachments = []
+                return
+            # Неизвестную команду не отправляем в модель.
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("cmd.unknown", cmd=text.strip().split()[0]),
+                    "kind": "err",
+                }
+            )
             return
         if self._gen:
             self._post(

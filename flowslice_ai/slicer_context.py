@@ -96,3 +96,23 @@ PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
         ),
     ),
 }
+
+
+def _overlapping_preset_fields() -> frozenset[str]:
+    """Ключи, встречающиеся сразу в нескольких разделах пресетов.
+
+    Объединённый `full_config_value()` не различает раздел, поэтому для таких
+    ключей (например, `notes`, `chamber_temperature`) его значение может
+    принадлежать чужому профилю. Их уточнение через merged-конфиг запрещено.
+    """
+    seen: set[str] = set()
+    overlap: set[str] = set()
+    for _attr, fields in PRESET_SECTIONS.values():
+        for field in fields:
+            if field in seen:
+                overlap.add(field)
+            seen.add(field)
+    return frozenset(overlap)
+
+
+AMBIGUOUS_PRESET_KEYS: frozenset[str] = _overlapping_preset_fields()

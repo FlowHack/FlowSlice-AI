@@ -1,10 +1,11 @@
-# pyright: ignore[reportGeneralTypeIssues]
 """Slash-команды и статистика использования движка FlowSlice AI.
 
 Миксин CommandsMixin обрабатывает служебные команды (/context, /clear,
 /model, /printer, /stats, /help, /reset) с двухшаговым подтверждением
 деструктивных операций и ведёт статистику использования.
 """
+# pyright (миксины _ChatEngine): reportGeneralTypeIssues отключён только здесь.
+# pyright: reportGeneralTypeIssues=false
 # pylint: disable=too-many-lines,too-many-branches,too-many-statements
 # pylint: disable=too-many-public-methods,too-few-public-methods
 

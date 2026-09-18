@@ -1,11 +1,11 @@
-# pyright: ignore[reportGeneralTypeIssues]
 """Контекст слайсера и оценка токенов движка FlowSlice AI.
 
 Миксин SlicerContextMixin собирает данные о модели на столе (через
 orca.host.model()), активных пресетах печати (orca.host.preset_bundle()),
 строит системный промпт и оценивает размер контекста в токенах.
 """
-# pyright: ignore[reportGeneralTypeIssues]
+# pyright (миксины _ChatEngine): reportGeneralTypeIssues отключён только здесь.
+# pyright: reportGeneralTypeIssues=false
 # pylint: disable=too-many-lines,too-many-statements,too-many-branches,broad-exception-caught
 # pylint: disable=too-many-locals,too-many-nested-blocks,too-many-public-methods,too-few-public-methods
 
@@ -25,11 +25,19 @@ except ImportError:
 from flowslice_ai.constants import SYSTEM_PROMPT
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _HAS_NUMPY, _np
-from flowslice_ai.slicer_context import PRESET_METADATA_KEYS, PRESET_SECTIONS
+from flowslice_ai.slicer_context import (
+    AMBIGUOUS_PRESET_KEYS,
+    PRESET_METADATA_KEYS,
+    PRESET_SECTIONS,
+)
 
 
 class SlicerContextMixin:
     """Сбор контекста слайсера, системный промпт и оценка токенов."""
+
+    # Небольшой TTL-кэш: сбор контекста дорогой и вызывается при каждом
+    # переключении флагов и старте генерации.
+    _CONTEXT_CACHE_TTL = 5.0
 
     def _collect_context(
         self: "_ChatEngine", flags: dict[str, Any], modes: dict[str, Any] | None = None
@@ -38,7 +46,30 @@ class SlicerContextMixin:
 
         modes задаёт режим выгрузки для каждого раздела пресетов
         ("changed" — только изменённые параметры, "all" — полный профиль).
+        Результат кэшируется на _CONTEXT_CACHE_TTL секунд по комбинации
+        флагов и режимов, чтобы не дёргать слайсер повторно.
         """
+        cache_key = (
+            json.dumps(flags, sort_keys=True, default=str),
+            json.dumps(modes or {}, sort_keys=True, default=str),
+        )
+        now = time.monotonic()
+        cache = getattr(self, "_context_cache", None)
+        if not isinstance(cache, dict):
+            cache = {}
+            self._context_cache = cache
+        cached = cache.get(cache_key)
+        if isinstance(cached, tuple) and now - cached[0] < self._CONTEXT_CACHE_TTL:
+            return cached[1]
+        ctx = self._collect_context_uncached(flags, modes)
+        cache.clear()
+        cache[cache_key] = (now, ctx)
+        return ctx
+
+    def _collect_context_uncached(
+        self: "_ChatEngine", flags: dict[str, Any], modes: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Собирает контекст слайсера без кэширования."""
         ctx: dict[str, Any] = {}
         if flags.get("model"):
             ctx["model"] = self._collect_model_data()
@@ -82,7 +113,7 @@ class SlicerContextMixin:
                         entry.update(self._local_stats(obj))
                     data["objects"].append(entry)
         except Exception as exc:  # noqa: BLE001
-            _LOGGER.warning("Не удалось собрать данные модели: %s", exc)
+            _LOGGER.warning("Не удалось собрать данные модели: %s", exc, exc_info=True)
             data["objects"] = []
         return data
 
@@ -254,11 +285,11 @@ class SlicerContextMixin:
                 )
             return out
         except Exception as exc:  # noqa: BLE001
-            _LOGGER.warning("Не удалось собрать данные пресетов: %s", exc)
+            _LOGGER.warning("Не удалось собрать данные пресетов: %s", exc, exc_info=True)
             return empty
 
     def _collect_preset_section(
-        self: "_ChatEngine",  # pyright: ignore[reportGeneralTypeIssues]
+        self: "_ChatEngine",
         bundle: Any,
         collection_attr: str,
         fields: tuple[str, ...],
@@ -313,6 +344,10 @@ class SlicerContextMixin:
             # уже разрешённые значения (с учётом наследования и вычислений).
             if has_full_value:
                 for fkey in list(params):
+                    # Ключи, общие для нескольких разделов, merged-конфиг не
+                    # различает — оставляем значение из собственного профиля.
+                    if fkey in AMBIGUOUS_PRESET_KEYS:
+                        continue
                     try:
                         value = bundle.full_config_value(fkey)
                     except (RuntimeError, TypeError, ValueError):
@@ -324,7 +359,7 @@ class SlicerContextMixin:
             if not params and mode == "all":
                 for field in fields:
                     value: Any = None
-                    if has_full_value:
+                    if has_full_value and field not in AMBIGUOUS_PRESET_KEYS:
                         try:
                             value = bundle.full_config_value(field)
                         except (RuntimeError, TypeError, ValueError):
@@ -524,6 +559,8 @@ class SlicerContextMixin:
         try:
             ctx = self._collect_context(flags, modes)
         except Exception as exc:  # noqa: BLE001
-            _LOGGER.warning("Не удалось собрать контекст слайсера: %s", exc)
+            _LOGGER.warning(
+                "Не удалось собрать контекст слайсера: %s", exc, exc_info=True
+            )
             ctx = {}
         return self._estimate_tokens(json.dumps(ctx, ensure_ascii=False))

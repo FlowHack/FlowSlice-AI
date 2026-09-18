@@ -1,16 +1,19 @@
-# pyright: ignore[reportGeneralTypeIssues]
 """Управление провайдерами и моделями движка FlowSlice AI.
 
 Миксин ProvidersMixin реализует CRUD-операции над провайдерами и моделями:
 выбор активной модели, добавление/обновление/удаление пользовательских
 провайдеров и моделей, генерация слагов и случайных суффиксов.
 """
+# pyright (миксины _ChatEngine): reportGeneralTypeIssues отключён только здесь.
+# pyright: reportGeneralTypeIssues=false
 # pylint: disable=too-many-lines,too-many-statements,too-many-branches
 # pylint: disable=too-many-locals,too-many-public-methods,too-few-public-methods,line-too-long
 
 import json
 import secrets
 from typing import TYPE_CHECKING, Any
+
+from flowslice_ai.config import normalize_max_tokens, normalize_temperature
 
 if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
@@ -262,22 +265,10 @@ class ProvidersMixin:
                 mdef["name"] = new_name
         temperature = message.get("temperature")
         if "temperature" in message:
-            try:
-                temperature = float(temperature) if temperature is not None else None
-            except (TypeError, ValueError):
-                temperature = None
-            if temperature is not None and (temperature < 0.0 or temperature > 2.0):
-                temperature = None
-            mdef["temperature"] = temperature
+            mdef["temperature"] = normalize_temperature(temperature)
         max_tokens = message.get("max_tokens")
         if "max_tokens" in message:
-            try:
-                max_tokens = int(max_tokens) if max_tokens is not None else None
-            except (TypeError, ValueError):
-                max_tokens = None
-            if max_tokens is not None and (max_tokens < 1 or max_tokens > 100000):
-                max_tokens = None
-            mdef["max_tokens"] = max_tokens
+            mdef["max_tokens"] = normalize_max_tokens(max_tokens)
         reasoning = message.get("reasoning")
         if "reasoning" in message:
             if reasoning is None:
