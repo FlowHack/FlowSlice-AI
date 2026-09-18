@@ -1286,7 +1286,10 @@ details.field summary:hover {
   position: fixed;
   z-index: 1000;
   max-width: 260px;
-  background: var(--orca-input);
+  /* Непрозрачная подложка: базовый фон темы + слой --orca-input (в «Авто»
+     он полупрозрачный и ложится на непрозрачный --orca-bg). */
+  background-color: var(--orca-bg);
+  background-image: linear-gradient(var(--orca-input), var(--orca-input));
   color: var(--orca-fg);
   border: 1px solid var(--orca-border);
   border-radius: 6px;
