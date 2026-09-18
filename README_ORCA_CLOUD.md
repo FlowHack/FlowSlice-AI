@@ -71,7 +71,7 @@ What the assistant can do:
 
 - **Attachments:** photos (up to 6 MB) and text files (up to 1 MB).
 - **Localization:** English / Русский / Srpski (English by default).
-- **Themes:** auto (native Orca) / pure white / pure black, signature red accent `#d9534f`.
+- **Themes:** auto (native Orca) / pure white / pure black, signature red accent.
 
 ---
 
