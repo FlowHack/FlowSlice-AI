@@ -423,13 +423,31 @@ select option {
   align-items: center;
   gap: 4px;
 }
-.ctx-mode {
+.ctx-mode-dd {
+  display: inline-block;
+}
+.ctx-mode-dd .dd-wrap {
+  display: inline-block;
+}
+.ctx-mode-dd .dd-btn {
+  width: auto;
+  gap: 4px;
+  padding: 2px 6px;
   font-size: 11px;
-  padding: 1px 2px;
-  border: 1px solid var(--orca-border);
   border-radius: 4px;
-  background: var(--orca-input);
-  color: var(--orca-fg);
+}
+.ctx-mode-dd .dd-caret {
+  font-size: 9px;
+}
+.ctx-mode-dd .dd-popup {
+  left: 0;
+  right: auto;
+  width: max-content;
+  min-width: 100%;
+}
+.ctx-mode-dd .dd-item {
+  padding: 4px 8px;
+  font-size: 12px;
 }
 .context-tokens {
   font-size: 12px;

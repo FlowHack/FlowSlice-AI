@@ -1048,6 +1048,7 @@
     container.innerHTML = "";
     var flags = state.context_flags || {};
     var modes = state.context_modes || {};
+    var modeDDs = {};
     // Собирает и отправляет текущие флаги и режимы пресетов.
     function collect() {
       var newFlags = {};
@@ -1057,9 +1058,8 @@
         var itemKey = items[n].getAttribute("data-key");
         var box = items[n].querySelector("input[type=checkbox]");
         newFlags[itemKey] = box ? box.checked : false;
-        var sel = items[n].querySelector("select");
-        if (sel) {
-          newModes[itemKey] = sel.value;
+        if (modeDDs[itemKey]) {
+          newModes[itemKey] = modeDDs[itemKey].getSelected();
         }
       }
       post({ type: "set_context_flags", flags: newFlags, modes: newModes });
@@ -1078,23 +1078,26 @@
       checkWrap.appendChild(cb);
       checkWrap.appendChild(document.createTextNode(t(CONTEXT_LABELS[key] || key)));
       item.appendChild(checkWrap);
-      if (CONTEXT_MODE_KEYS.indexOf(key) >= 0) {
-        var sel = document.createElement("select");
-        sel.className = "ctx-mode";
-        sel.title = t("ctx.mode_title");
-        var optChanged = document.createElement("option");
-        optChanged.value = "changed";
-        optChanged.textContent = t("ctx.mode_changed");
-        var optAll = document.createElement("option");
-        optAll.value = "all";
-        optAll.textContent = t("ctx.mode_all");
-        sel.appendChild(optChanged);
-        sel.appendChild(optAll);
-        sel.value = modes[key] === "all" ? "all" : "changed";
-        sel.addEventListener("change", collect);
-        item.appendChild(sel);
-      }
       container.appendChild(item);
+      if (CONTEXT_MODE_KEYS.indexOf(key) >= 0) {
+        // Режим пресета: штатный дропдаун проекта (без поиска).
+        var modeWrap = el("span", "ctx-mode-dd");
+        var modeHost = el("span");
+        modeHost.id = "ctxMode_" + key;
+        modeWrap.appendChild(modeHost);
+        item.appendChild(modeWrap);
+        modeDDs[key] = makeDropdown(
+          modeHost.id,
+          [
+            { value: "changed", label: t("ctx.mode_changed") },
+            { value: "all", label: t("ctx.mode_all") }
+          ],
+          modes[key] === "all" ? "all" : "changed",
+          collect,
+          null,
+          false
+        );
+      }
     }
     byId("contextTokens").textContent = "≈ " + t("ctx.tokens", { n: state.context_tokens || 0 });
   }
