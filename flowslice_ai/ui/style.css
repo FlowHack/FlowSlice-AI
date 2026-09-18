@@ -1328,7 +1328,8 @@ details.field summary:hover {
   font-size: 11px;
   line-height: 1.45;
   text-align: left;
-  white-space: normal;
+  /* pre-line: переносы «\n» в тексте подсказки сохраняются, длинные строки переносятся. */
+  white-space: pre-line;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   pointer-events: none;
   opacity: 0;

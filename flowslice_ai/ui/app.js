@@ -80,7 +80,7 @@
       "ctx.mode_changed": "changed",
       "ctx.mode_all": "all",
       "ctx.mode_title": "Preset export: only changed parameters or the full profile",
-      "ctx.mode_help": "Dropdown on the right: \"changed\" — only parameters changed from the base preset, \"all\" — the full profile.",
+      "ctx.mode_help": "Dropdown on the right:\nchanged — only parameters changed from the base preset\nall — the full profile",
       "composer.placeholder": "Message... (Enter — send, Shift+Enter — new line)",
       "welcome.sub": "3D printing engineer-expert. Ask about mechanics, Klipper or materials.",
       "settings.title": "Settings",
@@ -236,7 +236,7 @@
       "ctx.mode_changed": "изм.",
       "ctx.mode_all": "все",
       "ctx.mode_title": "Выгрузка пресета: только изменённые параметры или полный профиль",
-      "ctx.mode_help": "Дропдаун справа: «изм.» — только изменённые относительно базового пресета параметры, «все» — полный профиль.",
+      "ctx.mode_help": "Дропдаун справа:\nизм. — только изменённые относительно базового пресета параметры\nвсе — полный профиль",
       "composer.placeholder": "Сообщение… (Enter — отправить, Shift+Enter — новая строка)",
       "welcome.sub": "Инженер-эксперт 3D-печати. Спросите о механике, Klipper или материалах.",
       "settings.title": "Настройки",
@@ -392,7 +392,7 @@
       "ctx.mode_changed": "izm.",
       "ctx.mode_all": "sve",
       "ctx.mode_title": "Izvoz profila: samo izmenjeni parametri ili pun profil",
-      "ctx.mode_help": "Padajuća lista desno: „izm.” — samo parametri izmenjeni u odnosu na bazni profil, „sve” — pun profil.",
+      "ctx.mode_help": "Padajuća lista desno:\nizm. — samo parametri izmenjeni u odnosu na bazni profil\nsve — pun profil",
       "composer.placeholder": "Poruka… (Enter — pošalji, Shift+Enter — novi red)",
       "welcome.sub": "Inženjer-ekspert za 3D štampu. Pitajte o mehanici, Klipperu ili materijalima.",
       "settings.title": "Podešavanja",
@@ -1091,7 +1091,7 @@
       // а для пресетов — ещё и смысл режимов «изм.»/«все».
       var helpText = t("ctx." + key + "_help");
       if (CONTEXT_MODE_KEYS.indexOf(key) >= 0) {
-        helpText += " " + t("ctx.mode_help");
+        helpText += "\n\n" + t("ctx.mode_help");
       }
       checkWrap.setAttribute("data-tooltip", helpText);
       var cb = document.createElement("input");
