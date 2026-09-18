@@ -97,6 +97,7 @@ I18N_PY: dict[str, dict[str, str]] = {
         "chat.file_marker": " [file: {name}]",
         "win.already_open": "FlowSlice AI window is already open",
         "win.opened": "FlowSlice AI window opened",
+        "win.open_failed": "Failed to open the FlowSlice AI window",
     },
     "ru": {
         "settings.saved": "Настройки сохранены.",
@@ -192,6 +193,7 @@ I18N_PY: dict[str, dict[str, str]] = {
         "chat.file_marker": " [файл: {name}]",
         "win.already_open": "Окно FlowSlice AI уже открыто",
         "win.opened": "Окно FlowSlice AI открыто",
+        "win.open_failed": "Не удалось открыть окно FlowSlice AI",
     },
     "sr": {
         "settings.saved": "Podešavanja sačuvana.",
@@ -287,5 +289,6 @@ I18N_PY: dict[str, dict[str, str]] = {
         "chat.file_marker": " [fajl: {name}]",
         "win.already_open": "Prozor FlowSlice AI je već otvoren",
         "win.opened": "Prozor FlowSlice AI je otvoren",
+        "win.open_failed": "Nije moguće otvoriti prozor FlowSlice AI",
     },
 }

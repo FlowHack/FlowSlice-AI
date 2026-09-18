@@ -308,7 +308,7 @@ def test_attach_image_blocked_without_vision(engine) -> None:
     posted: list[dict] = []
     engine._post = posted.append  # type: ignore[method-assign]
     engine._handle_attach_file({"kind": "image", "name": "a.jpg", "data": "data:x"})
-    assert engine._pending_attachment is None
+    assert engine._pending_attachments == []
     assert posted and posted[-1]["kind"] == "err"
 
 

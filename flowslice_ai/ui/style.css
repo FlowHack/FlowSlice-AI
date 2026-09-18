@@ -300,6 +300,17 @@ select option {
   margin-bottom: 6px;
   display: block;
 }
+.msg-file {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--orca-muted);
+  background: var(--orca-input);
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
 .msg-actions {
   display: none;
   gap: 4px;

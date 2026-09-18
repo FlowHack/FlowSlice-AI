@@ -50,7 +50,8 @@ class GenerationMixin:
             {"id": msg_id, "role": "assistant", "text": "", "ts": time.time()}
         )
         self._save_chats()
-        self._post({"type": "status", "text": "streaming"})
+        # Полный state с пустым ответом ассистента: UI привязывает стрим к нему.
+        self._send_state()
         try:
             messages = self._build_messages(chat, user_text)
             full_text = self._call_api(messages, chat_id)
@@ -108,12 +109,20 @@ class GenerationMixin:
         """Собирает data URI изображений из последних сообщений чата."""
         images: list[str] = []
         for msg in reversed(chat.get("msgs", [])):
+            candidates: list[str] = []
             image = msg.get("image")
-            if not isinstance(image, str) or not image.startswith("data:"):
-                continue
-            images.append(image)
-            if len(images) >= MAX_IMAGES_IN_HISTORY:
-                break
+            if isinstance(image, str) and image.startswith("data:"):
+                candidates.append(image)
+            attachments = msg.get("attachments")
+            if isinstance(attachments, list):
+                for att in attachments:
+                    data = att.get("image") if isinstance(att, dict) else None
+                    if isinstance(data, str) and data.startswith("data:"):
+                        candidates.append(data)
+            for data in candidates:
+                images.append(data)
+                if len(images) >= MAX_IMAGES_IN_HISTORY:
+                    return images
         return images
 
     def _build_messages(self: "_ChatEngine", chat: dict[str, Any], user_text: str) -> list[dict[str, Any]]:
@@ -129,13 +138,13 @@ class GenerationMixin:
             messages.extend(self._history_messages(chat, MAX_CONTEXT_CHARS))
         user_content = user_text
         last_user = self._last_user_msg(chat)
-        if last_user is not None and last_user.get("file"):
-            file_info = last_user["file"]
-            user_content += self._t(
-                "prompt.file",
-                name=str(file_info.get("name", self._t("attach.default_name"))),
-                text=str(file_info.get("text", "")),
-            )
+        if last_user is not None:
+            for file_info in self._collect_files(last_user):
+                user_content += self._t(
+                    "prompt.file",
+                    name=str(file_info.get("name", self._t("attach.default_name"))),
+                    text=str(file_info.get("text", "")),
+                )
         images = self._collect_context_images(chat)
         scheme = self._active_scheme()
         if images and scheme == "anthropic":
@@ -171,6 +180,19 @@ class GenerationMixin:
                 return msg
         return None
 
+    def _collect_files(self: "_ChatEngine", msg: dict[str, Any]) -> list[dict[str, Any]]:
+        """Возвращает файловые вложения сообщения (включая legacy-поле file)."""
+        files: list[dict[str, Any]] = []
+        legacy = msg.get("file")
+        if isinstance(legacy, dict):
+            files.append(legacy)
+        attachments = msg.get("attachments")
+        if isinstance(attachments, list):
+            for att in attachments:
+                if isinstance(att, dict) and isinstance(att.get("file"), dict):
+                    files.append(att["file"])
+        return files
+
     def _history_messages(
         self: "_ChatEngine",
         chat: dict[str, Any],
@@ -201,6 +223,20 @@ class GenerationMixin:
                     "chat.file_marker",
                     name=str(msg.get("file", {}).get("name", self._t("attach.default_name"))),
                 )
+            attachments = msg.get("attachments")
+            if isinstance(attachments, list):
+                for att in attachments:
+                    if not isinstance(att, dict):
+                        continue
+                    if att.get("image"):
+                        text += self._t("chat.photo_marker")
+                    elif isinstance(att.get("file"), dict):
+                        text += self._t(
+                            "chat.file_marker",
+                            name=str(
+                                att["file"].get("name", self._t("attach.default_name"))
+                            ),
+                        )
             if total + len(text) > max_chars:
                 break
             result.append({"role": msg["role"], "content": text})

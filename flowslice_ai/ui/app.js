@@ -604,6 +604,7 @@
   }
 
   var streamTextEl = null; // элемент текста текущего стримингового сообщения
+  var streamText = ""; // накопленный текст текущего стрима (для перерисовок)
   var pendingEditId = null; // id сообщения, которое редактируется
   var attachments = []; // вложения перед отправкой
   var userScrolledUp = false; // пользователь прокрутил историю вверх
@@ -985,10 +986,27 @@
       return wrap;
     }
     var bubble = el("div", "msg-bubble");
+    var images = [];
     if (msg.image) {
+      images.push(msg.image);
+    }
+    if (msg.file && msg.file.name) {
+      bubble.appendChild(el("span", "msg-file", "📄 " + msg.file.name));
+    }
+    if (msg.attachments && msg.attachments.length) {
+      for (var ai = 0; ai < msg.attachments.length; ai++) {
+        var att = msg.attachments[ai];
+        if (att && att.image) {
+          images.push(att.image);
+        } else if (att && att.file && att.file.name) {
+          bubble.appendChild(el("span", "msg-file", "📄 " + att.file.name));
+        }
+      }
+    }
+    for (var ii = 0; ii < images.length; ii++) {
       var img = document.createElement("img");
       img.className = "msg-image";
-      img.src = msg.image;
+      img.src = images[ii];
       img.alt = t("common.attachment");
       bubble.appendChild(img);
     }
@@ -1052,6 +1070,10 @@
         }
         break;
       }
+    }
+    // Перерисовка во время стрима не должна терять накопленный текст.
+    if (state.status === "streaming" && streamTextEl) {
+      streamTextEl.textContent = streamText;
     }
     scrollToBottom(true);
   }
@@ -1191,8 +1213,8 @@
 
   function handleFiles(fileList) {
     var files = Array.prototype.slice.call(fileList);
-    for (var i = 0; i < files.length; i++) {
-      var file = files[i];
+    files.forEach(function (file) {
+      var name = file.name || t("attach.default_name");
       if (file.type && file.type.indexOf("image/") === 0) {
         // Фото: сжатие через canvas до 1024px по большей стороне
         var imgReader = new FileReader();
@@ -1210,7 +1232,7 @@
             ctx.drawImage(img, 0, 0, w, h);
             attachments.push({
               kind: "image",
-              name: file.name,
+              name: name,
               data: canvas.toDataURL("image/jpeg", 0.85)
             });
             renderAttachments();
@@ -1224,14 +1246,14 @@
         textReader.onload = function (e) {
           attachments.push({
             kind: "text",
-            name: file.name,
+            name: name,
             data: String(e.target.result)
           });
           renderAttachments();
         };
         textReader.readAsText(file);
       }
-    }
+    });
   }
 
   /* ===== Отправка сообщения ===== */
@@ -1366,7 +1388,7 @@
     var input = byId("input");
     var text = input.value;
     var list = byId("cmdSuggest");
-    if (text.charAt(0) !== "/" || text.indexOf("\\n") !== -1) {
+    if (text.charAt(0) !== "/" || text.indexOf("\n") !== -1) {
       closeCmdSuggest();
       return;
     }
@@ -2297,7 +2319,7 @@
         lines.push("FlowSlice AI: " + (m.text || ""));
       }
     }
-    copyText(lines.join("\\n\\n"));
+    copyText(lines.join("\n\n"));
   }
 
   function renderUsage(msg) {
@@ -2334,7 +2356,8 @@
       byId("messages").appendChild(node);
       streamTextEl = node.querySelector(".msg-text");
     }
-    streamTextEl.textContent += msg.text || "";
+    streamText += msg.text || "";
+    streamTextEl.textContent = streamText;
     scrollToBottom(false);
   }
 
@@ -2352,6 +2375,7 @@
         }
       }
       streamTextEl = null;
+      streamText = "";
     } else {
       // Ответ без стриминга — добавляем сообщение целиком
       var chat = getActiveChat();
@@ -2388,6 +2412,9 @@
         state.context_modes = msg.context_modes || {};
         state.context_tokens = msg.context_tokens || 0;
         state.status = msg.status || "idle";
+        if (state.status !== "streaming") {
+          streamText = "";
+        }
         renderState();
         // Обновляем открытые модалки без сброса несохранённых правок.
         if (byId("settingsModal").style.display !== "none") {
@@ -2405,6 +2432,10 @@
         break;
       case "status":
         state.status = msg.text || "idle";
+        if (state.status !== "streaming") {
+          streamText = "";
+          streamTextEl = null;
+        }
         updateTyping();
         break;
       case "toast":

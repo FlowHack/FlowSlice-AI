@@ -43,7 +43,7 @@ class CoreMixin:
         self._gen = False
         self._ctx_tokens = 0
         self._post_sink: Any = None
-        self._pending_attachment: dict[str, Any] | None = None
+        self._pending_attachments: list[dict[str, Any]] = []
         self._pending_confirm: str | None = None
         # Кэш возможностей моделей OpenRouter (id → поддержка изображений)
         self._or_models_cache: dict[str, bool] = {}
@@ -369,11 +369,43 @@ class CoreMixin:
                     marker = self._t("chat.file_marker", name=name)
                     if marker not in str(flat.get("text", "")):
                         flat["text"] = str(flat.get("text", "")) + marker
+                attachments = flat.get("attachments")
+                if isinstance(attachments, list):
+                    flat["attachments"] = self._flatten_attachments(flat, attachments)
                 flat_msgs.append(flat)
             flat_chat = dict(chat)
             flat_chat["msgs"] = flat_msgs
             result.append(flat_chat)
         return result
+
+    def _flatten_attachments(
+        self: "_ChatEngine", msg: dict[str, Any], attachments: list
+    ) -> list[dict[str, Any]]:
+        """Готовит вложения к записи на диск: без тяжёлых данных, с пометками.
+
+        Текст сообщения дополняется маркерами фото/файла, чтобы после перезапуска
+        OrcaSlicer история оставалась читаемой без самих данных вложений.
+        """
+        cleaned: list[dict[str, Any]] = []
+        text = str(msg.get("text", ""))
+        for att in attachments:
+            if not isinstance(att, dict):
+                continue
+            if att.get("image"):
+                cleaned.append(
+                    {"kind": "image", "name": str(att.get("name", ""))}
+                )
+                marker = self._t("chat.photo_marker")
+                if marker not in text:
+                    text += marker
+            elif isinstance(att.get("file"), dict):
+                name = str(att["file"].get("name", self._t("attach.default_name")))
+                cleaned.append({"kind": "text", "file": {"name": name}})
+                marker = self._t("chat.file_marker", name=name)
+                if marker not in text:
+                    text += marker
+        msg["text"] = text
+        return cleaned
 
     def _save_chats(self: "_ChatEngine") -> None:
         """Сохраняет историю чатов в файл под блокировкой без тяжёлых вложений."""

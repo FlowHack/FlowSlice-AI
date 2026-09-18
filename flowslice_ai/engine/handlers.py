@@ -94,12 +94,9 @@ class HandlersMixin:
         text = str(message.get("text", "")).strip()
         if not text:
             return
-        if (
-            self._pending_attachment is not None
-            and self._pending_attachment.get("image")
-            and self._model_supports_images() is False
-        ):
-            self._pending_attachment = None
+        has_image = any(att.get("image") for att in self._pending_attachments)
+        if has_image and self._model_supports_images() is False:
+            self._pending_attachments = []
             self._post(
                 {
                     "type": "toast",
@@ -111,7 +108,7 @@ class HandlersMixin:
             )
             return
         if text.startswith("/") and self._handle_command(text):
-            self._pending_attachment = None
+            self._pending_attachments = []
             return
         if self._gen:
             self._post(
@@ -134,15 +131,17 @@ class HandlersMixin:
             "text": text,
             "ts": time.time(),
         }
-        if self._pending_attachment is not None:
-            user_msg.update(self._pending_attachment)
-            self._pending_attachment = None
+        if self._pending_attachments:
+            user_msg["attachments"] = self._pending_attachments
+            self._pending_attachments = []
         chat["msgs"].append(user_msg)
         if not chat["title"]:
             chat["title"] = self._auto_title(text)
         chat["updated"] = time.time()
         self._trim_chat(chat)
         self._save_chats()
+        # Показываем отправленное сообщение в UI до старта стриминга.
+        self._send_state()
         self._start_generation(chat["id"], text, user_msg["id"])
 
     def _apply_edit(self: "_ChatEngine", chat: dict[str, Any], edit_id: Any, text: str) -> None:
@@ -154,6 +153,7 @@ class HandlersMixin:
                 del msgs[index + 1 :]
                 chat["updated"] = time.time()
                 self._save_chats()
+                self._send_state()
                 self._start_generation(chat["id"], text, edit_id)
                 return
         _LOGGER.warning("Не найдено сообщение для редактирования: %s", edit_id)
@@ -391,10 +391,17 @@ class HandlersMixin:
         self._post({"type": "usage", **snap})
 
     def _handle_attach_file(self: "_ChatEngine", message: dict) -> None:
-        """Сохраняет вложение для следующего сообщения."""
+        """Сохраняет вложение для следующего сообщения.
+
+        Поддерживается несколько вложений: каждое добавляется в список
+        и переносится в сообщение при отправке.
+        """
         kind = message.get("kind")
         name = str(message.get("name", self._t("attach.default_name")))
         data = message.get("data", "")
+        if not isinstance(data, str) or not data:
+            _LOGGER.warning("Пропущено вложение без данных (kind=%s)", kind)
+            return
         if kind == "image":
             if self._model_supports_images() is False:
                 self._post(
@@ -416,7 +423,7 @@ class HandlersMixin:
                     }
                 )
                 return
-            self._pending_attachment = {"image": data}
+            self._pending_attachments.append({"image": data, "name": name})
         else:
             if len(data) > MAX_FILE_CHARS:
                 self._post(
@@ -427,5 +434,7 @@ class HandlersMixin:
                     }
                 )
                 return
-            self._pending_attachment = {"file": {"name": name, "text": data}}
+            self._pending_attachments.append(
+                {"file": {"name": name, "text": data}}
+            )
         self._post({"type": "toast", "text": self._t("attach.added"), "kind": "ok"})

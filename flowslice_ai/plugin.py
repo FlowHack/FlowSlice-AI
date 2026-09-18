@@ -3,7 +3,10 @@
 
 from typing import Any
 
-import orca
+try:
+    import orca
+except ImportError:  # pragma: no cover - пакет импортируется вне OrcaSlicer
+    orca = None
 
 from flowslice_ai.assets import _TAB_ICON_SVG
 from flowslice_ai.config import DEFAULT_CONFIG
@@ -85,14 +88,16 @@ if _PAGES_BASE is not None:
             сборках OrcaSlicer возвращает ``Unknown``, из-за чего в диалоге
             плагинов в колонке «Types» отображается ``unknown`` вместо ``Pages``.
             """
-            for name in ("Pages", "Page"):
-                value: Any = getattr(orca.PluginType, name, None)
-                if value is not None:
-                    return value
+            plugin_type = getattr(orca, "PluginType", None)
+            if plugin_type is not None:
+                for name in ("Pages", "Page"):
+                    value: Any = getattr(plugin_type, name, None)
+                    if value is not None:
+                        return value
             getter: Any = getattr(super(), "get_type", None)
             if getter is not None:
                 return getter()
-            return orca.PluginType.Unknown
+            return getattr(plugin_type, "Unknown", None)
 
         def get_ui(self) -> str:
             """HTML-содержимое вкладки."""
@@ -124,19 +129,30 @@ if _SCRIPT_BASE is not None:
             """Имя capability."""
             return "FlowSlice AI"
 
-        def execute(self) -> orca.ExecutionResult:
+        def execute(self) -> Any:
             """Открывает окно ассистента либо сообщает, что оно уже открыто."""
+            host = orca
+            if host is None:  # pragma: no cover - класс создаётся только с orca
+                return None
             self._ensure_engine()
             win = getattr(self, "_win", None)
             if win is not None and win.is_open():
-                return orca.ExecutionResult.success(self._t("win.already_open"))
-            self._win = orca.host.ui.create_window(
-                html=HTML_PAGE,
-                title="FlowSlice AI",
-                on_message=self._on_message,
-                on_close=self._on_close,
-            )
-            return orca.ExecutionResult.success(self._t("win.opened"))
+                return host.ExecutionResult.success(self._t("win.already_open"))
+            try:
+                self._win = host.host.ui.create_window(
+                    html=HTML_PAGE,
+                    title="FlowSlice AI",
+                    on_message=self._on_message,
+                    on_close=self._on_close,
+                )
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                _LOGGER.error(
+                    "Не удалось открыть окно FlowSlice AI: %s", exc, exc_info=True
+                )
+                return host.ExecutionResult.failure(
+                    host.PluginResult.RecoverableError, self._t("win.open_failed")
+                )
+            return host.ExecutionResult.success(self._t("win.opened"))
 
         def _on_message(self, message: dict) -> None:
             """Обрабатывает сообщение из окна ассистента."""
