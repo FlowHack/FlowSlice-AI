@@ -39,12 +39,20 @@ HTTP_HEADERS = {
 }
 
 TIMEOUT = 120
+MAX_ATTACHMENTS = 10
 MAX_IMAGE_B64 = 6_000_000
-# Предел текста вложения: выше него запрос не помещается в контекст модели.
+# Предел текста одного вложения: выше него запрос не помещается в контекст модели.
 MAX_FILE_CHARS = 100_000
+# Суммарный бюджет текста всех вложений одного сообщения.
+MAX_TOTAL_FILE_CHARS = 400_000
+# Суммарный бюджет изображений одного запроса (в символах base64).
+MAX_TOTAL_IMAGE_B64 = 20_000_000
 MAX_CHAT_MESSAGES = 200
 STREAM_THROTTLE = 0.15
+# Сколько изображений из истории (не считая текущего запроса) отправлять.
 MAX_IMAGES_IN_HISTORY = 2
+# Сколько изображений всего допускается в одном запросе.
+MAX_IMAGES_IN_REQUEST = 10
 MAX_CONTEXT_CHARS = 60_000
 
 CONTEXT_OPTIONS = ("filament", "printer", "print", "model", "history")

@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
-from flowslice_ai.constants import MAX_CONTEXT_CHARS, MAX_IMAGES_IN_HISTORY
+from flowslice_ai.constants import MAX_CONTEXT_CHARS, MAX_IMAGES_IN_HISTORY, MAX_IMAGES_IN_REQUEST
 from flowslice_ai.errors import FlowSliceError
 from flowslice_ai.logging import _LOGGER
 
@@ -120,25 +120,43 @@ class GenerationMixin:
                 del msgs[index]
                 return
 
-    def _collect_context_images(self: "_ChatEngine", chat: dict[str, Any]) -> list[str]:
-        """Собирает data URI изображений из последних сообщений чата."""
+    @staticmethod
+    def _message_images(msg: dict[str, Any]) -> list[str]:
+        """Возвращает data URI изображений одного сообщения (включая legacy-поле)."""
         images: list[str] = []
-        for msg in reversed(chat.get("msgs", [])):
-            candidates: list[str] = []
-            image = msg.get("image")
-            if isinstance(image, str) and image.startswith("data:"):
-                candidates.append(image)
-            attachments = msg.get("attachments")
-            if isinstance(attachments, list):
-                for att in attachments:
-                    data = att.get("image") if isinstance(att, dict) else None
-                    if isinstance(data, str) and data.startswith("data:"):
-                        candidates.append(data)
-            for data in candidates:
-                images.append(data)
-                if len(images) >= MAX_IMAGES_IN_HISTORY:
-                    return images
+        image = msg.get("image")
+        if isinstance(image, str) and image.startswith("data:"):
+            images.append(image)
+        attachments = msg.get("attachments")
+        if isinstance(attachments, list):
+            for att in attachments:
+                data = att.get("image") if isinstance(att, dict) else None
+                if isinstance(data, str) and data.startswith("data:"):
+                    images.append(data)
         return images
+
+    def _collect_context_images(self: "_ChatEngine", chat: dict[str, Any]) -> list[str]:
+        """Собирает изображения: все из текущего запроса + ограниченно из истории."""
+        images: list[str] = []
+        history_count = 0
+        current_seen = False
+        for msg in reversed(chat.get("msgs", [])):
+            candidates = self._message_images(msg)
+            if not candidates:
+                continue
+            is_current = not current_seen and msg.get("role") == "user"
+            if is_current:
+                current_seen = True
+                images.extend(candidates)
+            else:
+                for data in candidates:
+                    if history_count >= MAX_IMAGES_IN_HISTORY:
+                        break
+                    images.append(data)
+                    history_count += 1
+            if len(images) >= MAX_IMAGES_IN_REQUEST:
+                break
+        return images[:MAX_IMAGES_IN_REQUEST]
 
     def _build_messages(self: "_ChatEngine", chat: dict[str, Any], user_text: str) -> list[dict[str, Any]]:
         """Собирает список сообщений для запроса к модели."""

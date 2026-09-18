@@ -17,7 +17,14 @@ if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
 from flowslice_ai.config import DEFAULT_CONFIG, RESET_SCOPES, SETTINGS_KEYS
-from flowslice_ai.constants import MAX_FILE_CHARS, MAX_IMAGE_B64, PRESET_CONTEXT_KEYS
+from flowslice_ai.constants import (
+    MAX_ATTACHMENTS,
+    MAX_FILE_CHARS,
+    MAX_IMAGE_B64,
+    MAX_TOTAL_FILE_CHARS,
+    MAX_TOTAL_IMAGE_B64,
+    PRESET_CONTEXT_KEYS,
+)
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.providers_data import DEFAULT_PROVIDERS
 
@@ -461,22 +468,67 @@ class HandlersMixin:
         name = str(first.get("file", {}).get("name", ""))
         return self._t("chat.file_marker", name=name).strip()
 
+    def _attachment_totals(self: "_ChatEngine") -> tuple[int, int]:
+        """Считает суммарные объёмы ожидающих вложений (текст, изображения)."""
+        text_chars = 0
+        image_b64 = 0
+        for att in self._pending_attachments:
+            if att.get("image"):
+                image_b64 += len(str(att["image"]))
+            elif att.get("file"):
+                text_chars += len(str(att["file"].get("text", "")))
+        return text_chars, image_b64
+
     def _accept_attachments(self: "_ChatEngine", items: Any) -> int:
         """Добавляет валидные вложения из списка и возвращает число принятых."""
         if not isinstance(items, list):
             return 0
         accepted = 0
+        text_chars, image_b64 = self._attachment_totals()
         for item in items:
             if not isinstance(item, dict):
                 continue
+            if len(self._pending_attachments) >= MAX_ATTACHMENTS:
+                self._post(
+                    {
+                        "type": "toast",
+                        "text": self._t("attach.limit_count", n=str(MAX_ATTACHMENTS)),
+                        "kind": "err",
+                    }
+                )
+                break
             att = self._checked_attachment(
                 item.get("kind"),
                 str(item.get("name", self._t("attach.default_name"))),
                 item.get("data", ""),
             )
-            if att is not None:
-                self._pending_attachments.append(att)
-                accepted += 1
+            if att is None:
+                continue
+            if att.get("image"):
+                if image_b64 + len(str(att["image"])) > MAX_TOTAL_IMAGE_B64:
+                    self._post(
+                        {
+                            "type": "toast",
+                            "text": self._t("attach.images_total_too_big"),
+                            "kind": "err",
+                        }
+                    )
+                    continue
+                image_b64 += len(str(att["image"]))
+            else:
+                size = len(str(att["file"].get("text", "")))
+                if text_chars + size > MAX_TOTAL_FILE_CHARS:
+                    self._post(
+                        {
+                            "type": "toast",
+                            "text": self._t("attach.files_total_too_big"),
+                            "kind": "err",
+                        }
+                    )
+                    continue
+                text_chars += size
+            self._pending_attachments.append(att)
+            accepted += 1
         return accepted
 
     def _handle_attach_file(self: "_ChatEngine", message: dict) -> None:

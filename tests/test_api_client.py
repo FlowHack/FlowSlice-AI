@@ -141,6 +141,37 @@ def test_worker_stores_reasoning(engine, monkeypatch) -> None:
     assert sent_chat["msgs"][-1]["text"] == "ответ"
 
 
+def test_collect_context_images_keeps_all_current(engine) -> None:
+    """Все изображения текущего сообщения отправляются, история — ограниченно."""
+    chat = {
+        "msgs": [
+            {
+                "role": "user",
+                "text": "старое",
+                "attachments": [{"image": "data:image/jpeg;base64,OLD"}],
+            },
+            {"role": "assistant", "text": "ок"},
+            {
+                "role": "user",
+                "text": "новое",
+                "attachments": [
+                    {"image": "data:image/jpeg;base64,A"},
+                    {"image": "data:image/jpeg;base64,B"},
+                    {"image": "data:image/jpeg;base64,C"},
+                ],
+            },
+        ]
+    }
+    result = engine._collect_context_images(chat)
+    assert result[:3] == [
+        "data:image/jpeg;base64,A",
+        "data:image/jpeg;base64,B",
+        "data:image/jpeg;base64,C",
+    ]
+    assert "data:image/jpeg;base64,OLD" in result
+    assert len(result) == 4
+
+
 def test_build_messages_adds_image_hints(engine) -> None:
     """При наличии изображения промпт требует разбор дефектов и запрещает выдумки."""
     chat = engine._active_chat()

@@ -4,8 +4,10 @@
   /* ===== Константы ===== */
   var CONTEXT_KEYS = ["filament", "printer", "print", "model", "history"];
   // Клиентские лимиты вложений (синхронизированы с лимитами бэкенда).
-  var MAX_ATTACHMENTS = 4;
+  var MAX_ATTACHMENTS = 10;
   var MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+  var MAX_TEXT_CHARS = 100000;
+  var MAX_TOTAL_TEXT_CHARS = 400000;
   // Разделы пресетов с выбором режима выгрузки (изменённые/все) в панели чата.
   var CONTEXT_MODE_KEYS = ["filament", "printer", "print"];
   var CONTEXT_LABELS = {
@@ -60,6 +62,10 @@
       "attach.reading": "File is still being read, try again in a moment.",
       "attach.binary_unsupported": "Binary files are not supported: {name}. Attach a text file or an image.",
       "attach.read_failed": "Failed to read file: {name}.",
+      "attach.type_image": "Images",
+      "attach.type_text": "Text files",
+      "attach.file_too_big": "File \"{name}\" is too large (100 000 characters limit).",
+      "attach.files_total_too_big": "Total size of text attachments is too large.",
       "common.stop": "Stop",
       "common.send": "Send",
       "common.choose_model": "Choose model",
@@ -231,6 +237,10 @@
       "attach.reading": "Файл ещё читается, повторите через мгновение.",
       "attach.binary_unsupported": "Бинарные файлы не поддерживаются: {name}. Прикрепите текстовый файл или изображение.",
       "attach.read_failed": "Не удалось прочитать файл: {name}.",
+      "attach.type_image": "Изображения",
+      "attach.type_text": "Текстовые файлы",
+      "attach.file_too_big": "Файл «{name}» слишком большой (лимит 100 000 символов).",
+      "attach.files_total_too_big": "Суммарный объём текстовых вложений слишком большой.",
       "common.stop": "Остановить генерацию",
       "common.send": "Отправить",
       "common.choose_model": "Выбрать модель",
@@ -402,6 +412,10 @@
       "attach.reading": "Datoteka se još čita, pokušajte ponovo za trenutak.",
       "attach.binary_unsupported": "Binarne datoteke nisu podržane: {name}. Priložite tekstualnu datoteku ili sliku.",
       "attach.read_failed": "Nije moguće pročitati datoteku: {name}.",
+      "attach.type_image": "Slike",
+      "attach.type_text": "Tekstualne datoteke",
+      "attach.file_too_big": "Datoteka \"{name}\" je prevelika (ograničenje 100 000 znakova).",
+      "attach.files_total_too_big": "Ukupna veličina tekstualnih priloga je prevelika.",
       "common.stop": "Zaustavi",
       "common.send": "Pošalji",
       "common.choose_model": "Izaberi model",
@@ -1512,6 +1526,51 @@
     }
   }
 
+  /* Нативный пикер (Chromium/WebView2) с жёстким фильтром без «Все файлы». */
+  function filePickerTypes() {
+    return [
+      {
+        description: t("attach.type_image"),
+        accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"] }
+      },
+      {
+        description: t("attach.type_text"),
+        accept: {
+          "text/plain": [".txt", ".md", ".log", ".gcode", ".ini", ".cfg", ".yaml", ".yml"],
+          "application/json": [".json"],
+          "text/csv": [".csv"]
+        }
+      }
+    ];
+  }
+
+  function pickFiles() {
+    if (typeof window.showOpenFilePicker === "function") {
+      window.showOpenFilePicker({
+        multiple: true,
+        excludeAcceptAllOption: true,
+        types: filePickerTypes()
+      })
+        .then(function (handles) {
+          return Promise.all(handles.map(function (handle) {
+            return handle.getFile();
+          }));
+        })
+        .then(function (files) {
+          handleFiles(files);
+        })
+        .catch(function (err) {
+          if (err && err.name === "AbortError") {
+            return;
+          }
+          // Фильтр не поддержан — откатываемся на обычный input.
+          byId("fileInput").click();
+        });
+      return;
+    }
+    byId("fileInput").click();
+  }
+
   function handleFiles(fileList) {
     var files = Array.prototype.slice.call(fileList);
     files.forEach(function (file) {
@@ -1561,6 +1620,10 @@
             showToast(t("attach.binary_unsupported", { name: name }), "err");
             return;
           }
+          if (text.length > MAX_TEXT_CHARS) {
+            showToast(t("attach.file_too_big", { name: name }), "err");
+            return;
+          }
           attachments.push({
             kind: "text",
             name: name,
@@ -1589,6 +1652,16 @@
         showToast(t("attach.reading"), "err");
         return;
       }
+    }
+    var totalChars = 0;
+    for (var j = 0; j < attachments.length; j++) {
+      if (attachments[j].kind === "text") {
+        totalChars += String(attachments[j].data || "").length;
+      }
+    }
+    if (totalChars > MAX_TOTAL_TEXT_CHARS) {
+      showToast(t("attach.files_total_too_big"), "err");
+      return;
     }
     var editId = pendingEditId;
     pendingEditId = null;
@@ -2889,7 +2962,7 @@
       post({ type: "stop" });
     });
     byId("attachBtn").addEventListener("click", function () {
-      byId("fileInput").click();
+      pickFiles();
     });
     byId("fileInput").addEventListener("change", function () {
       handleFiles(this.files);

@@ -4,7 +4,7 @@ from __future__ import annotations
 import time
 import types
 
-from flowslice_ai.constants import MAX_FILE_CHARS
+from flowslice_ai.constants import MAX_ATTACHMENTS, MAX_FILE_CHARS, MAX_TOTAL_FILE_CHARS
 
 
 def test_estimate_tokens(engine) -> None:
@@ -469,3 +469,28 @@ def test_checked_attachment_rejects_large_file(engine) -> None:
     assert engine._checked_attachment("text", "ok.txt", "hello") == {
         "file": {"name": "ok.txt", "text": "hello"}
     }
+
+
+def test_accept_attachments_limits_count(engine) -> None:
+    """Число принимаемых вложений ограничено MAX_ATTACHMENTS."""
+    engine._config["language"] = "en"
+    items = [
+        {"kind": "text", "name": f"f{i}.txt", "data": "x"}
+        for i in range(MAX_ATTACHMENTS + 3)
+    ]
+    accepted = engine._accept_attachments(items)
+    assert accepted == MAX_ATTACHMENTS
+    assert len(engine._pending_attachments) == MAX_ATTACHMENTS
+
+
+def test_accept_attachments_total_text_budget(engine) -> None:
+    """Суммарный объём текстовых вложений ограничен."""
+    engine._config["language"] = "en"
+    chunk = "x" * MAX_FILE_CHARS
+    items = [
+        {"kind": "text", "name": f"f{i}.txt", "data": chunk} for i in range(6)
+    ]
+    accepted = engine._accept_attachments(items)
+    assert accepted == MAX_TOTAL_FILE_CHARS // MAX_FILE_CHARS
+    total = sum(len(a["file"]["text"]) for a in engine._pending_attachments)
+    assert total <= MAX_TOTAL_FILE_CHARS
