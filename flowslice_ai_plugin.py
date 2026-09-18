@@ -371,6 +371,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "theme": "auto",
     "font_size": 14,
     "font_style": "system",
+    "language": "en",
     "temperature": 0.7,
     "max_tokens": 4096,
     "reasoning": False,
@@ -389,6 +390,7 @@ SETTINGS_KEYS: tuple[str, ...] = (
     "theme",
     "font_size",
     "font_style",
+    "language",
 )
 
 # Служебные команды чата: единый источник для /help и state.
@@ -401,6 +403,272 @@ COMMANDS: list[tuple[str, str]] = [
     ("/help", "список команд"),
     ("/reset", "сбросить настройки плагина"),
 ]
+
+# Локализация Python-части: тосты, системные сообщения команд и ошибки.
+# Ключи cmd.*.desc соответствуют описаниям COMMANDS и локализуются при отправке.
+I18N_PY: dict[str, dict[str, str]] = {
+    "en": {
+        "settings.saved": "Settings saved.",
+        "settings.reset": "Settings reset to defaults.",
+        "attach.image_too_big": "Image is too large (6 MB limit).",
+        "attach.file_too_big": "File is too large (1 MB limit).",
+        "attach.added": "Attachment added.",
+        "attach.default_name": "file",
+        "provider.not_found": "Provider not found.",
+        "provider.not_found_name": "Provider not found: {name}",
+        "provider.name_required": "Enter a provider name.",
+        "provider.added": "Provider added: {name}",
+        "provider.updated": "Provider updated.",
+        "provider.deleted": "Provider deleted.",
+        "provider.builtin_locked": "Built-in provider cannot be deleted.",
+        "model.not_found": "Model not found.",
+        "model.not_found_name": "Model not found: {name}",
+        "model.selected": "Model selected: {name}",
+        "model.default_set": "Default model: {name}",
+        "model.id_required": "Enter a model ID.",
+        "model.exists": "Model already exists: {name}",
+        "model.added": "Model added: {name}",
+        "model.updated": "Model updated: {name}",
+        "model.deleted": "Model deleted.",
+        "model.builtin_locked": "Built-in model cannot be deleted.",
+        "model.builtin_locked_fields": "Cannot change URL/key/scheme of a built-in model.",
+        "gen.already": "Generation already in progress. Wait for it to finish or press Stop.",
+        "gen.empty_reply": "The model returned an empty response.",
+        "gen.internal_error": "Internal generation error.",
+        "key.missing": "API key is not set.",
+        "key.valid": "API key is valid.",
+        "key.api_error": "API error {code}.",
+        "key.network_error": "Network error: {err}",
+        "err.api_key_required": "Please set an API key in settings.",
+        "err.api": "API error {code}: {body}",
+        "err.network": "Network error: {err}",
+        "err.timeout": "Request timed out.",
+        "err.sandbox": "Network access is blocked by the sandbox. Allow network for the plugin.",
+        "err.connection": "Connection error: {err}",
+        "cmd.help.title": "Available commands:",
+        "cmd.context.desc": "full slicer context dump",
+        "cmd.clear.desc": "clear chat history",
+        "cmd.model.desc": "report on the model on the plate",
+        "cmd.printer.desc": "print profile summary",
+        "cmd.stats.desc": "usage statistics",
+        "cmd.help.desc": "list of commands",
+        "cmd.reset.desc": "reset plugin settings",
+        "cmd.model.empty": "No model on the plate or it is unavailable.",
+        "cmd.model.title": "Model on the plate report:",
+        "cmd.model.unnamed": "Unnamed",
+        "cmd.model.bbox": "  Local bbox, mm: {v}",
+        "cmd.model.volume": "  Volume: {v} cm³",
+        "cmd.model.surface": "  Surface area: {v} cm²",
+        "cmd.model.triangles": "  Triangles: {v}",
+        "cmd.model.manifold": "  Manifold: {v}",
+        "cmd.yes": "yes",
+        "cmd.no": "no",
+        "cmd.model.instance": "  Instance {v}",
+        "cmd.model.mirrored": " — MIRRORED instance",
+        "cmd.printer.title": "Print profile summary:",
+        "cmd.printer.section_printer": "Printer",
+        "cmd.printer.section_filament": "Filament",
+        "cmd.printer.section_print": "Print settings",
+        "cmd.printer.unavailable": "{label}: unavailable",
+        "cmd.stats.line": "Messages: {msgs}, Tokens: {tokens}",
+        "cmd.context.title": "Slicer context:",
+        "cmd.context.system_prompt": "System prompt:",
+        "cmd.context.checkboxes": "Context checkboxes:",
+        "cmd.context.on": "on",
+        "cmd.context.off": "off",
+        "cmd.context.data": "Context data:",
+        "cmd.context.history": "Message history:",
+        "cmd.context.empty": "  (empty)",
+        "cmd.context.tokens": "Estimated context tokens: {v}",
+        "cmd.confirm": "Confirm: send {cmd} again.",
+        "cmd.clear.done": "Chat history cleared.",
+        "cmd.reset.done": "Settings reset to defaults.",
+        "prompt.notes": "User notes (important information, take it into account in your answers):\n{notes}",
+        "prompt.model_data": "Model data from the plate:\n{data}",
+        "prompt.print_profiles": "Print profiles:\n{data}",
+        "prompt.environment": "Environment: Python {ver}, date/time: {time}",
+        "prompt.file": "[File: {name}]\n{text}",
+        "prompt.images_unsupported": "\n[Attached images: {n}. DeepSeek model does not support images]",
+        "chat.photo_marker": " [photo]",
+        "chat.file_marker": " [file: {name}]",
+        "win.already_open": "FlowSlice AI window is already open",
+        "win.opened": "FlowSlice AI window opened",
+    },
+    "ru": {
+        "settings.saved": "Настройки сохранены.",
+        "settings.reset": "Настройки сброшены к заводским.",
+        "attach.image_too_big": "Изображение слишком большое (лимит 6 МБ).",
+        "attach.file_too_big": "Файл слишком большой (лимит 1 МБ).",
+        "attach.added": "Вложение добавлено.",
+        "attach.default_name": "файл",
+        "provider.not_found": "Провайдер не найден.",
+        "provider.not_found_name": "Провайдер не найден: {name}",
+        "provider.name_required": "Укажите название провайдера.",
+        "provider.added": "Провайдер добавлен: {name}",
+        "provider.updated": "Провайдер обновлён.",
+        "provider.deleted": "Провайдер удалён.",
+        "provider.builtin_locked": "Встроенный провайдер нельзя удалить.",
+        "model.not_found": "Модель не найдена.",
+        "model.not_found_name": "Модель не найдена: {name}",
+        "model.selected": "Модель выбрана: {name}",
+        "model.default_set": "Модель по умолчанию: {name}",
+        "model.id_required": "Укажите идентификатор модели.",
+        "model.exists": "Модель уже существует: {name}",
+        "model.added": "Модель добавлена: {name}",
+        "model.updated": "Модель обновлена: {name}",
+        "model.deleted": "Модель удалена.",
+        "model.builtin_locked": "Встроенную модель нельзя удалить.",
+        "model.builtin_locked_fields": "У встроенной модели нельзя менять URL/ключ/схему.",
+        "gen.already": "Генерация уже идёт. Дождитесь завершения или нажмите «Стоп».",
+        "gen.empty_reply": "Модель вернула пустой ответ.",
+        "gen.internal_error": "Внутренняя ошибка генерации.",
+        "key.missing": "API-ключ не указан.",
+        "key.valid": "Ключ действителен.",
+        "key.api_error": "Ошибка API {code}.",
+        "key.network_error": "Сетевая ошибка: {err}",
+        "err.api_key_required": "Пожалуйста, укажите API-ключ в настройках.",
+        "err.api": "Ошибка API {code}: {body}",
+        "err.network": "Сетевая ошибка: {err}",
+        "err.timeout": "Превышен таймаут запроса.",
+        "err.sandbox": "Сетевой доступ запрещён песочницей. Разрешите сеть для плагина.",
+        "err.connection": "Ошибка соединения: {err}",
+        "cmd.help.title": "Доступные команды:",
+        "cmd.context.desc": "полный дамп контекста слайсера",
+        "cmd.clear.desc": "очистить историю чата",
+        "cmd.model.desc": "отчёт о модели на столе",
+        "cmd.printer.desc": "сводка профилей печати",
+        "cmd.stats.desc": "статистика использования",
+        "cmd.help.desc": "список команд",
+        "cmd.reset.desc": "сбросить настройки плагина",
+        "cmd.model.empty": "Модель на столе отсутствует или недоступна.",
+        "cmd.model.title": "Отчёт о модели на столе:",
+        "cmd.model.unnamed": "Без имени",
+        "cmd.model.bbox": "  Локальный bbox, мм: {v}",
+        "cmd.model.volume": "  Объём: {v} см³",
+        "cmd.model.surface": "  Площадь поверхности: {v} см²",
+        "cmd.model.triangles": "  Треугольники: {v}",
+        "cmd.model.manifold": "  Manifold: {v}",
+        "cmd.yes": "да",
+        "cmd.no": "нет",
+        "cmd.model.instance": "  Экземпляр {v}",
+        "cmd.model.mirrored": " — ЗЕРКАЛЬНЫЙ экземпляр",
+        "cmd.printer.title": "Сводка профилей печати:",
+        "cmd.printer.section_printer": "Принтер",
+        "cmd.printer.section_filament": "Пластик",
+        "cmd.printer.section_print": "Настройки печати",
+        "cmd.printer.unavailable": "{label}: недоступно",
+        "cmd.stats.line": "Сообщений: {msgs}, Токенов: {tokens}",
+        "cmd.context.title": "Контекст слайсера:",
+        "cmd.context.system_prompt": "Системный промпт:",
+        "cmd.context.checkboxes": "Чекбоксы контекста:",
+        "cmd.context.on": "вкл",
+        "cmd.context.off": "выкл",
+        "cmd.context.data": "Данные контекста:",
+        "cmd.context.history": "История сообщений:",
+        "cmd.context.empty": "  (пусто)",
+        "cmd.context.tokens": "Оценка токенов контекста: {v}",
+        "cmd.confirm": "Подтвердите: отправьте {cmd} ещё раз.",
+        "cmd.clear.done": "История чата очищена.",
+        "cmd.reset.done": "Настройки сброшены к заводским.",
+        "prompt.notes": "Заметки пользователя (важная информация, учитывай её при ответах):\n{notes}",
+        "prompt.model_data": "Данные модели со стола:\n{data}",
+        "prompt.print_profiles": "Профили печати:\n{data}",
+        "prompt.environment": "Окружение: Python {ver}, дата/время: {time}",
+        "prompt.file": "[Файл: {name}]\n{text}",
+        "prompt.images_unsupported": "\n[Прикреплено изображений: {n}. Модель DeepSeek не поддерживает изображения]",
+        "chat.photo_marker": " [фото]",
+        "chat.file_marker": " [файл: {name}]",
+        "win.already_open": "Окно FlowSlice AI уже открыто",
+        "win.opened": "Окно FlowSlice AI открыто",
+    },
+    "sr": {
+        "settings.saved": "Podešavanja sačuvana.",
+        "settings.reset": "Podešavanja su resetovana na podrazumevana.",
+        "attach.image_too_big": "Slika je prevelika (ograničenje 6 MB).",
+        "attach.file_too_big": "Fajl je prevelik (ograničenje 1 MB).",
+        "attach.added": "Prilog dodat.",
+        "attach.default_name": "fajl",
+        "provider.not_found": "Provajder nije pronađen.",
+        "provider.not_found_name": "Provajder nije pronađen: {name}",
+        "provider.name_required": "Unesite naziv provajdera.",
+        "provider.added": "Provajder dodat: {name}",
+        "provider.updated": "Provajder ažuriran.",
+        "provider.deleted": "Provajder obrisan.",
+        "provider.builtin_locked": "Ugrađeni provajder se ne može obrisati.",
+        "model.not_found": "Model nije pronađen.",
+        "model.not_found_name": "Model nije pronađen: {name}",
+        "model.selected": "Model izabran: {name}",
+        "model.default_set": "Podrazumevani model: {name}",
+        "model.id_required": "Unesite identifikator modela.",
+        "model.exists": "Model već postoji: {name}",
+        "model.added": "Model dodat: {name}",
+        "model.updated": "Model ažuriran: {name}",
+        "model.deleted": "Model obrisan.",
+        "model.builtin_locked": "Ugrađeni model se ne može obrisati.",
+        "model.builtin_locked_fields": "URL/ključ/šema se ne mogu menjati kod ugrađenog modela.",
+        "gen.already": "Generisanje je već u toku. Sačekajte da se završi ili pritisnite Stop.",
+        "gen.empty_reply": "Model je vratio prazan odgovor.",
+        "gen.internal_error": "Interna greška pri generisanju.",
+        "key.missing": "API ključ nije naveden.",
+        "key.valid": "Ključ je važeći.",
+        "key.api_error": "API greška {code}.",
+        "key.network_error": "Mrežna greška: {err}",
+        "err.api_key_required": "Molimo navedite API ključ u podešavanjima.",
+        "err.api": "API greška {code}: {body}",
+        "err.network": "Mrežna greška: {err}",
+        "err.timeout": "Vreme zahteva je isteklo.",
+        "err.sandbox": "Mrežni pristup je blokiran peskovnikom. Dozvolite mrežu za dodatak.",
+        "err.connection": "Greška pri povezivanju: {err}",
+        "cmd.help.title": "Dostupne komande:",
+        "cmd.context.desc": "pun prikaz konteksta slajsera",
+        "cmd.clear.desc": "očisti istoriju razgovora",
+        "cmd.model.desc": "izveštaj o modelu na stolu",
+        "cmd.printer.desc": "pregled profila štampe",
+        "cmd.stats.desc": "statistika korišćenja",
+        "cmd.help.desc": "lista komandi",
+        "cmd.reset.desc": "resetuj podešavanja dodatka",
+        "cmd.model.empty": "Nema modela na stolu ili je nedostupan.",
+        "cmd.model.title": "Izveštaj o modelu na stolu:",
+        "cmd.model.unnamed": "Bez imena",
+        "cmd.model.bbox": "  Lokalni bbox, mm: {v}",
+        "cmd.model.volume": "  Zapremina: {v} cm³",
+        "cmd.model.surface": "  Površina: {v} cm²",
+        "cmd.model.triangles": "  Trouglovi: {v}",
+        "cmd.model.manifold": "  Manifold: {v}",
+        "cmd.yes": "da",
+        "cmd.no": "ne",
+        "cmd.model.instance": "  Instanca {v}",
+        "cmd.model.mirrored": " — PRESLIKANA instanca",
+        "cmd.printer.title": "Pregled profila štampe:",
+        "cmd.printer.section_printer": "Štampač",
+        "cmd.printer.section_filament": "Filament",
+        "cmd.printer.section_print": "Podešavanja štampe",
+        "cmd.printer.unavailable": "{label}: nedostupno",
+        "cmd.stats.line": "Poruka: {msgs}, Tokena: {tokens}",
+        "cmd.context.title": "Kontekst slajsera:",
+        "cmd.context.system_prompt": "Sistemski prompt:",
+        "cmd.context.checkboxes": "Polja za potvrdu konteksta:",
+        "cmd.context.on": "uklj",
+        "cmd.context.off": "isklj",
+        "cmd.context.data": "Podaci konteksta:",
+        "cmd.context.history": "Istorija poruka:",
+        "cmd.context.empty": "  (prazno)",
+        "cmd.context.tokens": "Procena tokena konteksta: {v}",
+        "cmd.confirm": "Potvrdite: pošaljite {cmd} ponovo.",
+        "cmd.clear.done": "Istorija razgovora je obrisana.",
+        "cmd.reset.done": "Podešavanja su resetovana na podrazumevana.",
+        "prompt.notes": "Korisničke beleške (važne informacije, uzmi ih u obzir u odgovorima):\n{notes}",
+        "prompt.model_data": "Podaci o modelu sa stola:\n{data}",
+        "prompt.print_profiles": "Profili štampe:\n{data}",
+        "prompt.environment": "Okruženje: Python {ver}, datum/vreme: {time}",
+        "prompt.file": "[Fajl: {name}]\n{text}",
+        "prompt.images_unsupported": "\n[Priloženo slika: {n}. DeepSeek model ne podržava slike]",
+        "chat.photo_marker": " [foto]",
+        "chat.file_marker": " [fajl: {name}]",
+        "win.already_open": "Prozor FlowSlice AI je već otvoren",
+        "win.opened": "Prozor FlowSlice AI je otvoren",
+    },
+}
 
 # Разделы пресетов: ключ результата → (атрибут коллекции, поля для full_config_value).
 PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
@@ -421,6 +689,9 @@ PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
             "heated_chamber",
             "chamber_temperature",
             "notes",
+            "printer_notes",
+            "machine_start_gcode",
+            "machine_end_gcode",
         ),
     ),
     "filament": (
@@ -437,6 +708,7 @@ PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
             "bed_temperature",
             "chamber_temperature",
             "notes",
+            "filament_notes",
         ),
     ),
     "print": (
@@ -457,6 +729,7 @@ PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
             "brim_width",
             "ironing_type",
             "notes",
+            "print_notes",
         ),
     ),
 }
@@ -1197,6 +1470,7 @@ select option {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--orca-bg);
   border: 1px solid var(--orca-border);
   border-radius: 10px;
@@ -1659,8 +1933,50 @@ select option {
 }
 .settings-scroll {
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   padding: 4px 2px;
+}
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--orca-border);
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.settings-tab {
+  border: none;
+  background: transparent;
+  color: var(--orca-muted);
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  font-family: var(--orca-font);
+}
+.settings-tab:hover {
+  color: var(--orca-fg);
+}
+.settings-tab.active {
+  color: var(--orca-accent);
+  border-bottom-color: var(--orca-accent);
+}
+.notes-textarea {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  background: var(--orca-input);
+  color: var(--orca-fg);
+  font-family: var(--orca-font);
+  font-size: 13px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.notes-textarea:focus {
+  outline: none;
+  border-color: var(--orca-accent);
 }
 .per-model-controls {
   display: flex;
@@ -1765,8 +2081,8 @@ details.field summary:hover {
   <!-- Sidebar чатов -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-title">Чаты</div>
-      <input type="text" id="searchInput" class="sidebar-search" placeholder="Поиск чатов…">
+      <div class="sidebar-title" data-i18n="sidebar.chats">Чаты</div>
+      <input type="text" id="searchInput" class="sidebar-search" placeholder="Поиск чатов…" data-i18n-placeholder="sidebar.search">
     </div>
     <div class="chat-list" id="chatList"></div>
   </aside>
@@ -1780,8 +2096,9 @@ details.field summary:hover {
       </div>
       <div class="header-right">
         <span class="model-status" id="modelStatus"></span>
-        <button type="button" id="settingsBtn" class="icon-btn" title="Настройки">⚙</button>
-        <button type="button" id="newChatBtn" class="icon-btn" title="Новый чат">+</button>
+        <button type="button" id="usageBtn" class="icon-btn" title="Статистика" data-i18n-title="common.stats">📊</button>
+        <button type="button" id="settingsBtn" class="icon-btn" title="Настройки" data-i18n-title="common.settings">⚙</button>
+        <button type="button" id="newChatBtn" class="icon-btn" title="Новый чат" data-i18n-title="common.new_chat">+</button>
       </div>
     </header>
 
@@ -1791,7 +2108,7 @@ details.field summary:hover {
       <span class="dot"></span>
       <span class="dot"></span>
       <span class="dot"></span>
-      <span class="typing-text">печатает…</span>
+      <span class="typing-text" data-i18n="common.typing">печатает…</span>
     </div>
 
     <!-- Панель контекста -->
@@ -1805,14 +2122,14 @@ details.field summary:hover {
       <div class="cmd-suggest" id="cmdSuggest" style="display:none"></div>
       <div class="attach-preview" id="attachPreview"></div>
       <div class="input-row">
-        <button type="button" id="attachBtn" class="icon-btn" title="Прикрепить файл">📎</button>
-        <textarea id="input" rows="1" placeholder="Сообщение… (Enter — отправить, Shift+Enter — новая строка)"></textarea>
-        <button type="button" id="stopBtn" class="stop-btn" title="Остановить генерацию" style="display:none">■</button>
-        <button type="button" id="sendBtn" class="send-btn" title="Отправить">➤</button>
+        <button type="button" id="attachBtn" class="icon-btn" title="Прикрепить файл" data-i18n-title="common.attach_file">📎</button>
+        <textarea id="input" rows="1" placeholder="Сообщение… (Enter — отправить, Shift+Enter — новая строка)" data-i18n-placeholder="composer.placeholder"></textarea>
+        <button type="button" id="stopBtn" class="stop-btn" title="Остановить генерацию" data-i18n-title="common.stop" style="display:none">■</button>
+        <button type="button" id="sendBtn" class="send-btn" title="Отправить" data-i18n-title="common.send">➤</button>
         <input type="file" id="fileInput" multiple accept="image/*,.txt,.md,.json,.gcode,.stl,.3mf" style="display:none">
       </div>
       <div class="composer-footer">
-        <button type="button" id="modelChip" class="model-chip" title="Выбрать модель">
+        <button type="button" id="modelChip" class="model-chip" title="Выбрать модель" data-i18n-title="common.choose_model">
           <span class="chip-dot"></span>
           <span class="chip-label" id="modelChipLabel">—</span>
           <span class="chip-caret">▾</span>
@@ -1826,118 +2143,164 @@ details.field summary:hover {
 <div class="modal-overlay" id="settingsModal" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span>Настройки</span>
-      <button type="button" id="modalClose" class="icon-btn" title="Закрыть">✕</button>
+      <span data-i18n="settings.title">Настройки</span>
+      <button type="button" id="modalClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
+    </div>
+    <div class="settings-tabs">
+      <button type="button" class="settings-tab active" data-tab="models" data-i18n="settings.tab.models">Модели</button>
+      <button type="button" class="settings-tab" data-tab="general" data-i18n="settings.tab.general">Общие значения</button>
+      <button type="button" class="settings-tab" data-tab="appearance" data-i18n="settings.tab.appearance">Оформление</button>
     </div>
     <div class="settings-scroll">
-      <div class="field">
-        <label>Провайдер</label>
-        <div class="dd-wrap" id="setProviderDD"></div>
-      </div>
-      <div class="field">
-        <label for="setApiKey">API-ключ (провайдера)</label>
-        <div class="key-row">
-          <input type="password" id="setApiKey" autocomplete="off">
-          <button type="button" id="setApiKeyEye" class="eye-btn" title="Показать ключ">👁</button>
-          <button type="button" id="testKeyBtn" class="ghost-btn">Проверить ключ</button>
+      <div id="tabModels">
+        <div class="field">
+          <label data-i18n="settings.provider">Провайдер</label>
+          <div class="dd-wrap" id="setProviderDD"></div>
         </div>
-      </div>
-      <div class="field" id="customUrlWrap" style="display:none">
-        <label for="setBaseUrl">Базовый URL API</label>
-        <input type="text" id="setBaseUrl" autocomplete="off">
-        <label for="setSchemeDD" style="margin-top:8px">Схема API</label>
-        <div class="dd-wrap" id="setSchemeDD"></div>
-      </div>
-      <div class="field">
-        <label>Модель</label>
-        <div class="dd-wrap" id="setModelDD"></div>
-      </div>
-      <div class="field" id="modelSettingsBlock">
-        <label>Настройки модели: <span id="modelSettingsLabel">—</span></label>
-        <div class="per-model-controls" style="margin-bottom:6px">
-          <label for="setTemperature" style="margin:0;white-space:nowrap">Температура: <span id="setTemperatureValue" class="range-value">0.7</span></label>
-          <input type="range" id="setTemperature" min="0" max="2" step="0.1" value="0.7">
-          <span class="dd-default-badge" id="setTemperatureBadge" style="display:none">общий</span>
-          <button type="button" id="resetTemperature" class="mini-btn" title="Сбросить к общему">↺</button>
-        </div>
-        <div class="per-model-controls" style="margin-bottom:6px">
-          <label for="setMaxTokens" style="margin:0;white-space:nowrap">Максимум токенов</label>
-          <input type="number" id="setMaxTokens" min="1" max="100000" step="1" value="4096">
-          <span class="dd-default-badge" id="setMaxTokensBadge" style="display:none">общий</span>
-          <button type="button" id="resetMaxTokens" class="mini-btn" title="Сбросить к общему">↺</button>
-        </div>
-        <div class="per-model-controls">
-          <div class="check-row" style="margin:0">
-            <input type="checkbox" id="setReasoning">
-            <label for="setReasoning">Расширенное мышление</label>
+        <div class="field">
+          <label for="setApiKey" data-i18n="settings.api_key">API-ключ (провайдера)</label>
+          <div class="key-row">
+            <input type="password" id="setApiKey" autocomplete="off">
+            <button type="button" id="setApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
+            <button type="button" id="testKeyBtn" class="ghost-btn" data-i18n="settings.test_key">Проверить ключ</button>
           </div>
-          <span class="dd-default-badge" id="setReasoningBadge" style="display:none">общий</span>
-          <button type="button" id="resetReasoning" class="mini-btn" title="Сбросить к общему">↺</button>
+        </div>
+        <div class="field" id="customUrlWrap" style="display:none">
+          <label for="setBaseUrl" data-i18n="settings.base_url">Базовый URL API</label>
+          <input type="text" id="setBaseUrl" autocomplete="off">
+          <label for="setSchemeDD" style="margin-top:8px" data-i18n="settings.scheme">Схема API</label>
+          <div class="dd-wrap" id="setSchemeDD"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="settings.model">Модель</label>
+          <div class="dd-wrap" id="setModelDD"></div>
+        </div>
+        <div class="field" id="modelSettingsBlock">
+          <label><span data-i18n="settings.model_settings">Настройки модели:</span> <span id="modelSettingsLabel">—</span></label>
+          <div id="customModelFields" style="display:none">
+            <div class="field">
+              <label for="setModelName" data-i18n="settings.model_name">Удобное название</label>
+              <input type="text" id="setModelName" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="setModelSystemName" data-i18n="settings.model_system_name">Название в системе (id)</label>
+              <input type="text" id="setModelSystemName" readonly>
+            </div>
+            <div class="field">
+              <label for="setModelBaseUrl" data-i18n="settings.base_url">Базовый URL API</label>
+              <input type="text" id="setModelBaseUrl" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="setModelApiKey" data-i18n="settings.api_key">API-ключ</label>
+              <div class="key-row">
+                <input type="password" id="setModelApiKey" autocomplete="off">
+                <button type="button" id="setModelApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
+              </div>
+            </div>
+            <div class="field">
+              <label data-i18n="settings.scheme">Схема API</label>
+              <div class="dd-wrap" id="setModelSchemeDD"></div>
+            </div>
+          </div>
+          <div class="per-model-controls" style="margin-bottom:6px">
+            <label for="setTemperature" style="margin:0;white-space:nowrap"><span data-i18n="settings.temperature">Температура:</span> <span id="setTemperatureValue" class="range-value">0.7</span></label>
+            <input type="range" id="setTemperature" min="0" max="2" step="0.1" value="0.7">
+            <span class="dd-default-badge" id="setTemperatureBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+            <button type="button" id="resetTemperature" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+          </div>
+          <div class="per-model-controls" style="margin-bottom:6px">
+            <label for="setMaxTokens" style="margin:0;white-space:nowrap" data-i18n="settings.max_tokens">Максимум токенов</label>
+            <input type="number" id="setMaxTokens" min="1" max="100000" step="1" value="4096">
+            <span class="dd-default-badge" id="setMaxTokensBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+            <button type="button" id="resetMaxTokens" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+          </div>
+          <div class="per-model-controls">
+            <div class="check-row" style="margin:0">
+              <input type="checkbox" id="setReasoning">
+              <label for="setReasoning" data-i18n="settings.reasoning">Расширенное мышление</label>
+            </div>
+            <span class="dd-default-badge" id="setReasoningBadge" style="display:none" data-i18n="settings.global_badge">общий</span>
+            <button type="button" id="resetReasoning" class="mini-btn" title="Сбросить к общему" data-i18n-title="settings.reset_to_global">↺</button>
+          </div>
+        </div>
+        <div class="field">
+          <button type="button" id="addModelBtn" class="ghost-btn" data-i18n="settings.add_model">+ Добавить модель</button>
+          <div id="addModelForm" style="display:none;margin-top:8px">
+            <input type="text" id="amSystemName" placeholder="Название в системе (id)" data-i18n-placeholder="settings.model_system_name">
+            <input type="text" id="amLabel" placeholder="Удобное название" data-i18n-placeholder="settings.model_name">
+            <div id="amCustomFields">
+              <input type="text" id="amBaseUrl" placeholder="Базовый URL API" data-i18n-placeholder="settings.base_url">
+              <input type="password" id="amApiKey" placeholder="API-ключ" data-i18n-placeholder="settings.api_key">
+              <label for="amSchemeDD" data-i18n="settings.scheme">Схема API</label>
+              <div class="dd-wrap" id="amSchemeDD"></div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" id="amSubmit" class="primary-btn" data-i18n="common.add">Добавить</button>
+              <button type="button" id="amCancel" class="ghost-btn" data-i18n="common.cancel">Отмена</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="field" id="providerModelsBlock">
-        <label>Модели провайдера</label>
-        <div id="providerModelsList"></div>
-        <button type="button" id="addModelBtn" class="ghost-btn">+ Добавить модель</button>
-        <div id="addModelForm" style="display:none;margin-top:8px">
-          <input type="text" id="amSystemName" placeholder="Название в системе (id)">
-          <input type="text" id="amLabel" placeholder="Удобное название">
-          <div id="amCustomFields">
-            <input type="text" id="amBaseUrl" placeholder="Базовый URL API">
-            <input type="password" id="amApiKey" placeholder="API-ключ">
-            <label for="amSchemeDD">Схема API</label>
-            <div class="dd-wrap" id="amSchemeDD"></div>
-          </div>
-          <label for="amTemperature">Температура: <span id="amTemperatureValue" class="range-value">0.7</span></label>
-          <input type="range" id="amTemperature" min="0" max="2" step="0.1" value="0.7">
-          <label for="amMaxTokens">Максимум токенов</label>
-          <input type="number" id="amMaxTokens" min="1" max="100000" step="1" value="4096">
+      <div id="tabGeneral" style="display:none">
+        <div class="field">
+          <label for="setNotes" data-i18n="settings.notes">Заметки для контекста (видны агенту)</label>
+          <textarea id="setNotes" class="notes-textarea" placeholder="Например: температура PETG откалибрована по температурной башне — не предлагай калибровку" data-i18n-placeholder="settings.notes_placeholder"></textarea>
+        </div>
+        <div class="field">
+          <label for="setGlobalTemperature"><span data-i18n="settings.temperature">Температура:</span> <span id="setGlobalTemperatureValue" class="range-value">0.7</span></label>
+          <input type="range" id="setGlobalTemperature" min="0" max="2" step="0.1" value="0.7">
+        </div>
+        <div class="field">
+          <label for="setGlobalMaxTokens" data-i18n="settings.max_tokens">Максимум токенов</label>
+          <input type="number" id="setGlobalMaxTokens" min="1" max="100000" step="1" value="4096">
+        </div>
+        <div class="field">
           <div class="check-row">
-            <input type="checkbox" id="amReasoning">
-            <label for="amReasoning">Расширенное мышление</label>
-          </div>
-          <div class="modal-actions">
-            <button type="button" id="amSubmit" class="primary-btn">Добавить</button>
-            <button type="button" id="amCancel" class="ghost-btn">Отмена</button>
+            <input type="checkbox" id="setGlobalReasoning">
+            <label for="setGlobalReasoning" data-i18n="settings.reasoning">Расширенное мышление</label>
           </div>
         </div>
       </div>
-      <div class="field">
-        <label for="setNotes">Заметки для контекста (видны агенту)</label>
-        <textarea id="setNotes" rows="3" placeholder="Например: температура PETG откалибрована по температурной башне — не предлагай калибровку"></textarea>
-      </div>
-      <details class="field">
-        <summary>Общие значения по умолчанию</summary>
-        <label for="setGlobalTemperature">Температура: <span id="setGlobalTemperatureValue" class="range-value">0.7</span></label>
-        <input type="range" id="setGlobalTemperature" min="0" max="2" step="0.1" value="0.7">
-        <label for="setGlobalMaxTokens">Максимум токенов</label>
-        <input type="number" id="setGlobalMaxTokens" min="1" max="100000" step="1" value="4096">
-        <div class="check-row">
-          <input type="checkbox" id="setGlobalReasoning">
-          <label for="setGlobalReasoning">Расширенное мышление</label>
+      <div id="tabAppearance" style="display:none">
+        <div class="field">
+          <label data-i18n="settings.theme">Тема</label>
+          <div class="dd-wrap" id="setThemeDD"></div>
         </div>
-      </details>
-      <div class="field">
-        <label>Тема</label>
-        <div class="dd-wrap" id="setThemeDD"></div>
-      </div>
-      <div class="field">
-        <label for="setFontSize">Размер шрифта: <span id="setFontSizeValue">14</span> px</label>
-        <input type="range" id="setFontSize" min="10" max="20" step="1" value="14">
-      </div>
-      <div class="field">
-        <label>Стиль шрифта</label>
-        <div class="dd-wrap" id="setFontStyleDD"></div>
-      </div>
-      <div class="usage-row">
-        <div class="dd-wrap" id="setPeriodDD" style="width:150px"></div>
-        <span id="setUsage">Сообщения: 0 · Токены: 0</span>
+        <div class="field">
+          <label for="setFontSize"><span data-i18n="settings.font_size">Размер шрифта:</span> <span id="setFontSizeValue">14</span> px</label>
+          <input type="range" id="setFontSize" min="10" max="20" step="1" value="14">
+        </div>
+        <div class="field">
+          <label data-i18n="settings.font_style">Стиль шрифта</label>
+          <div class="dd-wrap" id="setFontStyleDD"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="settings.language">Язык</label>
+          <div class="dd-wrap" id="setLanguageDD"></div>
+        </div>
       </div>
     </div>
     <div class="modal-actions">
-      <button type="button" id="exportBtn" class="ghost-btn">Экспорт чата</button>
-      <button type="button" id="resetSettingsBtn" class="danger-btn">Сбросить</button>
-      <button type="button" id="saveSettingsBtn" class="primary-btn">Сохранить</button>
+      <button type="button" id="exportBtn" class="ghost-btn" data-i18n="export.chat">Экспорт чата</button>
+      <button type="button" id="resetSettingsBtn" class="danger-btn" data-i18n="common.reset">Сбросить</button>
+      <button type="button" id="saveSettingsBtn" class="primary-btn" data-i18n="common.save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка статистики -->
+<div class="modal-overlay" id="usageModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="usage.title">Статистика использования</span>
+      <button type="button" id="usageModalClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
+    </div>
+    <div class="usage-row">
+      <div class="dd-wrap" id="setPeriodDD" style="width:150px"></div>
+      <span id="setUsage">Сообщения: 0 · Токены: 0</span>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="usageModalOk" class="primary-btn" data-i18n="common.close">Закрыть</button>
     </div>
   </div>
 </div>
@@ -1946,10 +2309,10 @@ details.field summary:hover {
 <div class="modal-overlay" id="modelPickerModal" style="display:none">
   <div class="mp-modal">
     <div class="modal-header">
-      <span>Выбор модели</span>
-      <button type="button" id="mpClose" class="icon-btn" title="Закрыть">✕</button>
+      <span data-i18n="mp.title">Выбор модели</span>
+      <button type="button" id="mpClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
     </div>
-    <input type="text" id="mpSearch" class="mp-search" placeholder="Поиск модели или провайдера…">
+    <input type="text" id="mpSearch" class="mp-search" placeholder="Поиск модели или провайдера…" data-i18n-placeholder="mp.search">
     <div class="mp-list" id="mpList"></div>
   </div>
 </div>
@@ -1958,12 +2321,12 @@ details.field summary:hover {
 <div class="modal-overlay" id="copyModal" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span>Скопируйте текст вручную</span>
-      <button type="button" id="copyModalClose" class="icon-btn" title="Закрыть">✕</button>
+      <span data-i18n="copy.title">Скопируйте текст вручную</span>
+      <button type="button" id="copyModalClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
     </div>
     <textarea class="copy-modal-text" id="copyModalText" readonly></textarea>
     <div class="modal-actions">
-      <button type="button" id="copyModalOk" class="primary-btn">Закрыть</button>
+      <button type="button" id="copyModalOk" class="primary-btn" data-i18n="common.close">Закрыть</button>
     </div>
   </div>
 </div>
@@ -1975,11 +2338,11 @@ details.field summary:hover {
   /* ===== Константы ===== */
   var CONTEXT_KEYS = ["filament", "printer", "print", "model", "history"];
   var CONTEXT_LABELS = {
-    filament: "Пластик",
-    printer: "Принтер",
-    print: "Настройки печати",
-    model: "Модель со стола",
-    history: "История"
+    filament: "ctx.filament",
+    printer: "ctx.printer",
+    print: "ctx.print",
+    model: "ctx.model",
+    history: "ctx.history"
   };
 
   /* ===== Состояние ===== */
@@ -1993,6 +2356,393 @@ details.field summary:hover {
     context_tokens: 0,
     status: "idle"
   };
+
+  /* ===== Локализация (i18n) ===== */
+  var I18N = {
+    en: {
+      "common.close": "Close",
+      "common.search": "Search",
+      "common.nothing": "No results",
+      "common.copied": "Copied!",
+      "common.copy_failed": "Failed to copy — select the text manually",
+      "common.save": "Save",
+      "common.reset": "Reset",
+      "common.cancel": "Cancel",
+      "common.add": "Add",
+      "common.delete": "Delete",
+      "common.rename": "Rename",
+      "common.pin": "Pin",
+      "common.unpin": "Unpin",
+      "common.copy": "Copy",
+      "common.regenerate": "Regenerate",
+      "common.edit": "Edit",
+      "common.show_key": "Show key",
+      "common.hide_key": "Hide key",
+      "common.typing": "Typing...",
+      "common.attachment": "Attachment",
+      "common.remove_attachment": "Remove attachment",
+      "common.attach_file": "Attach file",
+      "common.stop": "Stop",
+      "common.send": "Send",
+      "common.choose_model": "Choose model",
+      "common.new_chat": "New chat",
+      "common.settings": "Settings",
+      "common.stats": "Statistics",
+      "common.no_active_chat": "No active chat",
+      "sidebar.chats": "Chats",
+      "sidebar.search": "Search chats...",
+      "sidebar.pinned": "Pinned",
+      "sidebar.today": "Today",
+      "sidebar.yesterday": "Yesterday",
+      "sidebar.earlier": "Earlier",
+      "sidebar.empty": "No chats yet",
+      "sidebar.rename_prompt": "Enter new chat name:",
+      "sidebar.delete_confirm": "Delete chat \"{title}\"?",
+      "ctx.filament": "Filament",
+      "ctx.printer": "Printer",
+      "ctx.print": "Print settings",
+      "ctx.model": "Model from the plate",
+      "ctx.history": "History",
+      "ctx.tokens": "Context tokens: {n}",
+      "composer.placeholder": "Message... (Enter — send, Shift+Enter — new line)",
+      "welcome.sub": "3D printing engineer-expert. Ask about mechanics, Klipper or materials.",
+      "settings.title": "Settings",
+      "settings.tab.models": "Models",
+      "settings.tab.general": "General",
+      "settings.tab.appearance": "Appearance",
+      "settings.provider": "Provider",
+      "settings.api_key": "API key",
+      "settings.test_key": "Test key",
+      "settings.base_url": "Base URL",
+      "settings.scheme": "API scheme",
+      "settings.model": "Model",
+      "settings.model_settings": "Model settings:",
+      "settings.model_name": "Display name",
+      "settings.model_system_name": "Name in system (id)",
+      "settings.temperature": "Temperature:",
+      "settings.max_tokens": "Max tokens",
+      "settings.reasoning": "Extended reasoning",
+      "settings.global_badge": "global",
+      "settings.reset_to_global": "Reset to global",
+      "settings.add_model": "+ Add model",
+      "settings.notes": "Notes for context (visible to agent)",
+      "settings.notes_placeholder": "e.g. PETG temperature calibrated by temperature tower — do not suggest calibration",
+      "settings.font_size": "Font size:",
+      "settings.font_style": "Font style",
+      "settings.language": "Language",
+      "settings.theme": "Theme",
+      "settings.export": "Export chat",
+      "settings.saved": "Settings saved",
+      "settings.reset_done": "Settings reset",
+      "usage.title": "Usage Statistics",
+      "usage.text": "Messages: {msgs} · Tokens: {tokens}",
+      "usage.period.all": "All time",
+      "usage.period.today": "Today",
+      "usage.period.week": "This week",
+      "usage.period.month": "This month",
+      "mp.title": "Choose model",
+      "mp.search": "Search model or provider...",
+      "mp.default": "Default",
+      "mp.default_set": "Set as default model",
+      "mp.selected": "Selected",
+      "copy.title": "Copy the text manually",
+      "dd.provider_search": "Search providers...",
+      "dd.model_search": "Search models...",
+      "dd.scheme_search": "Search scheme...",
+      "dd.theme_search": "Search theme...",
+      "dd.style_search": "Search style...",
+      "dd.period_search": "Search period...",
+      "dd.language_search": "Search language...",
+      "scheme.openai": "OpenAI-compatible",
+      "scheme.anthropic": "Anthropic (native)",
+      "theme.auto": "Auto",
+      "theme.light": "Light",
+      "theme.dark": "Dark",
+      "font.system": "System",
+      "font.mono": "Monospace",
+      "font.serif": "Serif",
+      "lang.en": "English",
+      "lang.ru": "Русский",
+      "lang.sr": "Srpski",
+      "cmd.context": "/context — show slicer context",
+      "cmd.clear": "/clear — clear chat",
+      "cmd.model": "/model — show current model",
+      "cmd.printer": "/printer — show printer info",
+      "cmd.stats": "/stats — show usage stats",
+      "cmd.help": "/help — show commands",
+      "cmd.reset": "/reset — reset settings",
+      "cmd.not_found": "Command not found",
+      "key.valid": "API key is valid",
+      "key.invalid": "API key is invalid",
+      "export.user": "User",
+      "export.chat": "Export chat"
+    },
+    ru: {
+      "common.close": "Закрыть",
+      "common.search": "Поиск",
+      "common.nothing": "Ничего не найдено",
+      "common.copied": "Скопировано",
+      "common.copy_failed": "Не удалось скопировать — выделите текст вручную",
+      "common.save": "Сохранить",
+      "common.reset": "Сбросить",
+      "common.cancel": "Отмена",
+      "common.add": "Добавить",
+      "common.delete": "Удалить",
+      "common.rename": "Переименовать",
+      "common.pin": "Закрепить",
+      "common.unpin": "Открепить",
+      "common.copy": "Копировать",
+      "common.regenerate": "Регенерировать",
+      "common.edit": "Редактировать",
+      "common.show_key": "Показать ключ",
+      "common.hide_key": "Скрыть ключ",
+      "common.typing": "печатает…",
+      "common.attachment": "Вложение",
+      "common.remove_attachment": "Убрать вложение",
+      "common.attach_file": "Прикрепить файл",
+      "common.stop": "Остановить генерацию",
+      "common.send": "Отправить",
+      "common.choose_model": "Выбрать модель",
+      "common.new_chat": "Новый чат",
+      "common.settings": "Настройки",
+      "common.stats": "Статистика",
+      "common.no_active_chat": "Нет активного чата",
+      "sidebar.chats": "Чаты",
+      "sidebar.search": "Поиск чатов…",
+      "sidebar.pinned": "Закреплённые",
+      "sidebar.today": "Сегодня",
+      "sidebar.yesterday": "Вчера",
+      "sidebar.earlier": "Ранее",
+      "sidebar.empty": "Чатов пока нет",
+      "sidebar.rename_prompt": "Новое название чата:",
+      "sidebar.delete_confirm": "Удалить чат «{title}»?",
+      "ctx.filament": "Пластик",
+      "ctx.printer": "Принтер",
+      "ctx.print": "Настройки печати",
+      "ctx.model": "Модель со стола",
+      "ctx.history": "История",
+      "ctx.tokens": "Токенов контекста: {n}",
+      "composer.placeholder": "Сообщение… (Enter — отправить, Shift+Enter — новая строка)",
+      "welcome.sub": "Инженер-эксперт 3D-печати. Спросите о механике, Klipper или материалах.",
+      "settings.title": "Настройки",
+      "settings.tab.models": "Модели",
+      "settings.tab.general": "Общие значения",
+      "settings.tab.appearance": "Оформление",
+      "settings.provider": "Провайдер",
+      "settings.api_key": "API-ключ",
+      "settings.test_key": "Проверить ключ",
+      "settings.base_url": "Базовый URL API",
+      "settings.scheme": "Схема API",
+      "settings.model": "Модель",
+      "settings.model_settings": "Настройки модели:",
+      "settings.model_name": "Удобное название",
+      "settings.model_system_name": "Название в системе (id)",
+      "settings.temperature": "Температура:",
+      "settings.max_tokens": "Максимум токенов",
+      "settings.reasoning": "Расширенное мышление",
+      "settings.global_badge": "общий",
+      "settings.reset_to_global": "Сбросить к общему",
+      "settings.add_model": "+ Добавить модель",
+      "settings.notes": "Заметки для контекста (видны агенту)",
+      "settings.notes_placeholder": "Например: температура PETG откалибрована по температурной башне — не предлагай калибровку",
+      "settings.font_size": "Размер шрифта:",
+      "settings.font_style": "Стиль шрифта",
+      "settings.language": "Язык",
+      "settings.theme": "Тема",
+      "settings.export": "Экспорт чата",
+      "settings.saved": "Настройки сохранены",
+      "settings.reset_done": "Настройки сброшены",
+      "usage.title": "Статистика использования",
+      "usage.text": "Сообщения: {msgs} · Токены: {tokens}",
+      "usage.period.all": "Всё время",
+      "usage.period.today": "Сегодня",
+      "usage.period.week": "Неделя",
+      "usage.period.month": "Месяц",
+      "mp.title": "Выбор модели",
+      "mp.search": "Поиск модели или провайдера…",
+      "mp.default": "По умолчанию",
+      "mp.default_set": "Сделать моделью по умолчанию",
+      "mp.selected": "Выбрано",
+      "copy.title": "Скопируйте текст вручную",
+      "dd.provider_search": "Поиск провайдера…",
+      "dd.model_search": "Поиск модели…",
+      "dd.scheme_search": "Поиск схемы…",
+      "dd.theme_search": "Поиск темы…",
+      "dd.style_search": "Поиск стиля…",
+      "dd.period_search": "Поиск периода…",
+      "dd.language_search": "Поиск языка…",
+      "scheme.openai": "OpenAI-совместимая",
+      "scheme.anthropic": "Anthropic (нативный)",
+      "theme.auto": "Авто",
+      "theme.light": "Светлая",
+      "theme.dark": "Тёмная",
+      "font.system": "Системный",
+      "font.mono": "Моноширинный",
+      "font.serif": "С засечками",
+      "lang.en": "English",
+      "lang.ru": "Русский",
+      "lang.sr": "Srpski",
+      "cmd.context": "/context — показать контекст слайсера",
+      "cmd.clear": "/clear — очистить чат",
+      "cmd.model": "/model — показать текущую модель",
+      "cmd.printer": "/printer — показать информацию о принтере",
+      "cmd.stats": "/stats — показать статистику использования",
+      "cmd.help": "/help — показать команды",
+      "cmd.reset": "/reset — сбросить настройки",
+      "cmd.not_found": "Команда не найдена",
+      "key.valid": "Ключ действителен",
+      "key.invalid": "Ключ недействителен",
+      "export.user": "Пользователь",
+      "export.chat": "Экспорт чата"
+    },
+    sr: {
+      "common.close": "Zatvori",
+      "common.search": "Pretraga",
+      "common.nothing": "Ništa nije pronađeno",
+      "common.copied": "Kopirano!",
+      "common.copy_failed": "Kopiranje nije uspelo — označite tekst ručno",
+      "common.save": "Sačuvaj",
+      "common.reset": "Resetuj",
+      "common.cancel": "Otkaži",
+      "common.add": "Dodaj",
+      "common.delete": "Obriši",
+      "common.rename": "Preimenuj",
+      "common.pin": "Zakači",
+      "common.unpin": "Otkači",
+      "common.copy": "Kopiraj",
+      "common.regenerate": "Regeneriši",
+      "common.edit": "Izmeni",
+      "common.show_key": "Prikaži ključ",
+      "common.hide_key": "Sakrij ključ",
+      "common.typing": "kuca…",
+      "common.attachment": "Prilog",
+      "common.remove_attachment": "Ukloni prilog",
+      "common.attach_file": "Priloži datoteku",
+      "common.stop": "Zaustavi",
+      "common.send": "Pošalji",
+      "common.choose_model": "Izaberi model",
+      "common.new_chat": "Novi razgovor",
+      "common.settings": "Podešavanja",
+      "common.stats": "Statistika",
+      "common.no_active_chat": "Nema aktivnog razgovora",
+      "sidebar.chats": "Razgovori",
+      "sidebar.search": "Pretraga razgovora…",
+      "sidebar.pinned": "Zakačeni",
+      "sidebar.today": "Danas",
+      "sidebar.yesterday": "Juče",
+      "sidebar.earlier": "Ranije",
+      "sidebar.empty": "Još nema razgovora",
+      "sidebar.rename_prompt": "Unesite novo ime razgovora:",
+      "sidebar.delete_confirm": "Obrisati razgovor \"{title}\"?",
+      "ctx.filament": "Filament",
+      "ctx.printer": "Štampač",
+      "ctx.print": "Podešavanja štampe",
+      "ctx.model": "Model sa stola",
+      "ctx.history": "Istorija",
+      "ctx.tokens": "Tokeni konteksta: {n}",
+      "composer.placeholder": "Poruka… (Enter — pošalji, Shift+Enter — novi red)",
+      "welcome.sub": "Inženjer-ekspert za 3D štampu. Pitajte o mehanici, Klipperu ili materijalima.",
+      "settings.title": "Podešavanja",
+      "settings.tab.models": "Modeli",
+      "settings.tab.general": "Opšte vrednosti",
+      "settings.tab.appearance": "Izgled",
+      "settings.provider": "Provajder",
+      "settings.api_key": "API ključ",
+      "settings.test_key": "Testiraj ključ",
+      "settings.base_url": "Osnovni URL API",
+      "settings.scheme": "API šema",
+      "settings.model": "Model",
+      "settings.model_settings": "Podešavanja modela:",
+      "settings.model_name": "Prikazano ime",
+      "settings.model_system_name": "Ime u sistemu (id)",
+      "settings.temperature": "Temperatura:",
+      "settings.max_tokens": "Maksimum tokena",
+      "settings.reasoning": "Produženo razmišljanje",
+      "settings.global_badge": "globalno",
+      "settings.reset_to_global": "Resetuj na globalno",
+      "settings.add_model": "+ Dodaj model",
+      "settings.notes": "Beleške za kontekst (vidljive agentu)",
+      "settings.notes_placeholder": "Npr. temperatura PETG kalibrisana pomoću temperaturne kule — ne predlaži kalibraciju",
+      "settings.font_size": "Veličina fonta:",
+      "settings.font_style": "Stil fonta",
+      "settings.language": "Jezik",
+      "settings.theme": "Tema",
+      "settings.export": "Izvezi razgovor",
+      "settings.saved": "Podešavanja sačuvana",
+      "settings.reset_done": "Podešavanja resetovana",
+      "usage.title": "Statistika korišćenja",
+      "usage.text": "Poruke: {msgs} · Tokeni: {tokens}",
+      "usage.period.all": "Sve vreme",
+      "usage.period.today": "Danas",
+      "usage.period.week": "Ova nedelja",
+      "usage.period.month": "Ovaj mesec",
+      "mp.title": "Izbor modela",
+      "mp.search": "Pretraga modela ili provajdera…",
+      "mp.default": "Podrazumevano",
+      "mp.default_set": "Postavi kao podrazumevani model",
+      "mp.selected": "Izabrano",
+      "copy.title": "Kopirajte tekst ručno",
+      "dd.provider_search": "Pretraga provajdera…",
+      "dd.model_search": "Pretraga modela…",
+      "dd.scheme_search": "Pretraga šeme…",
+      "dd.theme_search": "Pretraga teme…",
+      "dd.style_search": "Pretraga stila…",
+      "dd.period_search": "Pretraga perioda…",
+      "dd.language_search": "Pretraga jezika…",
+      "scheme.openai": "OpenAI-kompatibilna",
+      "scheme.anthropic": "Anthropic (nativni)",
+      "theme.auto": "Auto",
+      "theme.light": "Svetla",
+      "theme.dark": "Tamna",
+      "font.system": "Sistemski",
+      "font.mono": "Monospace",
+      "font.serif": "Serif",
+      "lang.en": "English",
+      "lang.ru": "Ruski",
+      "lang.sr": "Srpski",
+      "cmd.context": "/context — prikaži kontekst slajsera",
+      "cmd.clear": "/clear — očisti razgovor",
+      "cmd.model": "/model — prikaži trenutni model",
+      "cmd.printer": "/printer — prikaži informacije o štampaču",
+      "cmd.stats": "/stats — prikaži statistiku korišćenja",
+      "cmd.help": "/help — prikaži komande",
+      "cmd.reset": "/reset — resetuj podešavanja",
+      "cmd.not_found": "Komanda nije pronađena",
+      "key.valid": "API ključ je važeći",
+      "key.invalid": "API ključ nije važeći",
+      "export.user": "Korisnik",
+      "export.chat": "Izvezi razgovor"
+    }
+  };
+
+  function currentLang() {
+    return (state && state.settings && state.settings.language) || "en";
+  }
+
+  function t(key, params) {
+    var lang = currentLang();
+    var s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+    if (params) {
+      for (var k in params) {
+        s = s.split("{" + k + "}").join(String(params[k]));
+      }
+    }
+    return s;
+  }
+
+  function applyI18n(root) {
+    var scope = root || document;
+    scope.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    scope.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+      el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
+    });
+    scope.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+      el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+  }
+
   var streamTextEl = null; // элемент текста текущего стримингового сообщения
   var pendingEditId = null; // id сообщения, которое редактируется
   var attachments = []; // вложения перед отправкой
@@ -2191,7 +2941,7 @@ details.field summary:hover {
         row.appendChild(el("code", "mp-item-id", item.id));
         var star = el("button", "mp-star" + (isDefault ? " active" : ""), isDefault ? "★" : "☆");
         star.type = "button";
-        star.title = "Сделать моделью по умолчанию";
+        star.title = t("mp.default_set");
         (function (pid, mid) {
           star.addEventListener("click", function (e) {
             e.stopPropagation();
@@ -2213,7 +2963,7 @@ details.field summary:hover {
       }
     }
     if (shown === 0) {
-      list.appendChild(el("div", "mp-empty", "Ничего не найдено"));
+      list.appendChild(el("div", "mp-empty", t("common.nothing")));
     }
   }
 
@@ -2248,39 +2998,39 @@ details.field summary:hover {
   }
 
   function renameChat(chat) {
-    var title = window.prompt("Новое название чата:", chat.title || "");
+    var title = window.prompt(t("sidebar.rename_prompt"), chat.title || "");
     if (title !== null) {
-      post({ type: "rename_chat", id: chat.id, title: title.trim() || "Новый чат" });
+      post({ type: "rename_chat", id: chat.id, title: title.trim() || t("common.new_chat") });
     }
   }
 
   function deleteChat(chat) {
-    if (window.confirm("Удалить чат «" + (chat.title || "Новый чат") + "»?")) {
+    if (window.confirm(t("sidebar.delete_confirm", { title: chat.title || t("common.new_chat") }))) {
       post({ type: "delete_chat", id: chat.id });
     }
   }
 
   function chatItem(chat) {
     var item = el("div", "chat-item" + (chat.id === state.active ? " active" : ""));
-    item.appendChild(el("div", "chat-title", chat.title || "Новый чат"));
+    item.appendChild(el("div", "chat-title", chat.title || t("common.new_chat")));
     var actions = el("div", "chat-actions");
     var pinBtn = el("button", "chat-action", "📌");
     pinBtn.type = "button";
-    pinBtn.title = chat.pinned ? "Открепить" : "Закрепить";
+    pinBtn.title = chat.pinned ? t("common.unpin") : t("common.pin");
     pinBtn.addEventListener("click", function (e) {
       e.stopPropagation();
       post({ type: "toggle_pin", id: chat.id });
     });
     var renameBtn = el("button", "chat-action", "✏️");
     renameBtn.type = "button";
-    renameBtn.title = "Переименовать";
+    renameBtn.title = t("common.rename");
     renameBtn.addEventListener("click", function (e) {
       e.stopPropagation();
       renameChat(chat);
     });
     var delBtn = el("button", "chat-action", "🗑");
     delBtn.type = "button";
-    delBtn.title = "Удалить";
+    delBtn.title = t("common.delete");
     delBtn.addEventListener("click", function (e) {
       e.stopPropagation();
       deleteChat(chat);
@@ -2312,7 +3062,7 @@ details.field summary:hover {
         list.appendChild(chatItem(filtered[j]));
       }
       if (filtered.length === 0) {
-        list.appendChild(el("div", "sidebar-empty", "Ничего не найдено"));
+        list.appendChild(el("div", "sidebar-empty", t("common.nothing")));
       }
       return;
     }
@@ -2322,10 +3072,10 @@ details.field summary:hover {
     sortByUpdated(groups.yesterday);
     sortByUpdated(groups.earlier);
     var groupTitles = [
-      ["pinned", "Закреплённые"],
-      ["today", "Сегодня"],
-      ["yesterday", "Вчера"],
-      ["earlier", "Ранее"]
+      ["pinned", t("sidebar.pinned")],
+      ["today", t("sidebar.today")],
+      ["yesterday", t("sidebar.yesterday")],
+      ["earlier", t("sidebar.earlier")]
     ];
     var any = false;
     for (var g = 0; g < groupTitles.length; g++) {
@@ -2342,7 +3092,7 @@ details.field summary:hover {
       }
     }
     if (!any) {
-      list.appendChild(el("div", "sidebar-empty", "Чатов пока нет"));
+      list.appendChild(el("div", "sidebar-empty", t("sidebar.empty")));
     }
   }
 
@@ -2368,7 +3118,7 @@ details.field summary:hover {
       var img = document.createElement("img");
       img.className = "msg-image";
       img.src = msg.image;
-      img.alt = "Вложение";
+      img.alt = t("common.attachment");
       bubble.appendChild(img);
     }
     bubble.appendChild(el("div", "msg-text", msg.text || ""));
@@ -2376,16 +3126,16 @@ details.field summary:hover {
     wrap.appendChild(bubble);
     var actions = el("div", "msg-actions");
     if (msg.role === "assistant") {
-      actions.appendChild(actionBtn("Копировать", function () {
+      actions.appendChild(actionBtn(t("common.copy"), function () {
         copyText(msg.text || "");
       }));
       if (index === msgs.length - 1) {
-        actions.appendChild(actionBtn("Регенерировать", function () {
+        actions.appendChild(actionBtn(t("common.regenerate"), function () {
           post({ type: "regenerate" });
         }));
       }
     } else if (msg.role === "user") {
-      actions.appendChild(actionBtn("Редактировать", function () {
+      actions.appendChild(actionBtn(t("common.edit"), function () {
         startEdit(msg);
       }));
     }
@@ -2396,7 +3146,7 @@ details.field summary:hover {
   function renderWelcome() {
     var wrap = el("div", "welcome");
     wrap.appendChild(el("div", "welcome-title", "FlowSlice AI"));
-    wrap.appendChild(el("div", "welcome-sub", "Инженер-эксперт 3D-печати. Спросите о механике, Klipper или материалах."));
+    wrap.appendChild(el("div", "welcome-sub", t("welcome.sub")));
     var list = el("div", "welcome-cmds");
     var cmds = ["/context", "/clear", "/model", "/printer", "/stats", "/help", "/reset"];
     for (var i = 0; i < cmds.length; i++) {
@@ -2468,10 +3218,10 @@ details.field summary:hover {
         post({ type: "set_context_flags", flags: newFlags });
       });
       checkWrap.appendChild(cb);
-      checkWrap.appendChild(document.createTextNode(CONTEXT_LABELS[key] || key));
+      checkWrap.appendChild(document.createTextNode(t(CONTEXT_LABELS[key] || key)));
       container.appendChild(checkWrap);
     }
-    byId("contextTokens").textContent = "≈ " + (state.context_tokens || 0) + " токенов";
+    byId("contextTokens").textContent = "≈ " + t("ctx.tokens", { n: state.context_tokens || 0 });
   }
 
   /* ===== Индикатор «печатает…» ===== */
@@ -2491,6 +3241,7 @@ details.field summary:hover {
     applyTheme(state.settings);
     applyFont(state.settings);
     updateTyping();
+    applyI18n();
   }
 
   /* ===== Вложения ===== */
@@ -2511,7 +3262,7 @@ details.field summary:hover {
       card.appendChild(el("span", "attach-name", att.name));
       var removeBtn = el("button", "attach-remove", "✕");
       removeBtn.type = "button";
-      removeBtn.title = "Убрать вложение";
+      removeBtn.title = t("common.remove_attachment");
       removeBtn.addEventListener("click", (function (idx) {
         return function () {
           attachments.splice(idx, 1);
@@ -2610,7 +3361,7 @@ details.field summary:hover {
     if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
       try {
         navigator.clipboard.writeText(value).then(function () {
-          showToast("Скопировано", "ok");
+          showToast(t("common.copied"), "ok");
         }, function () {
           copyTextFallback(value);
         });
@@ -2641,11 +3392,11 @@ details.field summary:hover {
       ok = false;
     }
     if (ok) {
-      showToast("Скопировано", "ok");
+      showToast(t("common.copied"), "ok");
       return;
     }
     // Шаг 3: ручное копирование — модалка с авто-выделением
-    showToast("Не удалось скопировать — выделите текст вручную", "err");
+    showToast(t("common.copy_failed"), "err");
     var textEl = byId("copyModalText");
     textEl.value = value;
     byId("copyModal").style.display = "flex";
@@ -2715,7 +3466,7 @@ details.field summary:hover {
     }
     list.innerHTML = "";
     if (matches.length === 0) {
-      list.appendChild(el("div", "cmd-suggest-empty", "Команда не найдена"));
+      list.appendChild(el("div", "cmd-suggest-empty", t("cmd.not_found")));
       list.style.display = "block";
       cmdSuggestIndex = -1;
       cmdSuggestMatches = [];
@@ -2779,19 +3530,31 @@ details.field summary:hover {
   }
 
   /* ===== Модалка настроек ===== */
+  var allDropdowns = []; // все созданные дропдауны для единого обработчика клика
+  var ddDocListenerAdded = false; // флаг: document click listener уже добавлен
   var setProviderDD = null;
   var setModelDD = null;
   var setSchemeDD = null;
   var setThemeDD = null;
   var setFontStyleDD = null;
+  var setLanguageDD = null;
   var setPeriodDD = null;
   var amSchemeDD = null;
+  var setModelSchemeDD = null;
   var perModelDirty = false; // флаг: per-model настройки изменены вручную
+  var currentModelKey = null; // ключ "provider::model" текущей редактируемой модели
+  var perModelDrafts = {}; // черновики per-model настроек: ключ -> {temperature, max_tokens, reasoning}
 
   function makeDropdown(containerId, options, selected, onSelect, placeholder) {
     var wrap = byId(containerId);
     wrap.className = "dd-wrap";
     wrap.innerHTML = "";
+    // Удаляем предыдущий дропдаун с тем же контейнером (пересоздание при смене языка).
+    for (var d = allDropdowns.length - 1; d >= 0; d--) {
+      if (allDropdowns[d].containerId === containerId) {
+        allDropdowns.splice(d, 1);
+      }
+    }
     var btn = el("button", "dd-btn");
     btn.type = "button";
     var btnLabel = el("span", "dd-btn-label", "");
@@ -2802,7 +3565,7 @@ details.field summary:hover {
     popup.style.display = "none";
     var search = el("input", "dd-search");
     search.type = "text";
-    search.placeholder = placeholder || "Поиск…";
+    search.placeholder = placeholder || t("common.search");
     var list = el("div", "dd-list");
     popup.appendChild(search);
     popup.appendChild(list);
@@ -2841,7 +3604,7 @@ details.field summary:hover {
         shown++;
       }
       if (shown === 0) {
-        list.appendChild(el("div", "dd-empty", "Ничего не найдено"));
+        list.appendChild(el("div", "dd-empty", t("common.nothing")));
       }
     }
 
@@ -2900,11 +3663,19 @@ details.field summary:hover {
       }
     });
     search.addEventListener("input", renderList);
-    document.addEventListener("click", function (e) {
-      if (!wrap.contains(e.target)) {
-        close();
-      }
-    });
+    // Регистрируем дропдаун в общем списке для единого обработчика клика.
+    allDropdowns.push({ containerId: containerId, wrap: wrap, close: close });
+    // Единый document click listener: закрывает все дропдауны, кроме кликнутого.
+    if (!ddDocListenerAdded) {
+      ddDocListenerAdded = true;
+      document.addEventListener("click", function (e) {
+        for (var d = 0; d < allDropdowns.length; d++) {
+          if (!allDropdowns[d].wrap.contains(e.target)) {
+            allDropdowns[d].close();
+          }
+        }
+      });
+    }
 
     setOptions(options);
     if (selected !== undefined && selected !== null) {
@@ -2921,34 +3692,43 @@ details.field summary:hover {
   }
 
   function initSettingsDropdowns() {
-    setProviderDD = makeDropdown("setProviderDD", [], "", onProviderChange, "Поиск провайдера…");
-    setModelDD = makeDropdown("setModelDD", [], "", onModelChange, "Поиск модели…");
+    setProviderDD = makeDropdown("setProviderDD", [], "", onProviderChange, t("dd.provider_search"));
+    setModelDD = makeDropdown("setModelDD", [], "", onModelChange, t("dd.model_search"));
     setSchemeDD = makeDropdown("setSchemeDD", [
-      { value: "openai", label: "OpenAI-совместимая" },
-      { value: "anthropic", label: "Anthropic (нативный)" }
-    ], "openai", null, "Поиск схемы…");
+      { value: "openai", label: t("scheme.openai") },
+      { value: "anthropic", label: t("scheme.anthropic") }
+    ], "openai", null, t("dd.scheme_search"));
     setThemeDD = makeDropdown("setThemeDD", [
-      { value: "auto", label: "Авто" },
-      { value: "light", label: "Светлая" },
-      { value: "dark", label: "Тёмная" }
-    ], "auto", null, "Поиск темы…");
+      { value: "auto", label: t("theme.auto") },
+      { value: "light", label: t("theme.light") },
+      { value: "dark", label: t("theme.dark") }
+    ], "auto", null, t("dd.theme_search"));
     setFontStyleDD = makeDropdown("setFontStyleDD", [
-      { value: "system", label: "Системный" },
-      { value: "mono", label: "Моноширинный" },
-      { value: "serif", label: "С засечками" }
-    ], "system", null, "Поиск стиля…");
+      { value: "system", label: t("font.system") },
+      { value: "mono", label: t("font.mono") },
+      { value: "serif", label: t("font.serif") }
+    ], "system", null, t("dd.style_search"));
     setPeriodDD = makeDropdown("setPeriodDD", [
-      { value: "all", label: "Всё время" },
-      { value: "today", label: "Сегодня" },
-      { value: "week", label: "Неделя" },
-      { value: "month", label: "Месяц" }
+      { value: "all", label: t("usage.period.all") },
+      { value: "today", label: t("usage.period.today") },
+      { value: "week", label: t("usage.period.week") },
+      { value: "month", label: t("usage.period.month") }
     ], "all", function (val) {
       post({ type: "get_usage", period: val });
-    }, "Поиск периода…");
+    }, t("dd.period_search"));
     amSchemeDD = makeDropdown("amSchemeDD", [
-      { value: "openai", label: "OpenAI-совместимая" },
-      { value: "anthropic", label: "Anthropic (нативный)" }
-    ], "openai", null, "Поиск схемы…");
+      { value: "openai", label: t("scheme.openai") },
+      { value: "anthropic", label: t("scheme.anthropic") }
+    ], "openai", null, t("dd.scheme_search"));
+    setModelSchemeDD = makeDropdown("setModelSchemeDD", [
+      { value: "openai", label: t("scheme.openai") },
+      { value: "anthropic", label: t("scheme.anthropic") }
+    ], "openai", null, t("dd.scheme_search"));
+    setLanguageDD = makeDropdown("setLanguageDD", [
+      { value: "en", label: t("lang.en") },
+      { value: "ru", label: t("lang.ru") },
+      { value: "sr", label: t("lang.sr") }
+    ], "en", null, t("dd.language_search"));
   }
 
   function onProviderChange() {
@@ -2983,62 +3763,59 @@ details.field summary:hover {
   }
 
   function onModelChange() {
-    var model = modelById(setProviderDD.getSelected(), setModelDD.getSelected());
+    // Сохраняем черновик предыдущей модели, если форма была изменена.
+    if (currentModelKey && perModelDirty) {
+      perModelDrafts[currentModelKey] = {
+        temperature: parseFloat(byId("setTemperature").value),
+        max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
+        reasoning: byId("setReasoning").checked
+      };
+    }
+    var provider = setProviderDD.getSelected();
+    var model = modelById(provider, setModelDD.getSelected());
     if (!model) {
+      currentModelKey = null;
+      byId("modelSettingsBlock").style.display = "none";
       return;
     }
+    byId("modelSettingsBlock").style.display = "block";
     byId("modelSettingsLabel").textContent = model.name || model.id;
+    var key = provider + "::" + model.id;
+    currentModelKey = key;
+    var draft = perModelDrafts[key];
     var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
     var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 4096;
     var gReas = !!state.settings.reasoning;
     var hasTemp = model.temperature !== null && model.temperature !== undefined;
     var hasMax = model.max_tokens !== null && model.max_tokens !== undefined;
     var hasReas = model.reasoning !== null && model.reasoning !== undefined;
-    byId("setTemperature").value = String(hasTemp ? model.temperature : gTemp);
-    byId("setTemperatureValue").textContent = String(hasTemp ? model.temperature : gTemp);
-    byId("setTemperatureBadge").style.display = hasTemp ? "none" : "inline-block";
-    byId("setMaxTokens").value = String(hasMax ? model.max_tokens : gMax);
-    byId("setMaxTokensBadge").style.display = hasMax ? "none" : "inline-block";
-    byId("setReasoning").checked = hasReas ? !!model.reasoning : gReas;
-    byId("setReasoningBadge").style.display = hasReas ? "none" : "inline-block";
+    var temp = draft && draft.temperature !== null && draft.temperature !== undefined
+      ? draft.temperature : (hasTemp ? model.temperature : gTemp);
+    var maxT = draft && draft.max_tokens !== null && draft.max_tokens !== undefined
+      ? draft.max_tokens : (hasMax ? model.max_tokens : gMax);
+    var reas = draft && draft.reasoning !== null && draft.reasoning !== undefined
+      ? draft.reasoning : (hasReas ? !!model.reasoning : gReas);
+    byId("setTemperature").value = String(temp);
+    byId("setTemperatureValue").textContent = String(temp);
+    byId("setTemperatureBadge").style.display = (draft || hasTemp) ? "none" : "inline-block";
+    byId("setMaxTokens").value = String(maxT);
+    byId("setMaxTokensBadge").style.display = (draft || hasMax) ? "none" : "inline-block";
+    byId("setReasoning").checked = !!reas;
+    byId("setReasoningBadge").style.display = (draft || hasReas) ? "none" : "inline-block";
+    // Дополнительные поля пользовательской модели (URL/ключ/название/схема).
+    var prov = providerById(provider);
+    var customFields = byId("customModelFields");
+    if (prov && !prov.builtin) {
+      customFields.style.display = "block";
+      byId("setModelName").value = model.name || "";
+      byId("setModelSystemName").value = model.id || "";
+      byId("setModelBaseUrl").value = model.base_url || "";
+      byId("setModelApiKey").value = model.api_key || "";
+      setModelSchemeDD.setSelected(model.scheme || prov.scheme || "openai");
+    } else {
+      customFields.style.display = "none";
+    }
     perModelDirty = false;
-    renderProviderModels();
-  }
-
-  function renderProviderModels() {
-    var list = byId("providerModelsList");
-    list.innerHTML = "";
-    var provider = providerById(setProviderDD.getSelected());
-    if (!provider) {
-      return;
-    }
-    var models = provider.models || [];
-    var activeModel = setModelDD.getSelected();
-    for (var i = 0; i < models.length; i++) {
-      var m = models[i];
-      var row = el("div", "provider-model-row" + (m.id === activeModel ? " active" : ""));
-      row.appendChild(el("span", "provider-model-name", m.name || m.id));
-      row.appendChild(el("code", "provider-model-id", m.id));
-      if (!m.builtin) {
-        var delBtn = el("button", "provider-model-del", "✕");
-        delBtn.type = "button";
-        delBtn.title = "Удалить модель";
-        (function (mid) {
-          delBtn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            post({ type: "delete_model", provider: provider.id, model_id: mid });
-          });
-        })(m.id);
-        row.appendChild(delBtn);
-      }
-      (function (mid) {
-        row.addEventListener("click", function () {
-          setModelDD.setSelected(mid);
-          onModelChange();
-        });
-      })(m.id);
-      list.appendChild(row);
-    }
   }
 
   function fillSettingsForm() {
@@ -3055,19 +3832,47 @@ details.field summary:hover {
     byId("setGlobalReasoning").checked = !!s.reasoning;
     setThemeDD.setSelected(s.theme || "auto");
     setFontStyleDD.setSelected(s.font_style || "system");
-    setPeriodDD.setSelected("all");
+    setLanguageDD.setSelected(s.language || "en");
     byId("setFontSize").value = String(s.font_size || 14);
     byId("setFontSizeValue").textContent = String(s.font_size || 14);
   }
 
   function openSettings() {
+    perModelDrafts = {};
+    perModelDirty = false;
+    currentModelKey = null;
+    // Пересоздаём дропдауны: лейблы и плейсхолдеры должны быть на текущем языке.
+    initSettingsDropdowns();
     fillSettingsForm();
     byId("settingsModal").style.display = "flex";
-    post({ type: "get_usage", period: setPeriodDD.getSelected() });
   }
 
   function closeSettings() {
     byId("settingsModal").style.display = "none";
+  }
+
+  function switchSettingsTab(tab) {
+    var tabs = ["models", "general", "appearance"];
+    for (var i = 0; i < tabs.length; i++) {
+      var pane = byId("tab" + tabs[i].charAt(0).toUpperCase() + tabs[i].slice(1));
+      if (pane) {
+        pane.style.display = (tabs[i] === tab) ? "block" : "none";
+      }
+    }
+    var btns = document.querySelectorAll(".settings-tab");
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].classList.toggle("active", btns[j].getAttribute("data-tab") === tab);
+    }
+  }
+
+  function openUsage() {
+    setPeriodDD.setSelected("all");
+    byId("usageModal").style.display = "flex";
+    post({ type: "get_usage", period: "all" });
+  }
+
+  function closeUsage() {
+    byId("usageModal").style.display = "none";
   }
 
   function resetPerModelField(field) {
@@ -3076,6 +3881,13 @@ details.field summary:hover {
     var payload = { type: "update_model", provider: provider, model_id: model };
     payload[field] = null;
     post(payload);
+    // Черновик: поле сбрасывается к глобальному значению.
+    if (currentModelKey) {
+      if (!perModelDrafts[currentModelKey]) {
+        perModelDrafts[currentModelKey] = {};
+      }
+      perModelDrafts[currentModelKey][field] = null;
+    }
     // Показываем глобальное значение и бейдж «общий».
     if (field === "temperature") {
       var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
@@ -3104,43 +3916,82 @@ details.field summary:hover {
       reasoning: byId("setGlobalReasoning").checked,
       theme: setThemeDD.getSelected(),
       font_size: parseInt(byId("setFontSize").value, 10) || 14,
-      font_style: setFontStyleDD.getSelected()
+      font_style: setFontStyleDD.getSelected(),
+      language: setLanguageDD.getSelected()
     };
     post({ type: "save_settings", settings: settings });
-    if (perModelDirty) {
+    // Сохраняем черновики всех изменённых моделей.
+    var keys = Object.keys(perModelDrafts);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var sep = key.indexOf("::");
+      if (sep <= 0) {
+        continue;
+      }
+      var pid = key.substring(0, sep);
+      var mid = key.substring(sep + 2);
+      var draft = perModelDrafts[key];
       post({
         type: "update_model",
-        provider: setProviderDD.getSelected(),
+        provider: pid,
+        model_id: mid,
+        temperature: draft.temperature !== undefined ? draft.temperature : null,
+        max_tokens: draft.max_tokens !== undefined ? draft.max_tokens : null,
+        reasoning: draft.reasoning !== undefined ? draft.reasoning : null
+      });
+    }
+    // Текущая модель, если изменена вручную.
+    var provider = setProviderDD.getSelected();
+    if (perModelDirty && provider) {
+      post({
+        type: "update_model",
+        provider: provider,
         model_id: setModelDD.getSelected(),
         temperature: parseFloat(byId("setTemperature").value),
         max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
         reasoning: byId("setReasoning").checked
       });
     }
-    var provider = providerById(setProviderDD.getSelected());
-    if (provider && !provider.builtin) {
+    var prov = providerById(provider);
+    if (prov && !prov.builtin) {
       post({
         type: "update_provider",
-        id: provider.id,
+        id: prov.id,
         base_url: byId("setBaseUrl").value,
         scheme: setSchemeDD.getSelected()
       });
+      // Дополнительные поля пользовательской модели.
+      var modelId = setModelDD.getSelected();
+      if (modelId) {
+        post({
+          type: "update_model",
+          provider: prov.id,
+          model_id: modelId,
+          name: byId("setModelName").value,
+          base_url: byId("setModelBaseUrl").value,
+          api_key: byId("setModelApiKey").value,
+          scheme: setModelSchemeDD.getSelected()
+        });
+      }
     }
+    perModelDrafts = {};
+    perModelDirty = false;
+    currentModelKey = null;
     closeSettings();
   }
 
   function exportChat() {
     var chat = getActiveChat();
     if (!chat) {
-      showToast("Нет активного чата", "err");
+      showToast(t("common.no_active_chat"), "err");
       return;
     }
-    var lines = [chat.title || "Чат"];
+    var lines = [chat.title || t("common.new_chat")];
     var msgs = chat.msgs || [];
     for (var i = 0; i < msgs.length; i++) {
       var m = msgs[i];
       if (m.role === "user") {
-        lines.push("Пользователь: " + (m.text || ""));
+        lines.push(t("export.user") + ": " + (m.text || ""));
       } else if (m.role === "assistant") {
         lines.push("FlowSlice AI: " + (m.text || ""));
       }
@@ -3149,7 +4000,7 @@ details.field summary:hover {
   }
 
   function renderUsage(msg) {
-    byId("setUsage").textContent = "Сообщения: " + (msg.msgs || 0) + " · Токены: " + (msg.tokens || 0);
+    byId("setUsage").textContent = t("usage.text", { msgs: msg.msgs || 0, tokens: msg.tokens || 0 });
   }
 
   /* ===== Toast ===== */
@@ -3236,6 +4087,13 @@ details.field summary:hover {
         state.context_tokens = msg.context_tokens || 0;
         state.status = msg.status || "idle";
         renderState();
+        // Обновляем открытые модалки без сброса несохранённых правок.
+        if (byId("settingsModal").style.display !== "none") {
+          refreshSettingsModels();
+        }
+        if (byId("modelPickerModal").style.display !== "none") {
+          renderModelPicker();
+        }
         break;
       case "delta":
         handleDelta(msg);
@@ -3259,16 +4117,40 @@ details.field summary:hover {
         state.settings = msg.settings || {};
         applyTheme(state.settings);
         applyFont(state.settings);
+        // Пересоздаём дропдауны и форму: язык мог измениться в настройках.
+        initSettingsDropdowns();
         fillSettingsForm();
+        applyI18n();
         renderHeader();
         break;
       case "key_test":
-        showToast(msg.text || (msg.ok ? "Ключ действителен" : "Ключ недействителен"), msg.ok ? "ok" : "err");
+        showToast(msg.text || (msg.ok ? t("key.valid") : t("key.invalid")), msg.ok ? "ok" : "err");
         break;
       case "usage":
         renderUsage(msg);
         break;
     }
+  }
+
+  function refreshSettingsModels() {
+    var provider = providerById(setProviderDD.getSelected());
+    if (!provider) {
+      return;
+    }
+    var models = provider.models || [];
+    var current = setModelDD.getSelected();
+    setModelDD.setOptions(models.map(function (m) {
+      return { value: m.id, label: m.name || m.id };
+    }));
+    var still = false;
+    for (var i = 0; i < models.length; i++) {
+      if (models[i].id === current) {
+        still = true;
+        break;
+      }
+    }
+    setModelDD.setSelected(still ? current : (models.length > 0 ? models[0].id : ""));
+    onModelChange();
   }
 
   /* ===== Инициализация ===== */
@@ -3297,6 +4179,22 @@ details.field summary:hover {
       post({ type: "new_chat" });
     });
     byId("settingsBtn").addEventListener("click", openSettings);
+    byId("usageBtn").addEventListener("click", openUsage);
+    byId("usageModalClose").addEventListener("click", closeUsage);
+    byId("usageModalOk").addEventListener("click", closeUsage);
+    byId("usageModal").addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeUsage();
+      }
+    });
+    var tabBtns = document.querySelectorAll(".settings-tab");
+    for (var tb = 0; tb < tabBtns.length; tb++) {
+      (function (btn) {
+        btn.addEventListener("click", function () {
+          switchSettingsTab(btn.getAttribute("data-tab"));
+        });
+      })(tabBtns[tb]);
+    }
     byId("modalClose").addEventListener("click", closeSettings);
     byId("settingsModal").addEventListener("click", function (e) {
       if (e.target === this) {
@@ -3315,7 +4213,14 @@ details.field summary:hover {
       var masked = keyInput.type === "password";
       keyInput.type = masked ? "text" : "password";
       this.textContent = masked ? "🙈" : "👁";
-      this.title = masked ? "Скрыть ключ" : "Показать ключ";
+      this.title = masked ? t("common.hide_key") : t("common.show_key");
+    });
+    byId("setModelApiKeyEye").addEventListener("click", function () {
+      var keyInput = byId("setModelApiKey");
+      var masked = keyInput.type === "password";
+      keyInput.type = masked ? "text" : "password";
+      this.textContent = masked ? "🙈" : "👁";
+      this.title = masked ? t("common.hide_key") : t("common.show_key");
     });
     byId("setTemperature").addEventListener("input", function () {
       byId("setTemperatureValue").textContent = this.value;
@@ -3361,10 +4266,7 @@ details.field summary:hover {
         type: "add_model",
         provider: provider,
         model_id: byId("amSystemName").value.trim(),
-        label: byId("amLabel").value.trim(),
-        temperature: parseFloat(byId("amTemperature").value),
-        max_tokens: parseInt(byId("amMaxTokens").value, 10) || 4096,
-        reasoning: byId("amReasoning").checked
+        label: byId("amLabel").value.trim()
       };
       if (prov && !prov.builtin) {
         payload.base_url = byId("amBaseUrl").value.trim();
@@ -3373,9 +4275,10 @@ details.field summary:hover {
       }
       post(payload);
       byId("addModelForm").style.display = "none";
-    });
-    byId("amTemperature").addEventListener("input", function () {
-      byId("amTemperatureValue").textContent = this.value;
+      byId("amSystemName").value = "";
+      byId("amLabel").value = "";
+      byId("amBaseUrl").value = "";
+      byId("amApiKey").value = "";
     });
     byId("searchInput").addEventListener("input", renderSidebar);
     byId("messages").addEventListener("scroll", onMessagesScroll);
@@ -3456,6 +4359,15 @@ class _ChatEngine:
         self._pending_attachment: dict[str, Any] | None = None
         self._pending_confirm: str | None = None
         self._load_chats()
+
+    def _t(self, key: str, **params: str) -> str:
+        """Локализует строку по ключу словаря I18N_PY с подстановкой параметров."""
+        lang = self._config.get("language", "en") if isinstance(self._config, dict) else "en"
+        lang = lang if lang in I18N_PY else "en"
+        text = I18N_PY[lang].get(key) or I18N_PY["en"].get(key) or key
+        for name, value in params.items():
+            text = text.replace("{" + name + "}", str(value))
+        return text
 
     def _read_raw_config(self) -> dict:
         """Читает и разбирает сырую JSON-конфигурацию capability."""
@@ -3612,6 +4524,9 @@ class _ChatEngine:
             merged["theme"] = "auto"
         if merged.get("font_style") not in ("system", "mono", "serif"):
             merged["font_style"] = "system"
+        # Язык интерфейса: en/ru/sr.
+        if merged.get("language") not in ("en", "ru", "sr"):
+            merged["language"] = "en"
         try:
             font_size = int(merged.get("font_size", 14))
         except (TypeError, ValueError):
@@ -3653,6 +4568,7 @@ class _ChatEngine:
             "theme": data.get("theme", "auto"),
             "font_size": data.get("font_size", 14),
             "font_style": data.get("font_style", "system"),
+            "language": "en",
             "usage": data.get("usage", {}),
         }
 
@@ -3711,6 +4627,11 @@ class _ChatEngine:
             _LOGGER.warning("Не удалось загрузить историю чатов: %s", exc)
         chats = data.get("chats", [])
         self._chats = list(chats) if isinstance(chats, list) else []
+        # Миграция: пустой заголовок — маркер нового чата (JS подставляет
+        # локализованный common.new_chat), старый русский маркер нормализуем.
+        for chat in self._chats:
+            if isinstance(chat, dict) and chat.get("title") == "Новый чат":
+                chat["title"] = ""
         self._active = self._as_int(data.get("active"), 0)
         self._next_id = self._as_int(data.get("next_id"), 1)
         self._msg_counter = self._as_int(data.get("next_msg_id"), 1)
@@ -3730,13 +4651,14 @@ class _ChatEngine:
                 flat = dict(msg)
                 if flat.get("image"):
                     flat.pop("image", None)
-                    if " [фото]" not in str(flat.get("text", "")):
-                        flat["text"] = str(flat.get("text", "")) + " [фото]"
+                    photo_marker = self._t("chat.photo_marker")
+                    if photo_marker not in str(flat.get("text", "")):
+                        flat["text"] = str(flat.get("text", "")) + photo_marker
                 file_info = flat.get("file")
                 if file_info:
-                    name = str(file_info.get("name", "файл"))
+                    name = str(file_info.get("name", self._t("attach.default_name")))
                     flat["file"] = {"name": name}
-                    marker = f" [файл: {name}]"
+                    marker = self._t("chat.file_marker", name=name)
                     if marker not in str(flat.get("text", "")):
                         flat["text"] = str(flat.get("text", "")) + marker
                 flat_msgs.append(flat)
@@ -3775,7 +4697,7 @@ class _ChatEngine:
         """Создаёт новый чат и делает его активным."""
         chat = {
             "id": self._next_id,
-            "title": "Новый чат",
+            "title": "",
             "updated": time.time(),
             "pinned": False,
             "context_flags": {key: True for key in CONTEXT_OPTIONS},
@@ -3942,10 +4864,13 @@ class _ChatEngine:
                 "active": self._active,
                 "settings": self._settings_snapshot(),
                 "providers": self._providers_snapshot(),
-                "commands": [{"cmd": cmd, "desc": desc} for cmd, desc in COMMANDS],
+                "commands": [
+                    {"cmd": cmd, "desc": self._t("cmd." + cmd.lstrip("/") + ".desc")}
+                    for cmd, _desc in COMMANDS
+                ],
                 "context_flags": chat["context_flags"],
                 "context_tokens": self._ctx_tokens,
-                "status": "печатает…" if self._gen else "",
+                "status": "streaming" if self._gen else "",
             }
         )
 
@@ -4001,7 +4926,7 @@ class _ChatEngine:
             self._post(
                 {
                     "type": "toast",
-                    "text": "Генерация уже идёт. Дождитесь завершения или нажмите «Стоп».",
+                    "text": self._t("gen.already"),
                     "kind": "err",
                 }
             )
@@ -4022,7 +4947,7 @@ class _ChatEngine:
             user_msg.update(self._pending_attachment)
             self._pending_attachment = None
         chat["msgs"].append(user_msg)
-        if chat["title"] == "Новый чат":
+        if not chat["title"]:
             chat["title"] = self._auto_title(text)
         chat["updated"] = time.time()
         self._trim_chat(chat)
@@ -4071,7 +4996,7 @@ class _ChatEngine:
         if chat is None:
             return
         title = str(message.get("title", "")).strip()[:60]
-        chat["title"] = title or "Новый чат"
+        chat["title"] = title
         self._save_chats()
         self._send_state()
 
@@ -4109,7 +5034,7 @@ class _ChatEngine:
             self._post(
                 {
                     "type": "toast",
-                    "text": "Генерация уже идёт. Дождитесь завершения или нажмите «Стоп».",
+                    "text": self._t("gen.already"),
                     "kind": "err",
                 }
             )
@@ -4148,6 +5073,7 @@ class _ChatEngine:
             "theme",
             "font_size",
             "font_style",
+            "language",
         ):
             if key in settings:
                 self._config[key] = settings[key]
@@ -4168,14 +5094,14 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._post_settings()
-        self._post({"type": "toast", "text": "Настройки сохранены.", "kind": "ok"})
+        self._post({"type": "toast", "text": self._t("settings.saved"), "kind": "ok"})
 
     def _handle_reset_settings(self) -> None:
         """Сбрасывает настройки к заводским значениям."""
         self._config = self._normalize_config(DEFAULT_CONFIG.copy())
         self._cap.save_config(json.dumps(self._config))
         self._post_settings()
-        self._post({"type": "toast", "text": "Настройки сброшены к заводским.", "kind": "ok"})
+        self._post({"type": "toast", "text": self._t("settings.reset"), "kind": "ok"})
 
     def _post_settings(self) -> None:
         """Отправляет актуальные настройки в UI."""
@@ -4206,14 +5132,14 @@ class _ChatEngine:
     def _handle_attach_file(self, message: dict) -> None:
         """Сохраняет вложение для следующего сообщения."""
         kind = message.get("kind")
-        name = str(message.get("name", "файл"))
+        name = str(message.get("name", self._t("attach.default_name")))
         data = message.get("data", "")
         if kind == "image":
             if len(data) > MAX_IMAGE_B64:
                 self._post(
                     {
                         "type": "toast",
-                        "text": "Изображение слишком большое (лимит 6 МБ).",
+                        "text": self._t("attach.image_too_big"),
                         "kind": "err",
                     }
                 )
@@ -4224,13 +5150,13 @@ class _ChatEngine:
                 self._post(
                     {
                         "type": "toast",
-                        "text": "Файл слишком большой (лимит 1 МБ).",
+                        "text": self._t("attach.file_too_big"),
                         "kind": "err",
                     }
                 )
                 return
             self._pending_attachment = {"file": {"name": name, "text": data}}
-        self._post({"type": "toast", "text": "Вложение добавлено.", "kind": "ok"})
+        self._post({"type": "toast", "text": self._t("attach.added"), "kind": "ok"})
 
     # ===== Управление провайдерами и моделями =====
 
@@ -4241,12 +5167,20 @@ class _ChatEngine:
         providers = self._config.get("providers", {})
         if provider not in providers:
             self._post(
-                {"type": "toast", "text": "Провайдер не найден: " + provider, "kind": "err"}
+                {
+                    "type": "toast",
+                    "text": self._t("provider.not_found_name", name=provider),
+                    "kind": "err",
+                }
             )
             return
         if model not in providers[provider].get("models", {}):
             self._post(
-                {"type": "toast", "text": "Модель не найдена: " + model, "kind": "err"}
+                {
+                    "type": "toast",
+                    "text": self._t("model.not_found_name", name=model),
+                    "kind": "err",
+                }
             )
             return
         self._config["active_provider"] = provider
@@ -4254,7 +5188,7 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Модель выбрана: " + model, "kind": "ok"})
+        self._post({"type": "toast", "text": self._t("model.selected", name=model), "kind": "ok"})
 
     def _handle_set_default_model(self, message: dict) -> None:
         """Устанавливает модель по умолчанию для новых чатов."""
@@ -4262,20 +5196,22 @@ class _ChatEngine:
         model = str(message.get("model", ""))
         providers = self._config.get("providers", {})
         if provider not in providers or model not in providers[provider].get("models", {}):
-            self._post({"type": "toast", "text": "Модель не найдена.", "kind": "err"})
+            self._post({"type": "toast", "text": self._t("model.not_found"), "kind": "err"})
             return
         self._config["default_model"] = provider + "::" + model
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Модель по умолчанию: " + model, "kind": "ok"})
+        self._post(
+            {"type": "toast", "text": self._t("model.default_set", name=model), "kind": "ok"}
+        )
 
     def _handle_add_provider(self, message: dict) -> None:
         """Создаёт пользовательского провайдера."""
         name = str(message.get("name", "")).strip()
         if not name:
             self._post(
-                {"type": "toast", "text": "Укажите название провайдера.", "kind": "err"}
+                {"type": "toast", "text": self._t("provider.name_required"), "kind": "err"}
             )
             return
         base_url = str(message.get("base_url", "")).strip()
@@ -4293,7 +5229,9 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Провайдер добавлен: " + name, "kind": "ok"})
+        self._post(
+            {"type": "toast", "text": self._t("provider.added", name=name), "kind": "ok"}
+        )
 
     def _handle_update_provider(self, message: dict) -> None:
         """Обновляет поля пользовательского провайдера."""
@@ -4302,7 +5240,7 @@ class _ChatEngine:
         prov = providers.get(pid)
         if not isinstance(prov, dict):
             self._post(
-                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
             )
             return
         if message.get("name") is not None:
@@ -4318,7 +5256,7 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Провайдер обновлён.", "kind": "ok"})
+        self._post({"type": "toast", "text": self._t("provider.updated"), "kind": "ok"})
 
     def _handle_delete_provider(self, message: dict) -> None:
         """Удаляет пользовательского провайдера, встроенные — под защитой."""
@@ -4327,14 +5265,14 @@ class _ChatEngine:
         prov = providers.get(pid)
         if not isinstance(prov, dict):
             self._post(
-                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
             )
             return
         if prov.get("builtin"):
             self._post(
                 {
                     "type": "toast",
-                    "text": "Встроенный провайдер нельзя удалить.",
+                    "text": self._t("provider.builtin_locked"),
                     "kind": "err",
                 }
             )
@@ -4345,7 +5283,7 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Провайдер удалён.", "kind": "ok"})
+        self._post({"type": "toast", "text": self._t("provider.deleted"), "kind": "ok"})
 
     def _handle_add_model(self, message: dict) -> None:
         """Добавляет пользовательскую модель в провайдер."""
@@ -4353,7 +5291,7 @@ class _ChatEngine:
         model_id = str(message.get("model_id", "")).strip()
         if not model_id:
             self._post(
-                {"type": "toast", "text": "Укажите идентификатор модели.", "kind": "err"}
+                {"type": "toast", "text": self._t("model.id_required"), "kind": "err"}
             )
             return
         name = str(message.get("name", "")).strip() or model_id
@@ -4361,7 +5299,7 @@ class _ChatEngine:
         prov = providers.get(provider)
         if not isinstance(prov, dict):
             self._post(
-                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
             )
             return
         models = prov.setdefault("models", {})
@@ -4369,7 +5307,7 @@ class _ChatEngine:
             self._post(
                 {
                     "type": "toast",
-                    "text": "Модель уже существует: " + model_id,
+                    "text": self._t("model.exists", name=model_id),
                     "kind": "err",
                 }
             )
@@ -4418,7 +5356,9 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Модель добавлена: " + model_id, "kind": "ok"})
+        self._post(
+            {"type": "toast", "text": self._t("model.added", name=model_id), "kind": "ok"}
+        )
 
     def _handle_update_model(self, message: dict) -> None:
         """Обновляет поля пользовательской модели.
@@ -4432,12 +5372,12 @@ class _ChatEngine:
         providers = self._config.get("providers", {})
         prov = providers.get(provider)
         if not isinstance(prov, dict):
-            self._post({"type": "toast", "text": "Провайдер не найден.", "kind": "err"})
+            self._post({"type": "toast", "text": self._t("provider.not_found"), "kind": "err"})
             return
         models = prov.get("models", {})
         mdef = models.get(model_id)
         if not isinstance(mdef, dict):
-            self._post({"type": "toast", "text": "Модель не найдена.", "kind": "err"})
+            self._post({"type": "toast", "text": self._t("model.not_found"), "kind": "err"})
             return
         if message.get("name") is not None:
             new_name = str(message["name"]).strip()
@@ -4477,7 +5417,7 @@ class _ChatEngine:
                 self._post(
                     {
                         "type": "toast",
-                        "text": "У встроенной модели нельзя менять URL/ключ/схему.",
+                        "text": self._t("model.builtin_locked_fields"),
                         "kind": "err",
                     }
                 )
@@ -4494,7 +5434,9 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Модель обновлена: " + model_id, "kind": "ok"})
+        self._post(
+            {"type": "toast", "text": self._t("model.updated", name=model_id), "kind": "ok"}
+        )
 
     def _handle_delete_model(self, message: dict) -> None:
         """Удаляет пользовательскую модель, встроенные — под защитой."""
@@ -4504,21 +5446,21 @@ class _ChatEngine:
         prov = providers.get(provider)
         if not isinstance(prov, dict):
             self._post(
-                {"type": "toast", "text": "Провайдер не найден.", "kind": "err"}
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
             )
             return
         models = prov.get("models", {})
         mdef = models.get(model_id)
         if not isinstance(mdef, dict):
             self._post(
-                {"type": "toast", "text": "Модель не найдена.", "kind": "err"}
+                {"type": "toast", "text": self._t("model.not_found"), "kind": "err"}
             )
             return
         if mdef.get("builtin"):
             self._post(
                 {
                     "type": "toast",
-                    "text": "Встроенную модель нельзя удалить.",
+                    "text": self._t("model.builtin_locked"),
                     "kind": "err",
                 }
             )
@@ -4532,7 +5474,7 @@ class _ChatEngine:
         self._config = self._normalize_config(self._config)
         self._cap.save_config(json.dumps(self._config))
         self._send_state()
-        self._post({"type": "toast", "text": "Модель удалена.", "kind": "ok"})
+        self._post({"type": "toast", "text": self._t("model.deleted"), "kind": "ok"})
 
     @staticmethod
     def _slugify(text: str) -> str:
@@ -4571,7 +5513,7 @@ class _ChatEngine:
             self._post(
                 {
                     "type": "toast",
-                    "text": "Генерация уже идёт. Дождитесь завершения или нажмите «Стоп».",
+                    "text": self._t("gen.already"),
                     "kind": "err",
                 }
             )
@@ -4592,12 +5534,12 @@ class _ChatEngine:
             {"id": msg_id, "role": "assistant", "text": "", "ts": time.time()}
         )
         self._save_chats()
-        self._post({"type": "status", "text": "печатает…"})
+        self._post({"type": "status", "text": "streaming"})
         try:
             messages = self._build_messages(chat, user_text)
             full_text = self._call_api(messages, chat_id)
             if not full_text.strip():
-                full_text = "Модель вернула пустой ответ."
+                full_text = self._t("gen.empty_reply")
             msg = self._find_msg(chat, msg_id)
             if msg is not None:
                 msg["text"] = full_text
@@ -4608,7 +5550,7 @@ class _ChatEngine:
         except Exception as exc:
             _LOGGER.error("Необработанная ошибка генерации: %s", exc)
             self._fail_generation(
-                chat, chat_id, user_msg_id, msg_id, "Внутренняя ошибка генерации."
+                chat, chat_id, user_msg_id, msg_id, self._t("gen.internal_error")
             )
         finally:
             self._gen = False
@@ -4672,9 +5614,10 @@ class _ChatEngine:
         last_user = self._last_user_msg(chat)
         if last_user is not None and last_user.get("file"):
             file_info = last_user["file"]
-            user_content += (
-                "\n\n[Файл: " + str(file_info.get("name", "файл")) + "]\n"
-                + str(file_info.get("text", ""))
+            user_content += self._t(
+                "prompt.file",
+                name=str(file_info.get("name", self._t("attach.default_name"))),
+                text=str(file_info.get("text", "")),
             )
         images = self._collect_context_images(chat)
         scheme = self._active_scheme()
@@ -4702,11 +5645,7 @@ class _ChatEngine:
             messages.append({"role": "user", "content": content})
         else:
             if images:
-                user_content += (
-                    "\n[Прикреплено изображений: "
-                    + str(len(images))
-                    + ". Модель DeepSeek не поддерживает изображения]"
-                )
+                user_content += self._t("prompt.images_unsupported", n=str(len(images)))
             messages.append({"role": "user", "content": user_content})
         return messages
 
@@ -4717,13 +5656,23 @@ class _ChatEngine:
                 return msg
         return None
 
-    def _history_messages(self, chat: dict[str, Any], max_chars: int) -> list[dict[str, Any]]:
-        """Собирает историю сообщений для контекста, отбрасывая старые."""
+    def _history_messages(
+        self,
+        chat: dict[str, Any],
+        max_chars: int,
+        include_last_user: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Собирает историю сообщений для контекста, отбрасывая старые.
+
+        При include_last_user=True (команда /context) включается и последнее
+        сообщение пользователя — для полного дампа истории.
+        """
         msgs = chat.get("msgs", [])
-        last_user = self._last_user_msg(chat)
         history = msgs
-        if last_user is not None:
-            history = msgs[: msgs.index(last_user)]
+        if not include_last_user:
+            last_user = self._last_user_msg(chat)
+            if last_user is not None:
+                history = msgs[: msgs.index(last_user)]
         result: list[dict[str, Any]] = []
         total = 0
         for msg in reversed(history):
@@ -4731,9 +5680,12 @@ class _ChatEngine:
                 continue
             text = str(msg.get("text", ""))
             if msg.get("image"):
-                text += " [фото]"
+                text += self._t("chat.photo_marker")
             if msg.get("file"):
-                text += " [файл: " + str(msg.get("file", {}).get("name", "файл")) + "]"
+                text += self._t(
+                    "chat.file_marker",
+                    name=str(msg.get("file", {}).get("name", self._t("attach.default_name"))),
+                )
             if total + len(text) > max_chars:
                 break
             result.append({"role": msg["role"], "content": text})
@@ -4782,7 +5734,7 @@ class _ChatEngine:
         self._sync_config()
         provider_id, base_url, api_key, model, scheme = self._active_api_credentials()
         if not api_key:
-            raise ApiError("Пожалуйста, укажите API-ключ в настройках.")
+            raise ApiError(self._t("err.api_key_required"))
         cfg = self._config
         # Per-model настройки: None → наследуем глобальные значения.
         prov = cfg.get("providers", {}).get(provider_id)
@@ -4831,17 +5783,17 @@ class _ChatEngine:
                 return self._read_sse(resp, chat_id)
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")[:500]
-            raise ApiError("Ошибка API " + str(exc.code) + ": " + body) from exc
-        except urllib.error.URLError as exc:
-            raise NetworkError("Сетевая ошибка: " + str(exc.reason)) from exc
-        except TimeoutError as exc:
-            raise NetworkError("Превышен таймаут запроса.") from exc
-        except PermissionError as exc:
-            raise NetworkError(
-                "Сетевой доступ запрещён песочницей. Разрешите сеть для плагина."
+            raise ApiError(
+                self._t("err.api", code=str(exc.code), body=body)
             ) from exc
+        except urllib.error.URLError as exc:
+            raise NetworkError(self._t("err.network", err=str(exc.reason))) from exc
+        except TimeoutError as exc:
+            raise NetworkError(self._t("err.timeout")) from exc
+        except PermissionError as exc:
+            raise NetworkError(self._t("err.sandbox")) from exc
         except OSError as exc:
-            raise NetworkError("Ошибка соединения: " + str(exc)) from exc
+            raise NetworkError(self._t("err.connection", err=str(exc))) from exc
 
     def _call_anthropic(
         self,
@@ -4889,17 +5841,17 @@ class _ChatEngine:
                 return self._read_sse_anthropic(resp, chat_id)
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")[:500]
-            raise ApiError("Ошибка API " + str(exc.code) + ": " + body) from exc
-        except urllib.error.URLError as exc:
-            raise NetworkError("Сетевая ошибка: " + str(exc.reason)) from exc
-        except TimeoutError as exc:
-            raise NetworkError("Превышен таймаут запроса.") from exc
-        except PermissionError as exc:
-            raise NetworkError(
-                "Сетевой доступ запрещён песочницей. Разрешите сеть для плагина."
+            raise ApiError(
+                self._t("err.api", code=str(exc.code), body=body)
             ) from exc
+        except urllib.error.URLError as exc:
+            raise NetworkError(self._t("err.network", err=str(exc.reason))) from exc
+        except TimeoutError as exc:
+            raise NetworkError(self._t("err.timeout")) from exc
+        except PermissionError as exc:
+            raise NetworkError(self._t("err.sandbox")) from exc
         except OSError as exc:
-            raise NetworkError("Ошибка соединения: " + str(exc)) from exc
+            raise NetworkError(self._t("err.connection", err=str(exc))) from exc
 
     def _read_sse(self, resp: Any, chat_id: int) -> str:
         """Читает SSE-поток ответа и отправляет инкрементальные куски в UI."""
@@ -4976,7 +5928,9 @@ class _ChatEngine:
         if key and key.strip():
             api_key = key.strip()
         if not api_key:
-            self._post({"type": "key_test", "ok": False, "text": "API-ключ не указан."})
+            self._post(
+                {"type": "key_test", "ok": False, "text": self._t("key.missing")}
+            )
             return
         if scheme == "anthropic":
             url = base_url.rstrip("/") + "/messages"
@@ -5010,14 +5964,22 @@ class _ChatEngine:
         try:
             with urllib.request.urlopen(request, timeout=30) as resp:
                 resp.read()
-            self._post({"type": "key_test", "ok": True, "text": "Ключ действителен."})
+            self._post({"type": "key_test", "ok": True, "text": self._t("key.valid")})
         except urllib.error.HTTPError as exc:
             self._post(
-                {"type": "key_test", "ok": False, "text": "Ошибка API " + str(exc.code) + "."}
+                {
+                    "type": "key_test",
+                    "ok": False,
+                    "text": self._t("key.api_error", code=str(exc.code)),
+                }
             )
         except OSError as exc:
             self._post(
-                {"type": "key_test", "ok": False, "text": "Сетевая ошибка: " + str(exc)}
+                {
+                    "type": "key_test",
+                    "ok": False,
+                    "text": self._t("key.network_error", err=str(exc)),
+                }
             )
 
     # ===== Контекст слайсера =====
@@ -5186,8 +6148,9 @@ class _ChatEngine:
     def _collect_preset_data(self) -> dict[str, Any]:
         """Собирает данные активных пресетов печати через preset_bundle.
 
-        Имя пресета берётся из коллекции (printers/prints/filaments),
-        значения полей — через full_config_value с fallback на объединённый конфиг.
+        Приоритет: полный конфиг выбранного пресета (preset.config — все
+        ключи и значения, включая заметки и G-code), затем full_config_value
+        по списку полей, затем объединённый конфиг.
         """
         out: dict[str, Any] = {"printer": {}, "filament": {}, "print": {}}
         try:
@@ -5203,20 +6166,39 @@ class _ChatEngine:
                     name = self._safe_get(collection, "get_selected_preset_name")
                     if name:
                         section["name"] = str(name)
+                    # Полный конфиг выбранного пресета: все ключи и значения.
+                    preset = self._safe_get(collection, "get_selected_preset")
+                    if preset is not None:
+                        config = getattr(preset, "config", None)
+                        items = getattr(config, "items", None)
+                        if callable(items):
+                            result = items()
+                            if isinstance(result, dict):
+                                for fkey, fval in result.items():
+                                    fval = getattr(fval, "value", fval)
+                                    if fval not in (None, ""):
+                                        section[str(fkey)] = self._json_safe(fval)
+                        elif isinstance(config, dict):
+                            for fkey, fval in config.items():
+                                fval = getattr(fval, "value", fval)
+                                if fval not in (None, ""):
+                                    section[str(fkey)] = self._json_safe(fval)
             except (AttributeError, RuntimeError):
                 pass
-            for field in fields:
-                value: Any = None
-                if has_full_value:
-                    try:
-                        value = bundle.full_config_value(field)
-                    except (RuntimeError, TypeError, ValueError):
-                        value = None
-                    value = getattr(value, "value", value)
-                if value in (None, ""):
-                    value = self._fallback_preset_value(bundle, field)
-                if value not in (None, ""):
-                    section[field] = self._json_safe(value)
+            # Fallback: если полный конфиг не получен — по списку полей.
+            if len(section) <= 1:
+                for field in fields:
+                    value: Any = None
+                    if has_full_value:
+                        try:
+                            value = bundle.full_config_value(field)
+                        except (RuntimeError, TypeError, ValueError):
+                            value = None
+                        value = getattr(value, "value", value)
+                    if value in (None, ""):
+                        value = self._fallback_preset_value(bundle, field)
+                    if value not in (None, ""):
+                        section[field] = self._json_safe(value)
             out[key] = section
         return out
 
@@ -5239,30 +6221,38 @@ class _ChatEngine:
                     return value
         return None
 
-    def _build_system_prompt(self, ctx: dict[str, Any]) -> str:
-        """Собирает системный промпт с данными контекста слайсера."""
+    def _build_system_prompt(self, ctx: dict[str, Any], include_data: bool = True) -> str:
+        """Собирает системный промпт с данными контекста слайсера.
+
+        При include_data=False возвращается только персона, заметки и
+        окружение — без JSON-данных (используется командой /context,
+        которая выводит данные отдельным блоком).
+        """
         parts = [SYSTEM_PROMPT]
         notes = str(self._config.get("notes", "")).strip()
         if notes:
-            parts.append(
-                "Заметки пользователя (важная информация, учитывай её при ответах):\n"
-                + notes
-            )
-        if ctx.get("model"):
-            parts.append(
-                "Данные модели со стола:\n"
-                + json.dumps(ctx["model"], ensure_ascii=False, indent=2)
-            )
-        if ctx.get("presets"):
-            parts.append(
-                "Профили печати:\n"
-                + json.dumps(ctx["presets"], ensure_ascii=False, indent=2)
-            )
+            parts.append(self._t("prompt.notes", notes=notes))
+        if include_data:
+            if ctx.get("model"):
+                parts.append(
+                    self._t(
+                        "prompt.model_data",
+                        data=json.dumps(ctx["model"], ensure_ascii=False, indent=2),
+                    )
+                )
+            if ctx.get("presets"):
+                parts.append(
+                    self._t(
+                        "prompt.print_profiles",
+                        data=json.dumps(ctx["presets"], ensure_ascii=False, indent=2),
+                    )
+                )
         parts.append(
-            "Окружение: Python "
-            + sys.version.split()[0]
-            + ", дата/время: "
-            + time.strftime("%Y-%m-%d %H:%M")
+            self._t(
+                "prompt.environment",
+                ver=sys.version.split()[0],
+                time=time.strftime("%Y-%m-%d %H:%M"),
+            )
         )
         return "\n\n".join(parts)
 
@@ -5308,9 +6298,9 @@ class _ChatEngine:
 
     def _cmd_help(self) -> None:
         """Выводит список доступных команд."""
-        lines = ["Доступные команды:"]
-        for cmd, desc in COMMANDS:
-            lines.append(cmd + " — " + desc)
+        lines = [self._t("cmd.help.title")]
+        for cmd, _desc in COMMANDS:
+            lines.append(cmd + " — " + self._t("cmd." + cmd.lstrip("/") + ".desc"))
         self._append_system("\n".join(lines))
 
     def _cmd_model(self) -> None:
@@ -5318,38 +6308,43 @@ class _ChatEngine:
         data = self._collect_model_data()
         objects = data.get("objects", [])
         if not objects:
-            self._append_system("Модель на столе отсутствует или недоступна.")
+            self._append_system(self._t("cmd.model.empty"))
             return
-        lines = ["Отчёт о модели на столе:"]
+        lines = [self._t("cmd.model.title")]
         for obj in objects:
-            lines.append("• " + str(obj.get("name", "Без имени")))
-            lines.append("  Локальный bbox, мм: " + str(obj.get("local_bbox_mm", "—")))
-            lines.append("  Объём: " + str(obj.get("volume_cm3", "—")) + " см³")
+            lines.append("• " + str(obj.get("name", self._t("cmd.model.unnamed"))))
+            lines.append(self._t("cmd.model.bbox", v=str(obj.get("local_bbox_mm", "—"))))
+            lines.append(self._t("cmd.model.volume", v=str(obj.get("volume_cm3", "—"))))
             lines.append(
-                "  Площадь поверхности: " + str(obj.get("surface_area_cm2", "—")) + " см²"
+                self._t("cmd.model.surface", v=str(obj.get("surface_area_cm2", "—")))
             )
-            lines.append("  Треугольники: " + str(obj.get("triangles", "—")))
-            lines.append("  Manifold: " + ("да" if obj.get("manifold") else "нет"))
+            lines.append(self._t("cmd.model.triangles", v=str(obj.get("triangles", "—"))))
+            lines.append(
+                self._t(
+                    "cmd.model.manifold",
+                    v=self._t("cmd.yes" if obj.get("manifold") else "cmd.no"),
+                )
+            )
             for inst in obj.get("instances", []):
-                line = "  Экземпляр " + str(inst.get("index", "—"))
+                line = self._t("cmd.model.instance", v=str(inst.get("index", "—")))
                 if inst.get("mirrored"):
-                    line += " — ЗЕРКАЛЬНЫЙ экземпляр"
+                    line += self._t("cmd.model.mirrored")
                 lines.append(line)
         self._append_system("\n".join(lines))
 
     def _cmd_printer(self) -> None:
         """Формирует сводку профилей печати."""
         data = self._collect_preset_data()
-        lines = ["Сводка профилей печати:"]
+        lines = [self._t("cmd.printer.title")]
         sections = (
-            ("printer", "Принтер"),
-            ("filament", "Пластик"),
-            ("print", "Настройки печати"),
+            ("printer", self._t("cmd.printer.section_printer")),
+            ("filament", self._t("cmd.printer.section_filament")),
+            ("print", self._t("cmd.printer.section_print")),
         )
         for key, label in sections:
             section = data.get(key, {})
             if not section:
-                lines.append("• " + label + ": недоступно")
+                lines.append("• " + self._t("cmd.printer.unavailable", label=label))
                 continue
             lines.append("• " + label + ":")
             for field, value in section.items():
@@ -5360,7 +6355,7 @@ class _ChatEngine:
         """Выводит статистику использования ассистента."""
         snap = self._usage_snapshot("all")
         self._append_system(
-            "Сообщений: " + str(snap["msgs"]) + ", Токенов: " + str(snap["tokens"])
+            self._t("cmd.stats.line", msgs=str(snap["msgs"]), tokens=str(snap["tokens"]))
         )
 
     def _cmd_context(self) -> None:
@@ -5368,23 +6363,28 @@ class _ChatEngine:
         chat = self._active_chat()
         flags = chat.get("context_flags", {})
         ctx = self._collect_context(flags)
-        lines = ["Контекст слайсера:"]
-        lines.append("Системный промпт:")
-        lines.append(self._build_system_prompt(ctx))
-        lines.append("Чекбоксы контекста:")
+        lines = [self._t("cmd.context.title")]
+        lines.append(self._t("cmd.context.system_prompt"))
+        lines.append(self._build_system_prompt(ctx, include_data=False))
+        lines.append(self._t("cmd.context.checkboxes"))
         for key, value in flags.items():
-            lines.append("  " + str(key) + ": " + ("вкл" if value else "выкл"))
-        lines.append("Данные контекста:")
+            lines.append(
+                "  "
+                + str(key)
+                + ": "
+                + self._t("cmd.context.on" if value else "cmd.context.off")
+            )
+        lines.append(self._t("cmd.context.data"))
         lines.append(json.dumps(ctx, ensure_ascii=False, indent=2))
-        lines.append("История сообщений:")
-        history = self._history_messages(chat, MAX_CONTEXT_CHARS)
+        lines.append(self._t("cmd.context.history"))
+        history = self._history_messages(chat, MAX_CONTEXT_CHARS, include_last_user=True)
         if history:
             for item in history:
                 lines.append("  [" + item["role"] + "] " + item["content"][:200])
         else:
-            lines.append("  (пусто)")
+            lines.append(self._t("cmd.context.empty"))
         lines.append(
-            "Оценка токенов контекста: " + str(self._estimate_context_tokens(flags))
+            self._t("cmd.context.tokens", v=str(self._estimate_context_tokens(flags)))
         )
         self._append_system("\n".join(lines))
 
@@ -5392,7 +6392,7 @@ class _ChatEngine:
         """Реализует двухшаговое подтверждение деструктивной команды."""
         if self._pending_confirm != cmd:
             self._pending_confirm = cmd
-            self._append_system("Подтвердите: отправьте " + cmd + " ещё раз.")
+            self._append_system(self._t("cmd.confirm", cmd=cmd))
             return False
         self._pending_confirm = None
         return True
@@ -5403,11 +6403,11 @@ class _ChatEngine:
             return
         chat = self._active_chat()
         chat["msgs"] = []
-        chat["title"] = "Новый чат"
+        chat["title"] = ""
         chat["updated"] = time.time()
         self._ctx_tokens = 0
         self._save_chats()
-        self._append_system("История чата очищена.")
+        self._append_system(self._t("cmd.clear.done"))
 
     def _cmd_reset(self) -> None:
         """Сбрасывает настройки с двухшаговым подтверждением."""
@@ -5415,7 +6415,7 @@ class _ChatEngine:
             return
         self._config = self._normalize_config(DEFAULT_CONFIG.copy())
         self._cap.save_config(json.dumps(self._config))
-        self._append_system("Настройки сброшены к заводским.")
+        self._append_system(self._t("cmd.reset.done"))
 
     # ===== Статистика использования =====
 
@@ -5486,6 +6486,10 @@ class _ConfigMixin:
             self._engine = engine
         return engine
 
+    def _t(self, key: str, **params: str) -> str:
+        """Локализует строку через движок (язык берётся из конфигурации)."""
+        return self._ensure_engine()._t(key, **params)
+
     def _make_post_sink(self) -> Any:
         """Возвращает callable для доставки payload в UI."""
         if _PAGES_BASE is not None and isinstance(self, _PAGES_BASE):
@@ -5543,14 +6547,14 @@ if _SCRIPT_BASE is not None:
             self._ensure_engine()
             win = getattr(self, "_win", None)
             if win is not None and win.is_open():
-                return orca.ExecutionResult.success("Окно FlowSlice AI уже открыто")
+                return orca.ExecutionResult.success(self._t("win.already_open"))
             self._win = orca.host.ui.create_window(
                 html=HTML_PAGE,
                 title="FlowSlice AI",
                 on_message=self._on_message,
                 on_close=self._on_close,
             )
-            return orca.ExecutionResult.success("Окно FlowSlice AI открыто")
+            return orca.ExecutionResult.success(self._t("win.opened"))
 
         def _on_message(self, message: dict) -> None:
             """Обрабатывает сообщение из окна ассистента."""
