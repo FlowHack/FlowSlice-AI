@@ -7,6 +7,7 @@ from flowslice_ai.engine.providers import ProvidersMixin
 from flowslice_ai.engine.generation import GenerationMixin
 from flowslice_ai.engine.api_client import ApiClientMixin
 from flowslice_ai.engine.slicer_context import SlicerContextMixin
+from flowslice_ai.engine.compaction import CompactionMixin
 from flowslice_ai.engine.commands import CommandsMixin
 
 
@@ -17,6 +18,7 @@ class _ChatEngine(
     GenerationMixin,
     ApiClientMixin,
     SlicerContextMixin,
+    CompactionMixin,
     CommandsMixin,
 ):
     """Ядро плагина: единый класс, собранный из миксинов по зонам ответственности."""

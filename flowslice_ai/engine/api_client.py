@@ -721,6 +721,134 @@ class ApiClientMixin:
         except OSError as exc:
             raise NetworkError(self._t("err.connection", err=str(exc))) from exc
 
+    def _call_api_blocking(
+        self: "_ChatEngine", messages: list[dict[str, Any]], max_tokens: int = 2048
+    ) -> str:
+        """Выполняет нестриминговый запрос к API и возвращает текст ответа.
+
+        Используется служебными задачами (сжатие истории), где потоковый
+        вывод не нужен. Ошибки транслируются в ApiError/NetworkError.
+        """
+        self._sync_config()
+        provider_id, base_url, api_key, model, scheme = self._active_api_credentials()
+        if not api_key:
+            raise ApiError(self._t("err.api_key_required"))
+        if scheme == "anthropic":
+            return self._call_anthropic_blocking(
+                messages, provider_id, base_url, api_key, model, max_tokens
+            )
+        url = base_url.rstrip("/") + "/chat/completions"
+        payload: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "max_tokens": max_tokens,
+            "temperature": 0.3,
+        }
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={**HTTP_HEADERS, "Authorization": "Bearer " + api_key},
+            method="POST",
+        )
+        data = self._send_blocking_request(request, provider_id)
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices:
+            return ""
+        message = choices[0].get("message") if isinstance(choices[0], dict) else None
+        if not isinstance(message, dict):
+            return ""
+        return self._content_to_text(message.get("content"))
+
+    def _call_anthropic_blocking(
+        self: "_ChatEngine",
+        messages: list[dict[str, Any]],
+        provider_id: str,
+        base_url: str,
+        api_key: str,
+        model: str,
+        max_tokens: int,
+    ) -> str:
+        """Нестриминговый запрос к нативному Messages API Anthropic."""
+        system = ""
+        body_messages = messages
+        if messages and messages[0].get("role") == "system":
+            system = str(messages[0].get("content", ""))
+            body_messages = messages[1:]
+        url = base_url.rstrip("/") + "/messages"
+        payload: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": body_messages,
+            "stream": False,
+            "temperature": 0.3,
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "OrcaSlicer/2.5.0",
+            "x-api-key": api_key,
+            "anthropic-version": _ANTHROPIC_VERSION,
+        }
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        data = self._send_blocking_request(request, provider_id)
+        content = data.get("content")
+        if not isinstance(content, list):
+            return ""
+        parts = [
+            str(block.get("text", ""))
+            for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        return "".join(parts)
+
+    def _send_blocking_request(
+        self: "_ChatEngine", request: urllib.request.Request, provider_id: str
+    ) -> dict[str, Any]:
+        """Отправляет запрос и разбирает JSON-ответ, транслируя ошибки."""
+        try:
+            resp = self._open_with_retry(request, provider_id)
+            with resp:
+                raw = resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            body = self._http_error_detail(exc)
+            raise ApiError(
+                self._t("err.api", code=str(exc.code), body=body)
+            ) from exc
+        except urllib.error.URLError as exc:
+            raise NetworkError(self._t("err.network", err=str(exc.reason))) from exc
+        except TimeoutError as exc:
+            raise NetworkError(self._t("err.timeout")) from exc
+        except PermissionError as exc:
+            raise NetworkError(self._t("err.sandbox")) from exc
+        except OSError as exc:
+            raise NetworkError(self._t("err.connection", err=str(exc))) from exc
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ApiError(self._t("err.bad_json")) from exc
+        if not isinstance(data, dict):
+            raise ApiError(self._t("err.bad_json"))
+        return data
+
+    @staticmethod
+    def _content_to_text(content: Any) -> str:
+        """Приводит поле content ответа к строке (поддерживает список блоков)."""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            return "".join(
+                str(block.get("text", ""))
+                for block in content
+                if isinstance(block, dict) and block.get("text")
+            )
+        return ""
+
     def _read_sse(self: "_ChatEngine", resp: Any, chat_id: int) -> tuple[str, str]:
         """Читает SSE-поток ответа и отправляет инкрементальные куски в UI.
 

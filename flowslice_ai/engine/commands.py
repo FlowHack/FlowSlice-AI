@@ -32,6 +32,8 @@ class CommandsMixin:
         cmd = stripped.split()[0].lower()
         if cmd == "/context":
             self._cmd_context()
+        elif cmd == "/compact":
+            self._handle_compact({})
         elif cmd == "/clear":
             self._cmd_clear()
         elif cmd == "/model":

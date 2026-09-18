@@ -80,6 +80,8 @@ class HandlersMixin:
             self._handle_import_api_model(message)
         elif msg_type == "refresh_models":
             self._handle_refresh_models(message)
+        elif msg_type == "compact":
+            self._handle_compact(message)
         elif msg_type == "set_default_model":
             self._handle_set_default_model(message)
         elif msg_type == "add_provider":

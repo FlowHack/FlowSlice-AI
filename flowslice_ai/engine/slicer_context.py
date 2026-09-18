@@ -591,6 +591,9 @@ class SlicerContextMixin:
         if flags.get("history"):
             chat = self._active_chat()
             if chat is not None:
+                summary = str(chat.get("summary", "") or "").strip()
+                if summary:
+                    chunks.append(self._t("compact.summary_header") + summary)
                 for msg in self._history_messages(chat, MAX_CONTEXT_CHARS):
                     text = self._message_text(msg)
                     if text:

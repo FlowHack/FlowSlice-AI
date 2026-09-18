@@ -82,3 +82,18 @@ NO_VISION_HINT = (
 
 # Разделы пресетов, для которых режим выгрузки (changed/all) выбирается отдельно.
 PRESET_CONTEXT_KEYS = ("filament", "printer", "print")
+
+# Сжатие истории чата в сводку.
+COMPACT_KEEP_MESSAGES = 4  # последних сообщений всегда остаются без сжатия
+COMPACT_MIN_NEW_MESSAGES = 6  # минимум новых сообщений для автосжатия
+COMPACT_MAX_SOURCE_CHARS = 60_000  # предел выжимки, отправляемой на сжатие
+COMPACT_MAX_TOKENS = 1024  # предел длины самой сводки
+COMPACT_SYSTEM_PROMPT = (
+    "You compress a technical conversation between a user and a 3D printing "
+    "assistant. Produce a concise summary that preserves: the user's goal, the "
+    "printer/filament/print settings mentioned, decisions made, unresolved "
+    "problems and any explicit constraints or preferences. Drop greetings, "
+    "repetitions and raw file dumps. Write in the same language as the "
+    "conversation. Return only the summary text, without headings or lists "
+    "unless the content requires them."
+)

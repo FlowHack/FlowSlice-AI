@@ -132,6 +132,13 @@
       "settings.temperature": "Temperature:",
       "settings.max_tokens": "Max tokens",
       "settings.reasoning": "Extended reasoning",
+      "settings.compact_title": "Context compaction",
+      "settings.compact_enabled": "Automatically compress history",
+      "settings.help_compact_enabled": "Replace old messages with a short summary when the context approaches the limit",
+      "settings.compact_threshold": "Compaction threshold, %",
+      "settings.help_compact_threshold": "Share of the context window at which the history is compressed",
+      "settings.context_window": "Context window, tokens",
+      "settings.help_context_window": "Context window size of the active model; used to estimate the compaction threshold",
       "settings.global_badge": "global",
       "settings.reset_to_global": "Reset to global",
       "settings.add_model": "+ Add model",
@@ -177,6 +184,7 @@
       "settings.price_manual": "Price set manually",
       "settings.price_hint": "Leave empty if unknown. Used to estimate the cost of replies.",
       "msg.usage_title": "Estimated tokens and cost of this reply, USD",
+      "compact.indicator": "Earlier messages are compressed into a summary ({n})",
       "settings.help_notes": "Additional info the agent takes into account when answering",
       "settings.help_language": "Plugin UI language",
       "settings.help_preset_context": "What goes into the slicer context: only changed preset parameters or all of them",
@@ -333,6 +341,13 @@
       "settings.temperature": "Температура:",
       "settings.max_tokens": "Максимум токенов",
       "settings.reasoning": "Расширенное мышление",
+      "settings.compact_title": "Сжатие контекста",
+      "settings.compact_enabled": "Автоматически сжимать историю",
+      "settings.help_compact_enabled": "Заменять старые сообщения короткой сводкой, когда контекст приближается к пределу",
+      "settings.compact_threshold": "Порог сжатия, %",
+      "settings.help_compact_threshold": "Доля окна контекста, при которой история сжимается",
+      "settings.context_window": "Окно контекста, токенов",
+      "settings.help_context_window": "Размер окна контекста активной модели; используется для оценки порога сжатия",
       "settings.global_badge": "общий",
       "settings.reset_to_global": "Сбросить к общему",
       "settings.add_model": "+ Добавить модель",
@@ -378,6 +393,7 @@
       "settings.price_manual": "Цена задана вручную",
       "settings.price_hint": "Оставьте пустым, если цена неизвестна. По ней оценивается стоимость ответов.",
       "msg.usage_title": "Оценка токенов и стоимости ответа, USD",
+      "compact.indicator": "Ранние сообщения сжаты в сводку ({n})",
       "settings.help_notes": "Дополнительная информация, которую агент учитывает при ответах",
       "settings.help_language": "Язык интерфейса плагина",
       "settings.help_preset_context": "Что попадает в контекст слайсера: только изменённые параметры пресетов или все",
@@ -534,6 +550,13 @@
       "settings.temperature": "Temperatura:",
       "settings.max_tokens": "Maksimum tokena",
       "settings.reasoning": "Produženo razmišljanje",
+      "settings.compact_title": "Sažimanje konteksta",
+      "settings.compact_enabled": "Automatski sažmi istoriju",
+      "settings.help_compact_enabled": "Zameni stare poruke kratkim sažetkom kada se kontekst približi limitu",
+      "settings.compact_threshold": "Prag sažimanja, %",
+      "settings.help_compact_threshold": "Deo prozora konteksta pri kojem se istorija sažima",
+      "settings.context_window": "Prozor konteksta, tokena",
+      "settings.help_context_window": "Veličina prozora konteksta aktivnog modela; koristi se za procenu praga sažimanja",
       "settings.global_badge": "globalno",
       "settings.reset_to_global": "Resetuj na globalno",
       "settings.add_model": "+ Dodaj model",
@@ -579,6 +602,7 @@
       "settings.price_manual": "Cena ručno podešena",
       "settings.price_hint": "Ostavite prazno ako cena nije poznata. Koristi se za procenu cene odgovora.",
       "msg.usage_title": "Procena tokena i cene odgovora, USD",
+      "compact.indicator": "Ranije poruke su sažete u sažetak ({n})",
       "settings.help_notes": "Dodatne informacije koje agent uzima u obzir pri odgovaranju",
       "settings.help_language": "Jezik interfejsa dodatka",
       "settings.help_preset_context": "Šta ulazi u kontekst slajsera: samo izmenjeni parametri preseta ili svi",
@@ -1713,6 +1737,9 @@
       return;
     }
     var msgs = chat.msgs;
+    if (chat.summary) {
+      container.appendChild(el("div", "compact-note", t("compact.indicator", { n: String(chat.summary_count || 0) })));
+    }
     for (var i = 0; i < msgs.length; i++) {
       container.appendChild(renderMessage(msgs[i], i, msgs));
     }
@@ -3217,6 +3244,9 @@
     byId("setGlobalTemperatureValue").textContent = byId("setGlobalTemperature").value;
     byId("setGlobalMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 4096);
     byId("setGlobalReasoning").checked = !!s.reasoning;
+    byId("setCompactEnabled").checked = s.compact_enabled !== false;
+    byId("setCompactThreshold").value = String(s.compact_threshold !== undefined ? s.compact_threshold : 80);
+    byId("setContextWindow").value = String(s.context_window !== undefined ? s.context_window : 128000);
     updateThemeSwitch();
     setFontStyleDD.setSelected(s.font_style || "system");
     setLanguageDD.setSelected(s.language || "en");
@@ -3319,6 +3349,9 @@
       temperature: parseFloat(byId("setGlobalTemperature").value),
       max_tokens: parseInt(byId("setGlobalMaxTokens").value, 10) || 4096,
       reasoning: byId("setGlobalReasoning").checked,
+      compact_enabled: byId("setCompactEnabled").checked,
+      compact_threshold: parseInt(byId("setCompactThreshold").value, 10) || 80,
+      context_window: parseInt(byId("setContextWindow").value, 10) || 128000,
       theme: themeBtn ? themeBtn.getAttribute("data-theme") : "auto",
       font_size: parseInt(byId("setFontSize").value, 10) || 14,
       font_style: setFontStyleDD.getSelected(),

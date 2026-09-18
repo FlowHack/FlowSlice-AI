@@ -386,6 +386,16 @@ select option {
 .msg-meta {
   opacity: 0.85;
 }
+.compact-note {
+  align-self: center;
+  margin: 6px 0;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--orca-muted);
+  background: var(--orca-input);
+  border: 1px solid var(--orca-border);
+}
 .msg-image {
   max-width: 100%;
   max-height: 240px;

@@ -18,6 +18,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "temperature": 0.7,
     "max_tokens": 4096,
     "reasoning": False,
+    "compact_enabled": True,
+    "compact_threshold": 80,
+    "context_window": 128000,
     "usage": {},
 }
 
@@ -30,6 +33,9 @@ SETTINGS_KEYS: tuple[str, ...] = (
     "temperature",
     "max_tokens",
     "reasoning",
+    "compact_enabled",
+    "compact_threshold",
+    "context_window",
     "theme",
     "font_size",
     "font_style",
@@ -39,6 +45,7 @@ SETTINGS_KEYS: tuple[str, ...] = (
 # Служебные команды чата: единый источник для /help и state.
 COMMANDS: list[tuple[str, str]] = [
     ("/context", "полный дамп контекста слайсера"),
+    ("/compact", "сжать историю чата в короткую сводку"),
     ("/clear", "очистить историю чата"),
     ("/model", "отчёт о модели на столе"),
     ("/printer", "сводка профилей печати"),
@@ -51,7 +58,15 @@ COMMANDS: list[tuple[str, str]] = [
 # Вкладки «Модели» и «Персональные модели» своей кнопки сброса не имеют —
 # для них на вкладке «Общие значения» есть отдельные кнопки сброса коллекций.
 RESET_SCOPES: dict[str, tuple[str, ...]] = {
-    "general": ("notes", "temperature", "max_tokens", "reasoning"),
+    "general": (
+        "notes",
+        "temperature",
+        "max_tokens",
+        "reasoning",
+        "compact_enabled",
+        "compact_threshold",
+        "context_window",
+    ),
     "appearance": ("theme", "font_size", "font_style", "language"),
 }
 

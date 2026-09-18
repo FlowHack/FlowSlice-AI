@@ -361,6 +361,22 @@
           </div>
         </div>
         <hr class="settings-divider">
+        <div class="settings-subtitle" data-i18n="settings.compact_title">Сжатие контекста</div>
+        <div class="field field-gap">
+          <div class="check-row">
+            <input type="checkbox" id="setCompactEnabled">
+            <label for="setCompactEnabled"><span data-i18n="settings.compact_enabled">Автоматически сжимать историю</span> <span class="help-icon" data-i18n-tooltip="settings.help_compact_enabled" data-i18n-title="settings.help_compact_enabled">?</span></label>
+          </div>
+        </div>
+        <div class="field field-inline field-gap">
+          <label for="setCompactThreshold"><span data-i18n="settings.compact_threshold">Порог сжатия, %</span> <span class="help-icon" data-i18n-tooltip="settings.help_compact_threshold" data-i18n-title="settings.help_compact_threshold">?</span></label>
+          <input type="number" id="setCompactThreshold" min="10" max="100" step="1" value="80">
+        </div>
+        <div class="field field-inline field-gap">
+          <label for="setContextWindow"><span data-i18n="settings.context_window">Окно контекста, токенов</span> <span class="help-icon" data-i18n-tooltip="settings.help_context_window" data-i18n-title="settings.help_context_window">?</span></label>
+          <input type="number" id="setContextWindow" min="1000" max="10000000" step="1000" value="128000">
+        </div>
+        <hr class="settings-divider">
         <div class="settings-subtitle" data-i18n="settings.data_title">Сброс данных</div>
         <div class="model-actions">
           <button type="button" id="resetModelsBtn" class="ghost-btn" data-i18n="settings.reset_models">Сброс моделей</button>

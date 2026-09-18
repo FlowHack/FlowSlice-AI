@@ -50,6 +50,7 @@ class CoreMixin:
         self._next_id = 1
         self._msg_counter = 1
         self._gen = False
+        self._compacting = False
         self._ctx_tokens = 0
         self._post_sink: Any = None
         self._pending_attachments: list[dict[str, Any]] = []
@@ -71,6 +72,10 @@ class CoreMixin:
         for name, value in params.items():
             text = text.replace("{" + name + "}", str(value))
         return text
+
+    def _toast(self: "_ChatEngine", text: str, kind: str = "") -> None:
+        """Отправляет в UI всплывающее уведомление."""
+        self._post({"type": "toast", "text": text, "kind": kind})
 
     def _read_raw_config(self: "_ChatEngine") -> dict:
         """Читает и разбирает сырую JSON-конфигурацию capability."""
@@ -222,6 +227,25 @@ class CoreMixin:
         if max_tokens < 1 or max_tokens > 100000:
             max_tokens = 4096
         merged["max_tokens"] = max_tokens
+        # Настройки сжатия контекста: вкл/выкл, порог в процентах, окно модели.
+        compact_enabled = merged.get("compact_enabled", True)
+        if isinstance(compact_enabled, str):
+            compact_enabled = compact_enabled.strip().lower() in ("1", "true", "yes", "on")
+        merged["compact_enabled"] = bool(compact_enabled)
+        try:
+            compact_threshold = int(merged.get("compact_threshold", 80))
+        except (TypeError, ValueError):
+            compact_threshold = 80
+        if compact_threshold < 10 or compact_threshold > 100:
+            compact_threshold = 80
+        merged["compact_threshold"] = compact_threshold
+        try:
+            context_window = int(merged.get("context_window", 128000))
+        except (TypeError, ValueError):
+            context_window = 128000
+        if context_window < 1000 or context_window > 10_000_000:
+            context_window = 128000
+        merged["context_window"] = context_window
         # Расширенное мышление: bool.
         reasoning = merged.get("reasoning", False)
         if isinstance(reasoning, str):

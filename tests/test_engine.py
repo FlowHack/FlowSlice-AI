@@ -5,6 +5,7 @@ import time
 import types
 
 from flowslice_ai.constants import (
+    COMPACT_KEEP_MESSAGES,
     MAX_ATTACHMENTS,
     MAX_FILE_CHARS,
     MAX_PERSISTED_FILE_CHARS,
@@ -714,3 +715,73 @@ def test_update_model_from_api_marks_provider_price(engine) -> None:
     model = engine._config["providers"]["deepseek"]["models"]["deepseek-new"]
     assert model["price_source"] == "provider"
     assert model["price_in"] == 0.5
+
+
+def _compact_chat(count: int) -> dict:
+    """Создаёт чат с чередованием реплик для проверки сжатия."""
+    msgs = []
+    for i in range(count):
+        role = "user" if i % 2 == 0 else "assistant"
+        msgs.append({"role": role, "text": f"msg-{i}"})
+    return {"msgs": msgs, "context_flags": {"history": True}}
+
+
+def test_history_messages_skips_compacted(engine) -> None:
+    """Сжатые сообщения не попадают в контекст модели."""
+    chat = _compact_chat(5)
+    chat["summary_count"] = 2
+    history = engine._history_messages(chat, 100_000)
+    texts = [item["content"] for item in history]
+    assert "msg-0" not in texts
+    assert "msg-1" not in texts
+    assert "msg-2" in texts
+
+
+def test_maybe_compact_saves_summary(engine, monkeypatch) -> None:
+    """Сжатие сохраняет сводку и помечает покрытые сообщения."""
+    chat = _compact_chat(10)
+    monkeypatch.setattr(
+        engine, "_call_api_blocking", lambda messages, max_tokens=2048: "SUMMARY"
+    )
+    assert engine._maybe_compact(chat) is True
+    assert chat["summary"] == "SUMMARY"
+    assert chat["summary_count"] == 10 - COMPACT_KEEP_MESSAGES
+    assert len(chat["msgs"]) == 10
+
+
+def test_maybe_compact_without_new_messages(engine, monkeypatch) -> None:
+    """Повторное сжатие без новых сообщений ничего не делает."""
+    chat = _compact_chat(10)
+    chat["summary_count"] = 10 - COMPACT_KEEP_MESSAGES
+    monkeypatch.setattr(
+        engine, "_call_api_blocking", lambda messages, max_tokens=2048: "SUMMARY"
+    )
+    assert engine._maybe_compact(chat) is False
+
+
+def test_maybe_compact_failure_keeps_state(engine, monkeypatch) -> None:
+    """Ошибка сжатия не портит чат и не создаёт пустую сводку."""
+
+    def _boom(messages, max_tokens=2048):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(engine, "_call_api_blocking", _boom)
+    chat = _compact_chat(10)
+    assert engine._maybe_compact(chat) is False
+    assert "summary" not in chat
+    assert "summary_count" not in chat
+
+
+def test_build_messages_includes_summary(engine, monkeypatch) -> None:
+    """Сводка добавляется в системный промпт запроса."""
+    monkeypatch.setattr(engine, "_collect_context", lambda flags, modes=None: {})
+    monkeypatch.setattr(engine, "_build_system_prompt", lambda ctx, **kwargs: "sys")
+    monkeypatch.setattr(engine, "_model_supports_images", lambda: False)
+    chat = {
+        "msgs": [{"role": "user", "text": "hi"}],
+        "summary": "Old context summary",
+        "summary_count": 0,
+        "context_flags": {},
+    }
+    messages = engine._build_messages(chat, "hi")
+    assert "Old context summary" in messages[0]["content"]

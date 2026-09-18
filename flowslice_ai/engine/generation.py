@@ -109,6 +109,14 @@ class GenerationMixin:
         # Полный state с пустым ответом ассистента: UI привязывает стрим к нему.
         self._send_state()
         try:
+            if chat.get("context_flags", {}).get("history") and self._should_compact(chat):
+                try:
+                    if self._maybe_compact(chat):
+                        self._send_state()
+                except Exception as exc:  # pylint: disable=broad-except
+                    _LOGGER.warning(
+                        "Автосжатие истории чата не удалось: %s", exc, exc_info=True
+                    )
             messages = self._build_messages(chat, user_text)
             in_tokens = self._estimate_messages_tokens(messages)
             full_text, reasoning = self._call_api(messages, chat_id)
@@ -279,6 +287,10 @@ class GenerationMixin:
             # всякий случай добавляем подсказку — вдруг модель его не видит.
             no_vision = True
         system = self._build_system_prompt(ctx, has_images=bool(images), no_vision=no_vision)
+        summary = str(chat.get("summary", "") or "").strip()
+        if summary:
+            header = self._t("compact.summary_header")
+            system += f"\n\n{header}\n{summary}"
         if len(system) > MAX_CONTEXT_CHARS:
             system = system[:MAX_CONTEXT_CHARS]
         messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
@@ -357,11 +369,19 @@ class GenerationMixin:
         сообщение пользователя — для полного дампа истории.
         """
         msgs = chat.get("msgs", [])
-        history = msgs
+        start = int(chat.get("summary_count", 0) or 0)
+        if start < 0 or start > len(msgs):
+            start = 0
+        history = msgs[start:]
         if not include_last_user:
             last_user = self._last_user_msg(chat)
             if last_user is not None:
-                history = msgs[: msgs.index(last_user)]
+                try:
+                    cut = msgs.index(last_user)
+                except ValueError:
+                    cut = None
+                if cut is not None and cut > start:
+                    history = msgs[start:cut]
         result: list[dict[str, Any]] = []
         total = 0
         for msg in reversed(history):
