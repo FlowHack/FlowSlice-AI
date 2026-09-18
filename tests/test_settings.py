@@ -60,11 +60,13 @@ def test_add_provider_with_first_model(engine) -> None:
     assert engine._config["active_model"] == "my-model"
 
 
-def test_reset_models_keeps_api_key(engine) -> None:
-    """Сброс моделей сохраняет введённый API-ключ встроенного провайдера."""
-    engine._config["providers"]["deepseek"]["api_key"] = "sk-keep"
+def test_reset_models_clears_api_key(engine) -> None:
+    """Сброс моделей очищает и введённый API-ключ встроенного провайдера."""
+    engine._config["providers"]["deepseek"]["api_key"] = "sk-clear"
     engine._handle_reset_models()
-    assert engine._config["providers"]["deepseek"]["api_key"] == "sk-keep"
+    assert engine._config["providers"]["deepseek"]["api_key"] == ""
+    deepseek = next(p for p in engine._providers_snapshot() if p["id"] == "deepseek")
+    assert deepseek["has_key"] is False
 
 
 def test_reset_custom_models_removes_custom(engine) -> None:

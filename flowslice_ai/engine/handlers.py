@@ -351,18 +351,12 @@ class HandlersMixin:
     def _handle_reset_models(self: "_ChatEngine") -> None:
         """Сбрасывает встроенные провайдеры и их модели к заводским значениям.
 
-        Сохраняет введённые API-ключи встроенных провайдеров.
+        Вместе с моделями очищаются и сохранённые API-ключи: после сброса
+        список моделей чата пуст, пока пользователь не укажет токен заново.
         """
         providers = self._config.setdefault("providers", {})
         for pid, pdef in DEFAULT_PROVIDERS.items():
-            api_key = ""
-            existing = providers.get(pid)
-            if isinstance(existing, dict):
-                api_key = str(existing.get("api_key", ""))
-            fresh = json.loads(json.dumps(pdef))
-            if api_key:
-                fresh["api_key"] = api_key
-            providers[pid] = fresh
+            providers[pid] = json.loads(json.dumps(pdef))
         self._config = self._normalize_config(self._config)
         self._persist_config()
         self._send_state()
