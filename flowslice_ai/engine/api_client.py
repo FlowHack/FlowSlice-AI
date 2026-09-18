@@ -627,13 +627,11 @@ class ApiClientMixin:
                 resp.read()
             self._post({"type": "key_test", "ok": True, "text": self._t("key.valid")})
         except urllib.error.HTTPError as exc:
-            self._post(
-                {
-                    "type": "key_test",
-                    "ok": False,
-                    "text": self._t("key.api_error", code=str(exc.code)),
-                }
-            )
+            text = self._t("key.api_error", code=str(exc.code))
+            detail = self._http_error_detail(exc)
+            if detail:
+                text = text + " " + detail
+            self._post({"type": "key_test", "ok": False, "text": text})
         except OSError as exc:
             self._post(
                 {
@@ -642,3 +640,27 @@ class ApiClientMixin:
                     "text": self._t("key.network_error", err=str(exc)),
                 }
             )
+
+    @staticmethod
+    def _http_error_detail(exc: urllib.error.HTTPError) -> str:
+        """Извлекает текст ошибки из тела HTTP-ответа для показа в UI."""
+        try:
+            raw = exc.read().decode("utf-8", "replace")
+        except OSError:
+            return ""
+        raw = raw.strip()[:300]
+        if not raw:
+            return ""
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return raw
+        if isinstance(data, dict):
+            error = data.get("error")
+            if isinstance(error, dict) and error.get("message"):
+                return str(error["message"])[:300]
+            if isinstance(error, str) and error:
+                return error[:300]
+            if data.get("detail"):
+                return str(data["detail"])[:300]
+        return raw

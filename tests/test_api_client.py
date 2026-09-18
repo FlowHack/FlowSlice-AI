@@ -333,3 +333,19 @@ def test_vision_requires_text_output(engine) -> None:
     }
     result = engine._parse_vision_payload(payload)
     assert result == {"hybrid": True, "image-only": False, "image-in-only": False}
+
+
+def test_http_error_detail_extracts_message(engine) -> None:
+    """Текст ошибки HTTP извлекается из тела ответа для показа в UI."""
+    import io
+    import urllib.error
+
+    def make(body: bytes) -> urllib.error.HTTPError:
+        return urllib.error.HTTPError("u", 403, "Forbidden", {}, io.BytesIO(body))
+
+    assert engine._http_error_detail(
+        make(b'{"error":{"message":"Access denied by security policy."}}')
+    ) == "Access denied by security policy."
+    assert engine._http_error_detail(make(b'{"error":"nope"}')) == "nope"
+    assert engine._http_error_detail(make(b"plain text")) == "plain text"
+    assert engine._http_error_detail(make(b"")) == ""
