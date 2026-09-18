@@ -35,6 +35,7 @@ class CoreMixin:
         """Сохраняет ссылку на capability, загружает конфигурацию и историю чатов."""
         self._cap = cap
         self._persist_lock = threading.Lock()
+        self._gen_lock = threading.Lock()
         self._config = self._normalize_config(self._read_raw_config())
         self._chats: list[dict[str, Any]] = []
         self._active = 0
@@ -61,7 +62,15 @@ class CoreMixin:
 
     def _read_raw_config(self: "_ChatEngine") -> dict:
         """Читает и разбирает сырую JSON-конфигурацию capability."""
-        raw = self._cap.get_config()
+        try:
+            raw = self._cap.get_config()
+        except Exception as exc:
+            _LOGGER.error(
+                "Хост не вернул конфигурацию, используются значения по умолчанию: %s",
+                exc,
+                exc_info=True,
+            )
+            return {}
         try:
             data = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
@@ -297,20 +306,34 @@ class CoreMixin:
         """Нормализует и сохраняет конфигурацию через capability."""
         self._config = self._normalize_config(config)
         with self._persist_lock:
-            try:
-                return bool(self._cap.save_config(json.dumps(self._config)))
-            except (TypeError, ValueError) as exc:
-                _LOGGER.error("Не удалось сериализовать конфигурацию: %s", exc)
-                return False
+            return self._persist_config_locked()
+
+    def _persist_config(self: "_ChatEngine") -> bool:
+        """Сохраняет текущую конфигурацию через capability.
+
+        Единая точка записи: любые ошибки хоста (включая запрет аудита)
+        логируются и не приводят к падению обработчика.
+        """
+        with self._persist_lock:
+            return self._persist_config_locked()
+
+    def _persist_config_locked(self: "_ChatEngine") -> bool:
+        """Сохраняет конфигурацию; вызывается при уже взятом _persist_lock."""
+        try:
+            raw = json.dumps(self._config)
+        except (TypeError, ValueError) as exc:
+            _LOGGER.error("Не удалось сериализовать конфигурацию: %s", exc, exc_info=True)
+            return False
+        try:
+            return bool(self._cap.save_config(raw))
+        except Exception as exc:
+            _LOGGER.error("Не удалось сохранить конфигурацию: %s", exc, exc_info=True)
+            return False
 
     def reset_config(self: "_ChatEngine") -> dict:
         """Сбрасывает конфигурацию к значениям по умолчанию."""
         self._config = self._normalize_config(DEFAULT_CONFIG.copy())
-        with self._persist_lock:
-            try:
-                self._cap.save_config(json.dumps(self._config))
-            except (TypeError, ValueError) as exc:
-                _LOGGER.error("Не удалось сохранить конфигурацию по умолчанию: %s", exc)
+        self._persist_config()
         return dict(self._config)
 
     def set_post_sink(self: "_ChatEngine", sink: Any) -> None:
@@ -345,6 +368,11 @@ class CoreMixin:
         self._msg_counter = self._as_int(data.get("next_msg_id"), 1)
         if not self._chats:
             self._create_chat()
+        # Пересчитываем токены активного чата: после перезапуска счётчик сбрасывался.
+        active_chat = self._active_chat()
+        self._ctx_tokens = self._estimate_context_tokens(
+            active_chat.get("context_flags", {}), active_chat.get("context_modes", {})
+        )
 
     def _flatten_chats(self: "_ChatEngine") -> list[dict[str, Any]]:
         """Возвращает копию чатов без тяжёлых вложений для записи на диск.
@@ -469,8 +497,13 @@ class CoreMixin:
             d_provider, d_model = default_model.split("::", 1)
             providers = self._config.get("providers", {})
             if d_provider in providers and d_model in providers[d_provider].get("models", {}):
-                self._config["active_provider"] = d_provider
-                self._config["active_model"] = d_model
+                if (
+                    self._config.get("active_provider") != d_provider
+                    or self._config.get("active_model") != d_model
+                ):
+                    self._config["active_provider"] = d_provider
+                    self._config["active_model"] = d_model
+                    self._persist_config()
         self._save_chats()
         return chat
 
@@ -537,16 +570,18 @@ class CoreMixin:
         self._send_state()
 
     def _settings_snapshot(self: "_ChatEngine") -> dict[str, Any]:
-        """Возвращает настройки для UI: общие ключи + ключ активного провайдера.
+        """Возвращает настройки для UI без секретов.
 
-        Ключи остальных провайдеров в UI не отправляются — только активного,
-        чтобы форма настроек могла предзаполнить поле API-ключа.
+        API-ключ не покидает движок: в UI передаётся только признак его
+        наличия, чтобы форма могла показать placeholder «ключ задан».
         """
         settings = {key: self._config[key] for key in SETTINGS_KEYS}
         provider_id = str(self._config.get("active_provider", "deepseek"))
         providers = self._config.get("providers", {})
         prov = providers.get(provider_id)
-        settings["api_key"] = str(prov.get("api_key", "")) if isinstance(prov, dict) else ""
+        settings["has_api_key"] = bool(
+            isinstance(prov, dict) and str(prov.get("api_key", "")).strip()
+        )
         return settings
 
     def _send_state(self: "_ChatEngine") -> None:
@@ -571,10 +606,11 @@ class CoreMixin:
         )
 
     def _providers_snapshot(self: "_ChatEngine") -> list[dict[str, Any]]:
-        """Возвращает список провайдеров для UI.
+        """Возвращает список провайдеров для UI без секретов.
 
-        Ключи и URL отправляются в UI: это локальный webview, а не внешний
-        канал, поэтому секреты доступны форме настроек для предзаполнения.
+        API-ключи (провайдеров и моделей) в webview не передаются: вместо них
+        отдаётся булев признак ``has_key``. Так форма знает, что ключ задан,
+        но сам секрет остаётся только в памяти движка и конфиге Orca.
         """
         result: list[dict[str, Any]] = []
         providers = self._config.get("providers", {})
@@ -592,17 +628,17 @@ class CoreMixin:
                         "max_tokens": mdef.get("max_tokens"),
                         "reasoning": mdef.get("reasoning"),
                         "scheme": str(mdef.get("scheme") or pdef.get("scheme") or "openai"),
+                        "has_key": bool(str(mdef.get("api_key", "")).strip()),
                     }
                     if not mdef.get("builtin", False):
                         entry["base_url"] = str(mdef.get("base_url", ""))
-                        entry["api_key"] = str(mdef.get("api_key", ""))
                     models.append(entry)
             prov_entry: dict[str, Any] = {
                 "id": pid,
                 "name": str(pdef.get("name", pid)),
                 "builtin": bool(pdef.get("builtin", False)),
                 "scheme": str(pdef.get("scheme", "openai")),
-                "api_key": str(pdef.get("api_key", "")),
+                "has_key": bool(str(pdef.get("api_key", "")).strip()),
                 "models": models,
             }
             if not pdef.get("builtin", False):

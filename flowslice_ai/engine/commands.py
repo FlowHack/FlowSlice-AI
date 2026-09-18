@@ -42,7 +42,7 @@ class CommandsMixin:
         elif cmd == "/help":
             self._cmd_help()
         elif cmd == "/reset":
-            self._cmd_reset()
+            self._cmd_reset(stripped)
         else:
             return False
         return True
@@ -166,12 +166,24 @@ class CommandsMixin:
         self._save_chats()
         self._append_system(self._t("cmd.clear.done"))
 
-    def _cmd_reset(self: "_ChatEngine") -> None:
-        """Сбрасывает настройки с двухшаговым подтверждением."""
-        if not self._confirm_command("/reset"):
+    def _cmd_reset(self: "_ChatEngine", text: str) -> None:
+        """Сбрасывает настройки либо историю чатов с двухшаговым подтверждением."""
+        parts = text.split()
+        clear_chats = len(parts) > 1 and parts[1].lower() == "chats"
+        target = "/reset chats" if clear_chats else "/reset"
+        if not self._confirm_command(target):
+            return
+        if clear_chats:
+            self._chats = []
+            self._active = 0
+            self._create_chat()
+            self._save_chats()
+            self._send_state()
+            self._append_system(self._t("cmd.reset_chats.done"))
             return
         self._config = self._normalize_config(DEFAULT_CONFIG.copy())
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
+        self._send_state()
         self._append_system(self._t("cmd.reset.done"))
 
     # ===== Статистика использования =====
@@ -183,13 +195,14 @@ class CommandsMixin:
         day = usage.setdefault(today, {"msgs": 0, "tokens": 0})
         day["msgs"] += 1
         day["tokens"] += (len(user_text) + len(answer_text)) // 4
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
 
     def _usage_snapshot(self: "_ChatEngine", period: str) -> dict[str, Any]:
         """Возвращает сводку использования за выбранный период."""
         usage = self._config.get("usage", {})
         today = time.strftime("%Y-%m-%d")
-        if period == "day":
+        # UI исторически присылает "today", старый код ждал "day" — принимаем оба.
+        if period in ("day", "today"):
             keys = [today]
         elif period == "week":
             keys = [

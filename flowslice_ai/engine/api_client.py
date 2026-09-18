@@ -120,8 +120,10 @@ class ApiClientMixin:
         """Возвращает идентификатор активной модели."""
         return str(self._config.get("active_model", ""))
 
-    def _call_api(self: "_ChatEngine", messages: list[dict[str, Any]], chat_id: int) -> str:
-        """Выполняет запрос к API провайдера и возвращает полный текст ответа."""
+    def _call_api(
+        self: "_ChatEngine", messages: list[dict[str, Any]], chat_id: int
+    ) -> tuple[str, str]:
+        """Выполняет запрос к API и возвращает (текст ответа, размышления)."""
         self._sync_config()
         provider_id, base_url, api_key, model, scheme = self._active_api_credentials()
         if not api_key:
@@ -155,9 +157,11 @@ class ApiClientMixin:
             "model": model,
             "messages": messages,
             "stream": True,
-            "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        # Reasoning-модели (GPT-5/o-серия) не принимают temperature.
+        if not reasoning:
+            payload["temperature"] = temperature
         if reasoning:
             if provider_id == "openrouter":
                 payload["reasoning"] = {"effort": "high"}
@@ -196,8 +200,11 @@ class ApiClientMixin:
         temperature: float,
         max_tokens: int,
         reasoning: bool,
-    ) -> str:
-        """Выполняет запрос к нативному Messages API Anthropic."""
+    ) -> tuple[str, str]:
+        """Выполняет запрос к нативному Messages API Anthropic.
+
+        Возвращает пару (текст ответа, размышления).
+        """
         system = ""
         body_messages = messages
         if messages and messages[0].get("role") == "system":
@@ -209,12 +216,13 @@ class ApiClientMixin:
             "max_tokens": max_tokens,
             "system": system,
             "messages": body_messages,
-            "temperature": temperature,
             "stream": True,
         }
         if reasoning:
             budget = min(4096, max(1024, max_tokens // 2))
             payload["thinking"] = {"type": "enabled", "budget_tokens": budget}
+        else:
+            payload["temperature"] = temperature
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "OrcaSlicer/2.5.0",
@@ -244,10 +252,16 @@ class ApiClientMixin:
         except OSError as exc:
             raise NetworkError(self._t("err.connection", err=str(exc))) from exc
 
-    def _read_sse(self: "_ChatEngine", resp: Any, chat_id: int) -> str:
-        """Читает SSE-поток ответа и отправляет инкрементальные куски в UI."""
+    def _read_sse(self: "_ChatEngine", resp: Any, chat_id: int) -> tuple[str, str]:
+        """Читает SSE-поток ответа и отправляет инкрементальные куски в UI.
+
+        Возвращает пару (текст ответа, накопленные размышления), чтобы движок
+        мог сохранить reasoning_content отдельно от ответа.
+        """
         acc = ""
+        thought = ""
         sent = ""
+        sent_thought = ""
         last_post = 0.0
         for raw in resp:
             if not self._gen:
@@ -260,25 +274,43 @@ class ApiClientMixin:
                 break
             try:
                 chunk = json.loads(data)
-                delta = chunk["choices"][0]["delta"].get("content", "")
-            except (ValueError, KeyError, IndexError, TypeError):
+                delta_obj = chunk["choices"][0].get("delta") or {}
+                delta = delta_obj.get("content") or ""
+                reasoning_delta = delta_obj.get("reasoning_content") or ""
+            except (ValueError, KeyError, IndexError, TypeError, AttributeError):
                 continue
-            if not delta:
-                continue
-            acc += delta
             now = time.monotonic()
-            if now - last_post >= STREAM_THROTTLE:
-                self._post({"type": "delta", "chat_id": chat_id, "text": delta})
-                last_post = now
-                sent += delta
+            if reasoning_delta:
+                thought += reasoning_delta
+                if now - last_post >= STREAM_THROTTLE:
+                    self._post(
+                        {"type": "thought_delta", "chat_id": chat_id, "text": reasoning_delta}
+                    )
+                    last_post = now
+                    sent_thought += reasoning_delta
+            if delta:
+                acc += delta
+                if now - last_post >= STREAM_THROTTLE:
+                    self._post({"type": "delta", "chat_id": chat_id, "text": delta})
+                    last_post = now
+                    sent += delta
+        if thought and sent_thought != thought:
+            self._post(
+                {"type": "thought_delta", "chat_id": chat_id, "text": thought[len(sent_thought) :]}
+            )
         if acc and sent != acc:
             self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
-        return acc
+        return acc, thought
 
-    def _read_sse_anthropic(self: "_ChatEngine", resp: Any, chat_id: int) -> str:
-        """Читает SSE-поток Messages API Anthropic и стримит текст в UI."""
+    def _read_sse_anthropic(self: "_ChatEngine", resp: Any, chat_id: int) -> tuple[str, str]:
+        """Читает SSE-поток Messages API Anthropic и стримит текст в UI.
+
+        Возвращает пару (текст ответа, размышления) с учётом thinking_delta.
+        """
         acc = ""
+        thought = ""
         sent = ""
+        sent_thought = ""
         last_post = 0.0
         for raw in resp:
             if not self._gen:
@@ -295,19 +327,37 @@ class ApiClientMixin:
                 continue
             if event.get("type") != "content_block_delta":
                 continue
-            delta = event.get("delta", {})
-            text = delta.get("text", "")
+            delta = event.get("delta") or {}
+            if delta.get("type") == "thinking_delta":
+                text = delta.get("thinking") or ""
+                is_thought = True
+            else:
+                text = delta.get("text") or ""
+                is_thought = False
             if not text:
                 continue
-            acc += text
             now = time.monotonic()
-            if now - last_post >= STREAM_THROTTLE:
-                self._post({"type": "delta", "chat_id": chat_id, "text": text})
-                last_post = now
-                sent += text
+            if is_thought:
+                thought += text
+                if now - last_post >= STREAM_THROTTLE:
+                    self._post(
+                        {"type": "thought_delta", "chat_id": chat_id, "text": text}
+                    )
+                    last_post = now
+                    sent_thought += text
+            else:
+                acc += text
+                if now - last_post >= STREAM_THROTTLE:
+                    self._post({"type": "delta", "chat_id": chat_id, "text": text})
+                    last_post = now
+                    sent += text
+        if thought and sent_thought != thought:
+            self._post(
+                {"type": "thought_delta", "chat_id": chat_id, "text": thought[len(sent_thought) :]}
+            )
         if acc and sent != acc:
             self._post({"type": "delta", "chat_id": chat_id, "text": acc[len(sent) :]})
-        return acc
+        return acc, thought
 
     def _test_key_worker(self: "_ChatEngine", key: str | None = None) -> None:
         """Проверяет API-ключ фоновым запросом к провайдеру.

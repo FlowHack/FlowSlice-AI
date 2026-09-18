@@ -9,7 +9,7 @@
 # pylint: disable=too-many-locals,too-many-public-methods,too-few-public-methods,line-too-long
 
 import json
-import random
+import secrets
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -45,7 +45,7 @@ class ProvidersMixin:
         self._config["active_provider"] = provider
         self._config["active_model"] = model
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post({"type": "toast", "text": self._t("model.selected", name=model), "kind": "ok"})
 
@@ -59,7 +59,7 @@ class ProvidersMixin:
             return
         self._config["default_model"] = provider + "::" + model
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("model.default_set", name=model), "kind": "ok"}
@@ -101,7 +101,7 @@ class ProvidersMixin:
             self._config["active_provider"] = pid
             self._config["active_model"] = model_id
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("provider.added", name=name), "kind": "ok"}
@@ -122,13 +122,16 @@ class ProvidersMixin:
         if message.get("base_url") is not None:
             prov["base_url"] = str(message["base_url"]).strip()
         if message.get("api_key") is not None:
-            prov["api_key"] = str(message["api_key"]).strip()
+            api_key = str(message["api_key"]).strip()
+            # Пустое поле = «не менять ключ» (UI не предзаполняет секрет).
+            if api_key:
+                prov["api_key"] = api_key
         if message.get("scheme") is not None:
             prov["scheme"] = (
                 "anthropic" if str(message["scheme"]) == "anthropic" else "openai"
             )
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post({"type": "toast", "text": self._t("provider.updated"), "kind": "ok"})
 
@@ -155,7 +158,7 @@ class ProvidersMixin:
         if self._config.get("active_provider") == pid:
             self._config["active_provider"] = "deepseek"
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post({"type": "toast", "text": self._t("provider.deleted"), "kind": "ok"})
 
@@ -228,7 +231,7 @@ class ProvidersMixin:
                 )
         models[model_id] = entry
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("model.added", name=model_id), "kind": "ok"}
@@ -300,13 +303,16 @@ class ProvidersMixin:
             if message.get("base_url") is not None:
                 mdef["base_url"] = str(message["base_url"]).strip()
             if message.get("api_key") is not None:
-                mdef["api_key"] = str(message["api_key"]).strip()
+                api_key = str(message["api_key"]).strip()
+                # Пустое поле = «не менять ключ» (UI не предзаполняет секрет).
+                if api_key:
+                    mdef["api_key"] = api_key
             if message.get("scheme") is not None:
                 mdef["scheme"] = (
                     "anthropic" if str(message["scheme"]) == "anthropic" else "openai"
                 )
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("model.updated", name=model_id), "kind": "ok"}
@@ -346,7 +352,7 @@ class ProvidersMixin:
         ):
             self._config["active_model"] = next(iter(models), "")
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post({"type": "toast", "text": self._t("model.deleted"), "kind": "ok"})
 
@@ -365,4 +371,5 @@ class ProvidersMixin:
     @staticmethod
     def _random_suffix() -> str:
         """Случайный короткий суффикс для идентификатора провайдера."""
-        return "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=4))
+        alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+        return "".join(secrets.choice(alphabet) for _ in range(4))

@@ -48,6 +48,7 @@
       "common.hide_key": "Hide key",
       "common.typing": "Typing...",
       "common.attachment": "Attachment",
+      "common.reasoning": "Reasoning",
       "common.remove_attachment": "Remove attachment",
       "common.attach_file": "Attach file",
       "common.stop": "Stop",
@@ -92,6 +93,7 @@
       "settings.tab.appearance": "Appearance",
       "settings.provider": "Provider",
       "settings.api_key": "API key",
+      "settings.key_set": "Key is set — type a new one to replace",
       "settings.test_key": "Test key",
       "settings.base_url": "Base URL",
       "settings.scheme": "API scheme",
@@ -207,6 +209,7 @@
       "common.hide_key": "Скрыть ключ",
       "common.typing": "печатает…",
       "common.attachment": "Вложение",
+      "common.reasoning": "Размышления",
       "common.remove_attachment": "Убрать вложение",
       "common.attach_file": "Прикрепить файл",
       "common.stop": "Остановить генерацию",
@@ -251,6 +254,7 @@
       "settings.tab.appearance": "Оформление",
       "settings.provider": "Провайдер",
       "settings.api_key": "API-ключ",
+      "settings.key_set": "Ключ задан — введите новый, чтобы заменить",
       "settings.test_key": "Проверить ключ",
       "settings.base_url": "Базовый URL API",
       "settings.scheme": "Схема API",
@@ -366,6 +370,7 @@
       "common.hide_key": "Sakrij ključ",
       "common.typing": "kuca…",
       "common.attachment": "Prilog",
+      "common.reasoning": "Razmišljanje",
       "common.remove_attachment": "Ukloni prilog",
       "common.attach_file": "Priloži datoteku",
       "common.stop": "Zaustavi",
@@ -410,6 +415,7 @@
       "settings.tab.appearance": "Izgled",
       "settings.provider": "Provajder",
       "settings.api_key": "API ključ",
+      "settings.key_set": "Ključ je postavljen — unesite novi da zamenite",
       "settings.test_key": "Testiraj ključ",
       "settings.base_url": "Osnovni URL API",
       "settings.scheme": "API šema",
@@ -605,6 +611,8 @@
 
   var streamTextEl = null; // элемент текста текущего стримингового сообщения
   var streamText = ""; // накопленный текст текущего стрима (для перерисовок)
+  var streamThoughtEl = null; // элемент текста размышлений текущего стрима
+  var streamThought = ""; // накопленные размышления текущего стрима
   var pendingEditId = null; // id сообщения, которое редактируется
   var attachments = []; // вложения перед отправкой
   var userScrolledUp = false; // пользователь прокрутил историю вверх
@@ -612,6 +620,16 @@
   /* ===== Хелперы ===== */
   function byId(id) {
     return document.getElementById(id);
+  }
+
+  // Ключ никогда не приходит из бэкенда: показываем только признак «задан».
+  function setKeyField(inputId, hasKey) {
+    var field = byId(inputId);
+    if (!field) {
+      return;
+    }
+    field.value = "";
+    field.placeholder = hasKey ? t("settings.key_set") : t("settings.api_key");
   }
 
   function el(tag, cls, text) {
@@ -768,7 +786,7 @@
     for (var i = 0; i < providers.length; i++) {
       var models = providers[i].models || [];
       // Показываем только провайдеров с непустым API-ключом и хотя бы одной моделью.
-      var hasKey = (providers[i].api_key || "").trim().length > 0;
+      var hasKey = !!providers[i].has_key;
       if (models.length > 0 && hasKey) {
         withModels.push(providers[i]);
       }
@@ -976,6 +994,18 @@
     return btn;
   }
 
+  // Сворачиваемый блок размышлений reasoning-моделей.
+  function buildReasoning(reasoning, open) {
+    var det = document.createElement("details");
+    det.className = "msg-reasoning";
+    if (open) {
+      det.open = true;
+    }
+    det.appendChild(el("summary", null, t("common.reasoning")));
+    det.appendChild(el("div", "msg-reasoning-text", reasoning || ""));
+    return det;
+  }
+
   function renderMessage(msg, index, msgs) {
     var wrap = el("div", "msg-wrap msg-" + msg.role);
     if (msg.error) {
@@ -1009,6 +1039,9 @@
       img.src = images[ii];
       img.alt = t("common.attachment");
       bubble.appendChild(img);
+    }
+    if (msg.reasoning) {
+      bubble.appendChild(buildReasoning(msg.reasoning, false));
     }
     bubble.appendChild(el("div", "msg-text", msg.text || ""));
     bubble.appendChild(el("div", "msg-time", formatTime(msg.ts)));
@@ -1049,6 +1082,7 @@
     var container = byId("messages");
     container.innerHTML = "";
     streamTextEl = null;
+    streamThoughtEl = null;
     var chat = getActiveChat();
     if (!chat || !chat.msgs || chat.msgs.length === 0) {
       container.appendChild(renderWelcome());
@@ -1063,9 +1097,14 @@
       if (msgs[j].role === "assistant") {
         var wraps = container.querySelectorAll(".msg-assistant");
         if (wraps.length > 0) {
-          var textEl = wraps[wraps.length - 1].querySelector(".msg-text");
+          var lastWrap = wraps[wraps.length - 1];
+          var textEl = lastWrap.querySelector(".msg-text");
           if (textEl) {
             streamTextEl = textEl;
+          }
+          var thoughtEl = lastWrap.querySelector(".msg-reasoning-text");
+          if (thoughtEl) {
+            streamThoughtEl = thoughtEl;
           }
         }
         break;
@@ -1074,6 +1113,9 @@
     // Перерисовка во время стрима не должна терять накопленный текст.
     if (state.status === "streaming" && streamTextEl) {
       streamTextEl.textContent = streamText;
+    }
+    if (state.status === "streaming" && streamThoughtEl) {
+      streamThoughtEl.textContent = streamThought;
     }
     scrollToBottom(true);
   }
@@ -1799,7 +1841,7 @@
     }
     byId("ctBaseUrl").value = prov.base_url || "";
     ctSchemeDD.setSelected(prov.scheme || "openai");
-    byId("ctApiKey").value = prov.api_key || "";
+    setKeyField("ctApiKey", !!prov.has_key);
     var models = prov.models || [];
     updateCtModelMode(models, true);
     ctModelDD.setOptions(models.map(function (m) {
@@ -1934,13 +1976,18 @@
     if (!pid) {
       return;
     }
-    post({
+    var providerPayload = {
       type: "update_provider",
       id: pid,
       base_url: byId("ctBaseUrl").value,
-      api_key: byId("ctApiKey").value,
       scheme: ctSchemeDD.getSelected()
-    });
+    };
+    // Пустое поле означает «оставить сохранённый ключ без изменений».
+    var ctKey = byId("ctApiKey").value.trim();
+    if (ctKey) {
+      providerPayload.api_key = ctKey;
+    }
+    post(providerPayload);
     var mid = ctModelDD ? ctModelDD.getSelected() : "";
     if (!mid) {
       return;
@@ -1966,7 +2013,7 @@
       return;
     }
     // Ключ теперь per-provider: берём из выбранного провайдера.
-    byId("setApiKey").value = provider.api_key || "";
+    setKeyField("setApiKey", !!provider.has_key);
     var customWrap = byId("customUrlWrap");
     if (provider.builtin) {
       customWrap.style.display = "none";
@@ -2108,7 +2155,7 @@
       byId("setModelName").value = model.name || "";
       byId("setModelSystemName").value = model.id || "";
       byId("setModelBaseUrl").value = model.base_url || "";
-      byId("setModelApiKey").value = model.api_key || "";
+      setKeyField("setModelApiKey", !!model.has_key);
       setModelSchemeDD.setSelected(model.scheme || prov.scheme || "openai");
     } else {
       customFields.style.display = "none";
@@ -2231,7 +2278,6 @@
     var settings = {
       active_provider: activeProvider,
       active_model: activeModel,
-      api_key: byId("setApiKey").value,
       notes: byId("setNotes").value,
       temperature: parseFloat(byId("setGlobalTemperature").value),
       max_tokens: parseInt(byId("setGlobalMaxTokens").value, 10) || 4096,
@@ -2241,6 +2287,11 @@
       font_style: setFontStyleDD.getSelected(),
       language: setLanguageDD.getSelected()
     };
+    // Пустое поле означает «оставить сохранённый ключ без изменений».
+    var newKey = byId("setApiKey").value.trim();
+    if (newKey) {
+      settings.api_key = newKey;
+    }
     post({ type: "save_settings", settings: settings });
     // Сохраняем черновики всех изменённых моделей.
     var keys = Object.keys(perModelDrafts);
@@ -2285,15 +2336,19 @@
       // Дополнительные поля пользовательской модели.
       var modelId = setModelDD.getSelected();
       if (modelId) {
-        post({
+        var modelPayload = {
           type: "update_model",
           provider: prov.id,
           model_id: modelId,
           name: byId("setModelName").value,
           base_url: byId("setModelBaseUrl").value,
-          api_key: byId("setModelApiKey").value,
           scheme: setModelSchemeDD.getSelected()
-        });
+        };
+        var modelKey = byId("setModelApiKey").value.trim();
+        if (modelKey) {
+          modelPayload.api_key = modelKey;
+        }
+        post(modelPayload);
       }
     }
     saveCustomTab();
@@ -2361,6 +2416,30 @@
     scrollToBottom(false);
   }
 
+  // Стриминг размышлений reasoning-моделей.
+  function handleThoughtDelta(msg) {
+    if (msg.chat_id && msg.chat_id !== state.active) {
+      return;
+    }
+    streamThought += msg.text || "";
+    if (!streamThoughtEl) {
+      var wrap = streamTextEl ? streamTextEl.closest(".msg-wrap") : null;
+      if (!wrap) {
+        return;
+      }
+      var bubble = wrap.querySelector(".msg-bubble");
+      var textNode = wrap.querySelector(".msg-text");
+      if (!bubble || !textNode) {
+        return;
+      }
+      var det = buildReasoning("", true);
+      bubble.insertBefore(det, textNode);
+      streamThoughtEl = det.querySelector(".msg-reasoning-text");
+    }
+    streamThoughtEl.textContent = streamThought;
+    scrollToBottom(false);
+  }
+
   function handleReply(msg) {
     if (msg.chat_id && msg.chat_id !== state.active) {
       return;
@@ -2373,9 +2452,25 @@
         if (!msg.ok) {
           node.classList.add("msg-error");
         }
+        if (msg.reasoning) {
+          if (!streamThoughtEl) {
+            var bubble = node.querySelector(".msg-bubble");
+            var textNode = node.querySelector(".msg-text");
+            if (bubble && textNode) {
+              var det = buildReasoning("", false);
+              bubble.insertBefore(det, textNode);
+              streamThoughtEl = det.querySelector(".msg-reasoning-text");
+            }
+          }
+          if (streamThoughtEl) {
+            streamThoughtEl.textContent = msg.reasoning;
+          }
+        }
       }
       streamTextEl = null;
       streamText = "";
+      streamThoughtEl = null;
+      streamThought = "";
     } else {
       // Ответ без стриминга — добавляем сообщение целиком
       var chat = getActiveChat();
@@ -2387,6 +2482,7 @@
         id: "r" + Date.now(),
         role: "assistant",
         text: msg.text || "",
+        reasoning: msg.reasoning || "",
         ts: Date.now(),
         error: !msg.ok
       });
@@ -2414,6 +2510,8 @@
         state.status = msg.status || "idle";
         if (state.status !== "streaming") {
           streamText = "";
+          streamThought = "";
+          streamThoughtEl = null;
         }
         renderState();
         // Обновляем открытые модалки без сброса несохранённых правок.
@@ -2427,6 +2525,9 @@
       case "delta":
         handleDelta(msg);
         break;
+      case "thought_delta":
+        handleThoughtDelta(msg);
+        break;
       case "reply":
         handleReply(msg);
         break;
@@ -2435,6 +2536,8 @@
         if (state.status !== "streaming") {
           streamText = "";
           streamTextEl = null;
+          streamThought = "";
+          streamThoughtEl = null;
         }
         updateTyping();
         break;

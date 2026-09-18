@@ -1,6 +1,7 @@
 """Тесты вспомогательных методов движка: токены, i18n, slugify, числа, состояние."""
 from __future__ import annotations
 
+import time
 import types
 
 
@@ -327,3 +328,51 @@ def test_build_messages_sends_images_over_openai(engine, monkeypatch) -> None:
     content = messages[-1]["content"]
     assert isinstance(content, list)
     assert content[1]["type"] == "image_url"
+
+
+def test_pending_attachments_multiple(engine) -> None:
+    """Несколько вложений подряд не перезаписывают друг друга."""
+    engine._config["active_provider"] = "openai"
+    engine._config["active_model"] = "gpt-4o"
+    engine._handle_attach_file({"kind": "image", "name": "a.jpg", "data": "data:x"})
+    engine._handle_attach_file({"kind": "image", "name": "b.jpg", "data": "data:y"})
+    assert len(engine._pending_attachments) == 2
+
+
+def test_usage_snapshot_today(engine) -> None:
+    """Период "today" из UI учитывает только сегодняшние записи."""
+    today = time.strftime("%Y-%m-%d")
+    engine._config["usage"] = {
+        today: {"msgs": 3, "tokens": 30},
+        "2000-01-01": {"msgs": 9, "tokens": 90},
+    }
+    snap = engine._usage_snapshot("today")
+    assert snap["msgs"] == 3
+    assert snap["tokens"] == 30
+
+
+def test_settings_snapshot_hides_api_key(engine) -> None:
+    """Снапшот настроек отдаёт только признак наличия ключа."""
+    engine._config["providers"]["deepseek"]["api_key"] = "secret-key"
+    snap = engine._settings_snapshot()
+    assert "api_key" not in snap
+    assert snap["has_api_key"] is True
+
+
+def test_providers_snapshot_hides_api_keys(engine) -> None:
+    """Снапшот провайдеров не раскрывает ни один API-ключ."""
+    engine._config["providers"]["deepseek"]["api_key"] = "secret-key"
+    snap = engine._providers_snapshot()
+    for prov in snap:
+        assert "api_key" not in prov
+    deepseek = next(p for p in snap if p["id"] == "deepseek")
+    assert deepseek["has_key"] is True
+
+
+def test_cmd_reset_chats_requires_confirmation(engine) -> None:
+    """`/reset chats` очищает историю только после подтверждения."""
+    before = len(engine._chats)
+    engine._cmd_reset("/reset chats")
+    assert len(engine._chats) == before
+    engine._cmd_reset("/reset chats")
+    assert len(engine._chats) == 1

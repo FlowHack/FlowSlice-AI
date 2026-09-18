@@ -1,5 +1,8 @@
 """Пути хранения данных плагина (data_dir() — разрешённая зона аудита)."""
+import logging
 import pathlib
+
+_LOGGER = logging.getLogger("flowslice_ai")
 
 
 def _find_data_dir() -> pathlib.Path | None:
@@ -10,18 +13,26 @@ def _find_data_dir() -> pathlib.Path | None:
     return None
 
 
+def _prepare_storage_dir(raw_dir: pathlib.Path, fallback_dir: pathlib.Path) -> pathlib.Path:
+    """Создаёт каталог хранения, откатываясь к fallback при ошибке доступа."""
+    for candidate in (raw_dir, fallback_dir):
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return candidate
+        except OSError as exc:
+            _LOGGER.error(
+                "Не удалось создать каталог хранения %s: %s", candidate, exc, exc_info=True
+            )
+    return fallback_dir
+
+
 _DATA_DIR = _find_data_dir()
+_FALLBACK_DIR = pathlib.Path(__file__).resolve().parent.parent
 if _DATA_DIR is not None:
-    STORAGE_DIR = _DATA_DIR / "flowslice_ai"
+    STORAGE_DIR = _prepare_storage_dir(_DATA_DIR / "flowslice_ai", _FALLBACK_DIR)
 else:
     # Режим разработки: пакет лежит рядом с репозиторием.
-    STORAGE_DIR = pathlib.Path(__file__).resolve().parent.parent
-
-try:
-    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-except OSError:
-    STORAGE_DIR = pathlib.Path(__file__).resolve().parent.parent
-    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    STORAGE_DIR = _FALLBACK_DIR
 
 CHATS_FILE = STORAGE_DIR / "chats.json"
 ICON_FILE = STORAGE_DIR / "tab_icon.svg"

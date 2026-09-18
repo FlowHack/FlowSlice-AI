@@ -25,16 +25,17 @@ class GenerationMixin:
 
     def _start_generation(self: "_ChatEngine", chat_id: int, user_text: str, user_msg_id: int) -> None:
         """Запускает генерацию ответа в фоновом потоке."""
-        if self._gen:
-            self._post(
-                {
-                    "type": "toast",
-                    "text": self._t("gen.already"),
-                    "kind": "err",
-                }
-            )
-            return
-        self._gen = True
+        with self._gen_lock:
+            if self._gen:
+                self._post(
+                    {
+                        "type": "toast",
+                        "text": self._t("gen.already"),
+                        "kind": "err",
+                    }
+                )
+                return
+            self._gen = True
         threading.Thread(
             target=self._worker, args=(chat_id, user_text, user_msg_id), daemon=True
         ).start()
@@ -54,23 +55,34 @@ class GenerationMixin:
         self._send_state()
         try:
             messages = self._build_messages(chat, user_text)
-            full_text = self._call_api(messages, chat_id)
+            full_text, reasoning = self._call_api(messages, chat_id)
             if not full_text.strip():
                 full_text = self._t("gen.empty_reply")
             msg = self._find_msg(chat, msg_id)
             if msg is not None:
                 msg["text"] = full_text
-            self._post({"type": "reply", "chat_id": chat_id, "text": full_text, "ok": True})
+                if reasoning:
+                    msg["reasoning"] = reasoning
+            self._post(
+                {
+                    "type": "reply",
+                    "chat_id": chat_id,
+                    "text": full_text,
+                    "ok": True,
+                    "reasoning": reasoning,
+                }
+            )
             self._record_usage(user_text, full_text)
         except FlowSliceError as exc:
             self._fail_generation(chat, chat_id, user_msg_id, msg_id, str(exc))
         except Exception as exc:
-            _LOGGER.error("Необработанная ошибка генерации: %s", exc)
+            _LOGGER.error("Необработанная ошибка генерации: %s", exc, exc_info=True)
             self._fail_generation(
                 chat, chat_id, user_msg_id, msg_id, self._t("gen.internal_error")
             )
         finally:
-            self._gen = False
+            with self._gen_lock:
+                self._gen = False
             self._post({"type": "status", "text": ""})
             self._save_chats()
 

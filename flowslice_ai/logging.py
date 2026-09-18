@@ -10,3 +10,5 @@ if not _LOGGER.handlers:
     )
     _LOGGER.addHandler(_STREAM_HANDLER)
     _LOGGER.setLevel(logging.INFO)
+    # Не дублируем записи в root-логгере OrcaSlicer.
+    _LOGGER.propagate = False

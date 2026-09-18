@@ -168,6 +168,11 @@ class HandlersMixin:
         chat_id = message.get("id")
         if self._chat_by_id(chat_id) is not None:
             self._active = chat_id
+            chat = self._active_chat()
+            self._ctx_tokens = self._estimate_context_tokens(
+                chat.get("context_flags", {}), chat.get("context_modes", {})
+            )
+            self._save_chats()
             self._send_state()
 
     def _handle_delete_chat(self: "_ChatEngine", message: dict) -> None:
@@ -210,7 +215,8 @@ class HandlersMixin:
 
     def _handle_stop(self: "_ChatEngine") -> None:
         """Останавливает текущую генерацию."""
-        self._gen = False
+        with self._gen_lock:
+            self._gen = False
         self._post({"type": "status", "text": ""})
 
     def _handle_context_flags(self: "_ChatEngine", message: dict) -> None:
@@ -251,10 +257,7 @@ class HandlersMixin:
             "flags": dict(chat.get("context_flags", {})),
             "modes": dict(chat.get("context_modes", {})),
         }
-        try:
-            self._cap.save_config(json.dumps(self._config))
-        except (TypeError, ValueError) as exc:
-            _LOGGER.error("Не удалось сохранить настройки контекста: %s", exc)
+        self._persist_config()
 
     def _handle_regenerate(self: "_ChatEngine") -> None:
         """Перегенерирует последний ответ ассистента."""
@@ -299,11 +302,14 @@ class HandlersMixin:
         if "model" in settings:
             self._config["active_model"] = settings["model"]
         if "api_key" in settings:
-            provider_id = str(self._config.get("active_provider", "deepseek"))
-            providers = self._config.setdefault("providers", {})
-            providers.setdefault(provider_id, {})["api_key"] = str(settings["api_key"])
+            api_key = settings["api_key"]
+            # Пустое поле означает «не менять ключ»: в UI ключ не предзаполняется.
+            if isinstance(api_key, str) and api_key.strip():
+                provider_id = str(self._config.get("active_provider", "deepseek"))
+                providers = self._config.setdefault("providers", {})
+                providers.setdefault(provider_id, {})["api_key"] = api_key.strip()
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._post_settings()
         self._post({"type": "toast", "text": self._t("settings.saved"), "kind": "ok"})
 
@@ -324,7 +330,7 @@ class HandlersMixin:
             if key in DEFAULT_CONFIG:
                 self._config[key] = json.loads(json.dumps(DEFAULT_CONFIG[key]))
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._post_settings()
         self._post({"type": "toast", "text": self._t("settings.reset"), "kind": "ok"})
 
@@ -344,7 +350,7 @@ class HandlersMixin:
                 fresh["api_key"] = api_key
             providers[pid] = fresh
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post({"type": "toast", "text": self._t("settings.models_reset"), "kind": "ok"})
 
@@ -358,7 +364,7 @@ class HandlersMixin:
         ]:
             del providers[pid]
         self._config = self._normalize_config(self._config)
-        self._cap.save_config(json.dumps(self._config))
+        self._persist_config()
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("settings.custom_models_reset"), "kind": "ok"}
