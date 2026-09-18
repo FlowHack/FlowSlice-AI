@@ -4,6 +4,8 @@ from __future__ import annotations
 import time
 import types
 
+import pytest
+
 from flowslice_ai.constants import (
     COMPACT_KEEP_MESSAGES,
     MAX_ATTACHMENTS,
@@ -785,3 +787,181 @@ def test_build_messages_includes_summary(engine, monkeypatch) -> None:
     }
     messages = engine._build_messages(chat, "hi")
     assert "Old context summary" in messages[0]["content"]
+
+
+class _FakeBBox:
+    """Тестовый BoundingBox с полями min/max/size/center."""
+
+    def __init__(self, low, high) -> None:
+        self.min = low
+        self.max = high
+        self.size = tuple(high[i] - low[i] for i in range(3))
+        self.center = tuple((high[i] + low[i]) / 2 for i in range(3))
+
+
+class _FakeMesh:
+    """Тестовый меш с габаритами, объёмом и числом треугольников."""
+
+    def __init__(self, low, high, volume, triangles, manifold=True) -> None:
+        self.bounding_box = _FakeBBox(low, high)
+        self.volume = volume
+        self.is_manifold = manifold
+        self.triangle_count = triangles
+
+
+class _FakeVolume:
+    """Тестовый объём объекта с именем и мешем."""
+
+    def __init__(self, name, mesh) -> None:
+        self.name = name
+        self.mesh = mesh
+
+
+class _FakeModelObject:
+    """Тестовый объект модели, возвращающий список объёмов."""
+
+    def __init__(self, volumes) -> None:
+        self._volumes = volumes
+
+    def volumes(self):
+        """Возвращает объёмы объекта."""
+        return self._volumes
+
+
+def _fake_orca_with_model(objects):
+    """Собирает минимальный стенд orca.host.model() для теста контекста."""
+    model = types.SimpleNamespace(objects=lambda: objects)
+    host = types.SimpleNamespace(model=lambda: model)
+    return types.SimpleNamespace(host=host)
+
+
+def test_collect_model_brief_aggregates_scene(engine, monkeypatch) -> None:
+    """Краткий режим отдаёт сводку по сцене без деталей по объектам."""
+    mesh_a = _FakeMesh((0.0, 0.0, 0.0), (10.0, 20.0, 30.0), 1000.0, 12)
+    mesh_b = _FakeMesh((5.0, 0.0, 0.0), (15.0, 10.0, 40.0), 1000.0, 20, manifold=False)
+    objects = [
+        _FakeModelObject([_FakeVolume("a", mesh_a)]),
+        _FakeModelObject([_FakeVolume("b", mesh_b)]),
+    ]
+    monkeypatch.setattr(
+        "flowslice_ai.engine.slicer_context.orca", _fake_orca_with_model(objects)
+    )
+    data = engine._collect_model_data("brief")
+    assert data["objects_count"] == 2
+    assert data["volume_cm3"] == 2.0
+    assert data["triangles"] == 32
+    assert data["manifold"] is False
+    assert data["overall_bbox_mm"] == (15.0, 20.0, 40.0)
+    assert "objects" not in data
+
+
+def test_collect_context_model_brief(engine, monkeypatch) -> None:
+    """_collect_context_uncached() учитывает режим brief для раздела модели."""
+    mesh = _FakeMesh((0.0, 0.0, 0.0), (10.0, 10.0, 10.0), 500.0, 12)
+    objects = [_FakeModelObject([_FakeVolume("part", mesh)])]
+    monkeypatch.setattr(
+        "flowslice_ai.engine.slicer_context.orca", _fake_orca_with_model(objects)
+    )
+    ctx = engine._collect_context_uncached({"model": True}, {"model": "brief"})
+    assert ctx["model"]["objects_count"] == 1
+    assert ctx["model"]["volume_cm3"] == 0.5
+
+
+def test_collect_context_model_full(engine, monkeypatch) -> None:
+    """Полный режим сохраняет детализацию по каждому объекту."""
+    mesh = _FakeMesh((0.0, 0.0, 0.0), (10.0, 10.0, 10.0), 500.0, 12)
+    objects = [_FakeModelObject([_FakeVolume("part", mesh)])]
+    monkeypatch.setattr(
+        "flowslice_ai.engine.slicer_context.orca", _fake_orca_with_model(objects)
+    )
+    ctx = engine._collect_context_uncached({"model": True}, {"model": "full"})
+    assert len(ctx["model"]["objects"]) == 1
+    assert ctx["model"]["objects"][0]["name"] == "part"
+
+
+class _InstancedMesh:
+    """Меш с вершинами и треугольниками (куб) для проверки глубинных метрик."""
+
+    def __init__(self, np) -> None:
+        self.bounding_box = _FakeBBox((0.0, 0.0, 0.0), (10.0, 10.0, 10.0))
+        self.volume = 1000.0
+        self.is_manifold = True
+        self.triangle_count = 12
+        self.vertices = np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [10.0, 0.0, 0.0],
+                [10.0, 10.0, 0.0],
+                [0.0, 10.0, 0.0],
+                [0.0, 0.0, 10.0],
+                [10.0, 0.0, 10.0],
+                [10.0, 10.0, 10.0],
+                [0.0, 10.0, 10.0],
+            ]
+        )
+        self.triangles = np.array(
+            [
+                [0, 2, 1], [0, 3, 2],
+                [4, 5, 6], [4, 6, 7],
+                [0, 1, 5], [0, 5, 4],
+                [1, 2, 6], [1, 6, 5],
+                [2, 3, 7], [2, 7, 6],
+                [3, 0, 4], [3, 4, 7],
+            ]
+        )
+
+
+class _FakeInstance:
+    """Экземпляр объекта с мировой матрицей (без зеркалирования)."""
+
+    def __init__(self, matrix) -> None:
+        self.matrix = matrix
+        self.is_left_handed = False
+
+
+class _InstancedObject:
+    """Объект модели со списком экземпляров."""
+
+    def __init__(self, volume, instances) -> None:
+        self._volume = volume
+        self.instances = instances
+
+    def volumes(self):
+        """Возвращает список объёмов."""
+        return [self._volume]
+
+
+def _instanced_stand():
+    """Собирает стенд orca для меша с вершинами и матрицами."""
+    np = pytest.importorskip("numpy")
+    mesh = _InstancedMesh(np)
+    volume = _FakeVolume("cube", mesh)
+    volume.matrix = np.eye(4)
+    obj = _InstancedObject(volume, [_FakeInstance(np.eye(4))])
+    return _fake_orca_with_model([obj]), np
+
+
+def test_collect_model_deep_geometry(engine, monkeypatch) -> None:
+    """Глубокий режим добавляет метрики основания, нависаний и заполнения."""
+    stand, np = _instanced_stand()
+    monkeypatch.setattr("flowslice_ai.engine.slicer_context.orca", stand)
+    data = engine._collect_model_data("deep")
+    assert data["deep"] is True
+    instance = data["objects"][0]["instances"][0]
+    assert instance["height_mm"] == pytest.approx(10.0)
+    assert instance["base_area_cm2"] == pytest.approx(1.0)
+    assert instance["overhang_area_cm2"] == pytest.approx(0.0)
+    assert instance["bbox_fill_ratio"] == pytest.approx(1.0)
+    assert instance["surface_area_cm2"] == pytest.approx(6.0)
+
+
+def test_collect_model_full_has_no_deep_metrics(engine, monkeypatch) -> None:
+    """Полный режим не добавляет глубинных метрик и не помечается как deep."""
+    stand, _np = _instanced_stand()
+    monkeypatch.setattr("flowslice_ai.engine.slicer_context.orca", stand)
+    data = engine._collect_model_data("full")
+    assert data["deep"] is False
+    instance = data["objects"][0]["instances"][0]
+    assert "base_area_cm2" not in instance
+    assert "overhang_area_cm2" not in instance
+

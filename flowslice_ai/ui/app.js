@@ -12,6 +12,9 @@
   var HISTORY_LIMIT = 50;
   // Разделы пресетов с выбором режима выгрузки (изменённые/все) в панели чата.
   var CONTEXT_MODE_KEYS = ["filament", "printer", "print"];
+  // Раздел «Модель со стола» имеет собственный режим: кратко/подробно.
+  var CONTEXT_MODEL_KEY = "model";
+  var CONTEXT_MODEL_MODES = ["brief", "full", "deep"];
   var CONTEXT_LABELS = {
     filament: "ctx.filament",
     printer: "ctx.printer",
@@ -102,7 +105,7 @@
       "ctx.filament_help": "Adds the active filament profile to the context: type, temperatures, flow rate and other parameters",
       "ctx.printer_help": "Adds the active printer profile to the context: bed size, print height, G-code and other parameters",
       "ctx.print_help": "Adds the active print profile to the context: layer height, speeds, infill and other parameters",
-      "ctx.model_help": "Adds the loaded model data to the context: dimensions, volume, triangle count",
+      "ctx.model_help": "Adds the loaded model data to the context. The dropdown sets the detail level: from a scene summary to a deep geometry analysis (dimensions, volume, triangles, base and overhang area).",
       "ctx.history_help": "Adds the current chat's message history to the context",
       "ctx.tokens": "Context tokens: {n}",
       "ctx.request_tokens": "Request tokens: {n}",
@@ -111,6 +114,11 @@
       "ctx.mode_all": "all",
       "ctx.mode_title": "Preset export: only changed parameters or the full profile",
       "ctx.mode_help": "Dropdown on the right:\nchanged — only parameters changed from the base preset\nall — the full profile",
+      "ctx.model_mode_brief": "brief",
+      "ctx.model_mode_full": "full",
+      "ctx.model_mode_deep": "deep analysis",
+      "ctx.model_mode_title": "Model export: summary, detail or deep analysis",
+      "ctx.model_mode_help": "Dropdown on the right:\nbrief — summary only: object count, overall size and volume\nfull — detailed data per object: bounding boxes, volume, triangles\ndeep analysis — full data plus base area, overhang area and bounding-box fill ratio",
       "composer.placeholder": "Message... (Enter — send, Shift+Enter — new line)",
       "welcome.sub": "3D printing engineer-expert. Ask about mechanics, Klipper or materials.",
       "settings.title": "Settings",
@@ -311,7 +319,7 @@
       "ctx.filament_help": "Добавляет в контекст активный профиль пластика: тип, температуры, скорость потока и другие параметры",
       "ctx.printer_help": "Добавляет в контекст активный профиль принтера: размеры стола, высоту печати, G-code и другие параметры",
       "ctx.print_help": "Добавляет в контекст активный профиль печати: высоту слоя, скорости, заполнение и другие параметры",
-      "ctx.model_help": "Добавляет в контекст данные загруженной модели: размеры, объём, количество треугольников",
+      "ctx.model_help": "Добавляет в контекст данные загруженной модели. Дропдаун справа задаёт глубину: от сводки по сцене до глубокого анализа геометрии (габариты, объём, треугольники, площадь основания и нависаний).",
       "ctx.history_help": "Добавляет в контекст историю сообщений текущего чата",
       "ctx.tokens": "Токенов контекста: {n}",
       "ctx.request_tokens": "Токенов запроса: {n}",
@@ -320,6 +328,11 @@
       "ctx.mode_all": "все",
       "ctx.mode_title": "Выгрузка пресета: только изменённые параметры или полный профиль",
       "ctx.mode_help": "Дропдаун справа:\nизм. — только изменённые относительно базового пресета параметры\nвсе — полный профиль",
+      "ctx.model_mode_brief": "кратко",
+      "ctx.model_mode_full": "подробно",
+      "ctx.model_mode_deep": "глубокий анализ",
+      "ctx.model_mode_title": "Выгрузка модели: сводка, подробности или глубокий анализ",
+      "ctx.model_mode_help": "Дропдаун справа:\nкратко — только сводка: число объектов, габариты и объём\nподробно — детальные данные по каждому объекту: габариты, объём, треугольники\nглубокий анализ — всё из «подробно» плюс площадь основания, площадь нависаний и заполнение габарита",
       "composer.placeholder": "Сообщение… (Enter — отправить, Shift+Enter — новая строка)",
       "welcome.sub": "Инженер-эксперт 3D-печати. Спросите о механике, Klipper или материалах.",
       "settings.title": "Настройки",
@@ -520,7 +533,7 @@
       "ctx.filament_help": "Dodaje u kontekst aktivni profil filamenta: tip, temperature, protok i druge parametre",
       "ctx.printer_help": "Dodaje u kontekst aktivni profil štampača: dimenzije stola, visinu štampe, G-code i druge parametre",
       "ctx.print_help": "Dodaje u kontekst aktivni profil štampe: visinu sloja, brzine, ispunu i druge parametre",
-      "ctx.model_help": "Dodaje u kontekst podatke učitanog modela: dimenzije, zapreminu, broj trouglova",
+      "ctx.model_help": "Dodaje u kontekst podatke učitanog modela. Padajuća lista desno bira nivo detalja: od sažetka scene do duboke analize geometrije (gabariti, zapremina, trouglovi, površina osnove i prevjesa).",
       "ctx.history_help": "Dodaje u kontekst istoriju poruka trenutnog razgovora",
       "ctx.tokens": "Tokeni konteksta: {n}",
       "ctx.request_tokens": "Tokeni zahteva: {n}",
@@ -529,6 +542,11 @@
       "ctx.mode_all": "sve",
       "ctx.mode_title": "Izvoz profila: samo izmenjeni parametri ili pun profil",
       "ctx.mode_help": "Padajuća lista desno:\nizm. — samo parametri izmenjeni u odnosu na bazni profil\nsve — pun profil",
+      "ctx.model_mode_brief": "kratko",
+      "ctx.model_mode_full": "detaljno",
+      "ctx.model_mode_deep": "duboka analiza",
+      "ctx.model_mode_title": "Izvoz modela: sažetak, detalji ili duboka analiza",
+      "ctx.model_mode_help": "Padajuća lista desno:\nkratko — samo sažetak: broj objekata, gabariti i zapremina\ndetaljno — detaljni podaci po objektu: gabariti, zapremina, trouglovi\nduboka analiza — sve iz «detaljno» plus površina osnove, površina prevjesa i ispuna gabarita",
       "composer.placeholder": "Poruka… (Enter — pošalji, Shift+Enter — novi red)",
       "welcome.sub": "Inženjer-ekspert za 3D štampu. Pitajte o mehanici, Klipperu ili materijalima.",
       "settings.title": "Podešavanja",
@@ -1832,10 +1850,14 @@
       item.setAttribute("data-key", key);
       var checkWrap = el("label", "ctx-check");
       // Тултип: пояснение, что именно этот пункт добавляет в контекст,
-      // а для пресетов — ещё и смысл режимов «изм.»/«все».
+      // а для пресетов и модели — ещё и смысл режимов выгрузки.
       var helpText = t("ctx." + key + "_help");
-      if (CONTEXT_MODE_KEYS.indexOf(key) >= 0) {
+      var isPresetMode = CONTEXT_MODE_KEYS.indexOf(key) >= 0;
+      var isModelMode = key === CONTEXT_MODEL_KEY;
+      if (isPresetMode) {
         helpText += "\n\n" + t("ctx.mode_help");
+      } else if (isModelMode) {
+        helpText += "\n\n" + t("ctx.model_mode_help");
       }
       checkWrap.setAttribute("data-tooltip", helpText);
       var cb = document.createElement("input");
@@ -1846,28 +1868,39 @@
       checkWrap.appendChild(document.createTextNode(t(CONTEXT_LABELS[key] || key)));
       item.appendChild(checkWrap);
       container.appendChild(item);
-      if (CONTEXT_MODE_KEYS.indexOf(key) >= 0) {
-        // Режим пресета: штатный дропдаун проекта (без поиска).
+      if (isPresetMode || isModelMode) {
+        // Режим выгрузки: штатный дропдаун проекта (без поиска).
         var modeWrap = el("span", "ctx-mode-dd");
         var modeHost = el("span");
         modeHost.id = "ctxMode_" + key;
         modeWrap.appendChild(modeHost);
         item.appendChild(modeWrap);
+        var modeOptions = isModelMode
+          ? CONTEXT_MODEL_MODES.map(function (value) {
+              return { value: value, label: t("ctx.model_mode_" + value) };
+            })
+          : [
+              { value: "changed", label: t("ctx.mode_changed") },
+              { value: "all", label: t("ctx.mode_all") }
+            ];
+        var modeDefault = isModelMode
+          ? (CONTEXT_MODEL_MODES.indexOf(modes[key]) >= 0 ? modes[key] : "full")
+          : (modes[key] === "all" ? "all" : "changed");
         modeDDs[key] = makeDropdown(
           modeHost.id,
-          [
-            { value: "changed", label: t("ctx.mode_changed") },
-            { value: "all", label: t("ctx.mode_all") }
-          ],
-          modes[key] === "all" ? "all" : "changed",
+          modeOptions,
+          modeDefault,
           collect,
           null,
           false
         );
-        // Подсказка на самой выпадайке: выбор «изм.»/«все».
+        // Подсказка на самой выпадайке: выбор режима выгрузки.
         var modeBtn = modeWrap.querySelector(".dd-btn");
         if (modeBtn) {
-          modeBtn.setAttribute("data-tooltip", t("ctx.mode_title"));
+          modeBtn.setAttribute(
+            "data-tooltip",
+            t(isModelMode ? "ctx.model_mode_title" : "ctx.mode_title")
+          );
         }
       }
     }

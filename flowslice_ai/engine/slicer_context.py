@@ -76,14 +76,31 @@ class SlicerContextMixin:
         """Собирает контекст слайсера без кэширования."""
         ctx: dict[str, Any] = {}
         if flags.get("model"):
-            ctx["model"] = self._collect_model_data()
+            mode_map = modes if isinstance(modes, dict) else {}
+            raw_mode = mode_map.get("model")
+            model_mode = raw_mode if raw_mode in ("brief", "full", "deep") else "full"
+            ctx["model"] = self._collect_model_data(model_mode)
         if flags.get("filament") or flags.get("printer") or flags.get("print"):
             ctx["presets"] = self._collect_preset_data(modes)
         return ctx
 
-    def _collect_model_data(self: "_ChatEngine") -> dict[str, Any]:
-        """Собирает данные о модели на столе слайсера."""
-        data: dict[str, Any] = {"objects": [], "coords": "world"}
+    def _collect_model_data(self: "_ChatEngine", mode: str = "full") -> dict[str, Any]:
+        """Собирает данные о модели на столе слайсера.
+
+        mode="full" — подробно по каждому объекту (размеры, объём, треугольники,
+        мировые характеристики экземпляров); mode="deep" — то же плюс глубинные
+        метрики геометрии (площадь основания, нависания, заполнение габарита);
+        mode="brief" — только сводка по всей сцене: количество объектов и
+        суммарные габариты/объём.
+        """
+        if mode == "brief":
+            return self._collect_model_brief()
+        deep = mode == "deep"
+        data: dict[str, Any] = {
+            "objects": [],
+            "coords": "world",
+            "deep": deep and _HAS_NUMPY,
+        }
         if orca is None:
             return data
         try:
@@ -111,7 +128,7 @@ class SlicerContextMixin:
                         "triangles": self._safe_get(mesh, "triangle_count") or 0,
                     }
                     if _HAS_NUMPY:
-                        entry.update(self._world_stats(obj, vol, mesh))
+                        entry.update(self._world_stats(obj, vol, mesh, deep=deep))
                     else:
                         entry["coords"] = "local"
                         entry.update(self._local_stats(obj))
@@ -121,8 +138,71 @@ class SlicerContextMixin:
             data["objects"] = []
         return data
 
-    def _world_stats(self: "_ChatEngine", obj: Any, vol: Any, mesh: Any) -> dict[str, Any]:
-        """Считает мировые характеристики экземпляров через numpy."""
+    def _collect_model_brief(self: "_ChatEngine") -> dict[str, Any]:
+        """Собирает краткую сводку по модели на столе без деталей по объектам."""
+        data: dict[str, Any] = {
+            "objects_count": 0,
+            "volume_cm3": 0.0,
+            "triangles": 0,
+            "manifold": True,
+            "overall_bbox_mm": (),
+            "coords": "world",
+        }
+        if orca is None:
+            return data
+        mins: list[float] = []
+        maxs: list[float] = []
+        count = 0
+        volume_total = 0.0
+        triangles = 0
+        manifold = True
+        try:
+            model = orca.host.model()
+            for obj in model.objects():
+                for vol in obj.volumes():
+                    mesh = self._safe_get(vol, "mesh")
+                    if mesh is None:
+                        continue
+                    count += 1
+                    bbox = self._safe_get(mesh, "bounding_box")
+                    low = self._bbox_tuple(bbox, "min")
+                    high = self._bbox_tuple(bbox, "max")
+                    if len(low) >= 3 and len(high) >= 3:
+                        if not mins:
+                            mins = [float(v) for v in low[:3]]
+                            maxs = [float(v) for v in high[:3]]
+                        else:
+                            for axis in range(3):
+                                mins[axis] = min(mins[axis], float(low[axis]))
+                                maxs[axis] = max(maxs[axis], float(high[axis]))
+                    volume = self._safe_get(mesh, "volume")
+                    if volume:
+                        volume_total += float(volume) / 1000.0
+                    triangles += int(self._safe_get(mesh, "triangle_count") or 0)
+                    if not self._safe_get(mesh, "is_manifold"):
+                        manifold = False
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.warning("Не удалось собрать сводку модели: %s", exc, exc_info=True)
+        data["objects_count"] = count
+        data["volume_cm3"] = round(volume_total, 2)
+        data["triangles"] = triangles
+        data["manifold"] = manifold
+        if mins and maxs:
+            data["overall_bbox_mm"] = tuple(
+                round(maxs[axis] - mins[axis], 1) for axis in range(3)
+            )
+            data["overall_bbox_min_mm"] = tuple(round(v, 1) for v in mins)
+            data["overall_bbox_max_mm"] = tuple(round(v, 1) for v in maxs)
+        return data
+
+    def _world_stats(
+        self: "_ChatEngine", obj: Any, vol: Any, mesh: Any, deep: bool = False
+    ) -> dict[str, Any]:
+        """Считает мировые характеристики экземпляров через numpy.
+
+        При deep=True к каждому экземпляру добавляются глубинные метрики:
+        высота, площадь основания, площадь нависаний и заполнение габарита.
+        """
         assert _np is not None
         stats: dict[str, Any] = {"instances": []}
         try:
@@ -155,28 +235,79 @@ class SlicerContextMixin:
                 cross = _np.cross(
                     tri_pts[:, 1] - tri_pts[:, 0], tri_pts[:, 2] - tri_pts[:, 0]
                 )
-                area = float(_np.sum(_np.linalg.norm(cross, axis=1) / 2.0))
-                stats["instances"].append(
-                    {
-                        "index": index,
-                        "position_mm": tuple(
-                            round(v, 1) for v in inst_matrix[:3, 3]
-                        ),
-                        "world_bbox_mm": tuple(
-                            round(v, 1) for v in (bbox_max - bbox_min)
-                        ),
-                        "world_bbox_min_mm": tuple(round(v, 1) for v in bbox_min),
-                        "world_bbox_max_mm": tuple(round(v, 1) for v in bbox_max),
-                        "world_bbox_center_mm": tuple(
-                            round(v, 1) for v in ((bbox_max + bbox_min) / 2.0)
-                        ),
-                        "surface_area_cm2": round(area / 100.0, 2),
-                        "mirrored": bool(self._safe_get(inst, "is_left_handed")),
-                    }
-                )
+                norm = _np.linalg.norm(cross, axis=1)
+                area = float(_np.sum(norm) / 2.0)
+                entry: dict[str, Any] = {
+                    "index": index,
+                    "position_mm": tuple(round(v, 1) for v in inst_matrix[:3, 3]),
+                    "world_bbox_mm": tuple(
+                        round(v, 1) for v in (bbox_max - bbox_min)
+                    ),
+                    "world_bbox_min_mm": tuple(round(v, 1) for v in bbox_min),
+                    "world_bbox_max_mm": tuple(round(v, 1) for v in bbox_max),
+                    "world_bbox_center_mm": tuple(
+                        round(v, 1) for v in ((bbox_max + bbox_min) / 2.0)
+                    ),
+                    "surface_area_cm2": round(area / 100.0, 2),
+                    "mirrored": bool(self._safe_get(inst, "is_left_handed")),
+                }
+                if deep:
+                    entry.update(
+                        self._deep_instance_stats(bbox_min, bbox_max, tri_pts, cross, norm, mesh)
+                    )
+                stats["instances"].append(entry)
         except (ImportError, RuntimeError, ValueError, TypeError):
             stats = {}
         return stats
+
+    def _deep_instance_stats(
+        self: "_ChatEngine",
+        bbox_min: Any,
+        bbox_max: Any,
+        tri_pts: Any,
+        cross: Any,
+        norm: Any,
+        mesh: Any,
+    ) -> dict[str, Any]:
+        """Вычисляет глубинные метрики геометрии одного экземпляра.
+
+        Основание — треугольники, ближайшие к нижней плоскости (допуск 0.2 мм).
+        Нависания — треугольники с направленной вниз нормалью круче 45°;
+        основание из них исключается. Направление нормалей наружу определяется
+        приближённо — по стороне от центроида меша. Нормали строятся из
+        векторного произведения сторон.
+        """
+        assert _np is not None
+        result: dict[str, Any] = {}
+        try:
+            safe_norm = _np.where(norm > 1e-9, norm, 1.0)
+            areas = norm / 2.0
+            z_min = float(_np.min(tri_pts[:, :, 2]))
+            z_max = float(_np.max(tri_pts[:, :, 2]))
+            tri_max_z = _np.max(tri_pts[:, :, 2], axis=1)
+            base_mask = tri_max_z <= z_min + 0.2
+            base_area = float(_np.sum(areas[base_mask]))
+            centroids = _np.mean(tri_pts, axis=1)
+            weights = areas / max(float(_np.sum(areas)), 1e-12)
+            mesh_center = _np.sum(centroids * weights[:, None], axis=0)
+            signs = _np.sign(_np.sum(cross * (centroids - mesh_center), axis=1))
+            signs[signs == 0] = 1.0
+            outward_z = (cross[:, 2] * signs) / safe_norm
+            overhang_mask = (outward_z <= -0.7071) & (~base_mask)
+            overhang_area = float(_np.sum(areas[overhang_mask]))
+            result["height_mm"] = round(z_max - z_min, 1)
+            result["base_area_cm2"] = round(base_area / 100.0, 2)
+            result["overhang_area_cm2"] = round(overhang_area / 100.0, 2)
+            bbox_size = _np.asarray(bbox_max) - _np.asarray(bbox_min)
+            bbox_volume = float(_np.prod(bbox_size))
+            mesh_volume = self._safe_get(mesh, "volume")
+            if bbox_volume > 1e-6 and mesh_volume:
+                result["bbox_fill_ratio"] = round(
+                    float(mesh_volume) / bbox_volume, 3
+                )
+        except (RuntimeError, ValueError, TypeError, ZeroDivisionError):
+            result = {}
+        return result
 
     def _local_stats(self: "_ChatEngine", obj: Any) -> dict[str, Any]:
         """Собирает локальные характеристики экземпляров без numpy."""
