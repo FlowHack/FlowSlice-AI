@@ -105,10 +105,11 @@ class ApiClientMixin:
                 if not isinstance(entry, dict):
                     continue
                 model_id = str(entry.get("id", ""))
-                arch = entry.get("architecture")
-                modalities = arch.get("input_modalities") if isinstance(arch, dict) else None
-                if model_id and isinstance(modalities, list):
-                    result[model_id] = "image" in modalities
+                if not model_id:
+                    continue
+                value = self._vision_from_entry(entry)
+                if value is not None:
+                    result[model_id] = value
         except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
             _LOGGER.warning("Не удалось получить список моделей OpenRouter: %s", exc)
             result = cache
@@ -128,18 +129,27 @@ class ApiClientMixin:
 
     @staticmethod
     def _vision_from_entry(entry: dict[str, Any]) -> bool | None:
-        """Извлекает признак зрения из одной записи ответа провайдера.
+        """Извлекает признак «модель принимает изображения и отвечает текстом».
 
-        Поддерживает все известные форматы: ``architecture.input_modalities``
-        (OpenRouter), ``input_modalities`` (xAI), ``capabilities.vision``
+        Нам нужна модель, которая получает на вход текст и изображение, а на
+        выходе даёт текст (дополнительно может отдавать изображения — это
+        неважно). Поддерживаются форматы: ``architecture.input/output_modalities``
+        (OpenRouter), ``input/output_modalities`` (xAI), ``capabilities.vision``
         (Mistral, Cerebras) и ``capabilities.image_input.supported`` (Anthropic).
         """
         arch = entry.get("architecture")
-        modalities = arch.get("input_modalities") if isinstance(arch, dict) else None
-        if not isinstance(modalities, list):
-            modalities = entry.get("input_modalities")
-        if isinstance(modalities, list):
-            return "image" in modalities
+        inputs = arch.get("input_modalities") if isinstance(arch, dict) else None
+        outputs = arch.get("output_modalities") if isinstance(arch, dict) else None
+        if not isinstance(inputs, list):
+            inputs = entry.get("input_modalities")
+        if not isinstance(outputs, list):
+            outputs = entry.get("output_modalities")
+        if isinstance(inputs, list):
+            if "image" not in inputs or "text" not in inputs:
+                return False
+            if isinstance(outputs, list) and "text" not in outputs:
+                return False
+            return True
         caps = entry.get("capabilities")
         if isinstance(caps, dict):
             image_input = caps.get("image_input")

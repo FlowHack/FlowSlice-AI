@@ -299,3 +299,37 @@ def test_test_key_worker_uses_selected_provider(engine, monkeypatch) -> None:
     assert calls[0].get_header("Authorization") == "Bearer test-key"
     body = json.loads(calls[0].data.decode("utf-8"))
     assert body["model"] in engine._config["providers"]["openrouter"]["models"]
+
+
+def test_vision_requires_text_output(engine) -> None:
+    """Зрение = image+text на входе и text на выходе; image-генерация не мешает."""
+    payload = {
+        "data": [
+            # Гибрид: умеет и рисовать, но и отвечает текстом — подходит.
+            {
+                "id": "hybrid",
+                "architecture": {
+                    "input_modalities": ["image", "text"],
+                    "output_modalities": ["image", "text"],
+                },
+            },
+            # Отдаёт только изображения — для анализа не подходит.
+            {
+                "id": "image-only",
+                "architecture": {
+                    "input_modalities": ["image", "text"],
+                    "output_modalities": ["image"],
+                },
+            },
+            # Без приёма текста промпт отправить нечем.
+            {
+                "id": "image-in-only",
+                "architecture": {
+                    "input_modalities": ["image"],
+                    "output_modalities": ["text"],
+                },
+            },
+        ]
+    }
+    result = engine._parse_vision_payload(payload)
+    assert result == {"hybrid": True, "image-only": False, "image-in-only": False}
