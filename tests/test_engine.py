@@ -4,6 +4,8 @@ from __future__ import annotations
 import time
 import types
 
+from flowslice_ai.constants import MAX_FILE_CHARS
+
 
 def test_estimate_tokens(engine) -> None:
     """_estimate_tokens() оценивает токены как len(text) // 4."""
@@ -458,3 +460,12 @@ def test_chat_with_only_attachment_uses_label(engine, monkeypatch) -> None:
     user_msg = engine._active_chat()["msgs"][-1]
     assert user_msg["role"] == "user"
     assert "a.txt" in user_msg["text"]
+
+
+def test_checked_attachment_rejects_large_file(engine) -> None:
+    """Слишком большой текстовый файл отклоняется, нормальный — принимается."""
+    engine._config["language"] = "en"
+    assert engine._checked_attachment("text", "big.txt", "x" * (MAX_FILE_CHARS + 1)) is None
+    assert engine._checked_attachment("text", "ok.txt", "hello") == {
+        "file": {"name": "ok.txt", "text": "hello"}
+    }

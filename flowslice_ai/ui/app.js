@@ -58,6 +58,8 @@
       "attach.limit_count": "Attachment limit reached (max {n}).",
       "attach.limit_size": "File \"{name}\" is too large.",
       "attach.reading": "File is still being read, try again in a moment.",
+      "attach.binary_unsupported": "Binary files are not supported: {name}. Attach a text file or an image.",
+      "attach.read_failed": "Failed to read file: {name}.",
       "common.stop": "Stop",
       "common.send": "Send",
       "common.choose_model": "Choose model",
@@ -227,6 +229,8 @@
       "attach.limit_count": "Достигнут предел вложений (не более {n}).",
       "attach.limit_size": "Файл «{name}» слишком большой.",
       "attach.reading": "Файл ещё читается, повторите через мгновение.",
+      "attach.binary_unsupported": "Бинарные файлы не поддерживаются: {name}. Прикрепите текстовый файл или изображение.",
+      "attach.read_failed": "Не удалось прочитать файл: {name}.",
       "common.stop": "Остановить генерацию",
       "common.send": "Отправить",
       "common.choose_model": "Выбрать модель",
@@ -396,6 +400,8 @@
       "attach.limit_count": "Dostignut limit priloga (najviše {n}).",
       "attach.limit_size": "Datoteka \"{name}\" je prevelika.",
       "attach.reading": "Datoteka se još čita, pokušajte ponovo za trenutak.",
+      "attach.binary_unsupported": "Binarne datoteke nisu podržane: {name}. Priložite tekstualnu datoteku ili sliku.",
+      "attach.read_failed": "Nije moguće pročitati datoteku: {name}.",
       "common.stop": "Zaustavi",
       "common.send": "Pošalji",
       "common.choose_model": "Izaberi model",
@@ -1548,13 +1554,23 @@
         // Текстовый файл
         var textReader = new FileReader();
         textReader.onload = function (e) {
+          var text = String(e.target.result || "");
+          // Бинарные файлы (STL, 3MF и др.) читать как текст нельзя —
+          // они засоряют запрос нечитаемыми байтами.
+          if (text.indexOf("\u0000") !== -1) {
+            showToast(t("attach.binary_unsupported", { name: name }), "err");
+            return;
+          }
           attachments.push({
             kind: "text",
             name: name,
             ready: true,
-            data: String(e.target.result)
+            data: text
           });
           renderAttachments();
+        };
+        textReader.onerror = function () {
+          showToast(t("attach.read_failed", { name: name }), "err");
         };
         textReader.readAsText(file);
       }

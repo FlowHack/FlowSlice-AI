@@ -40,7 +40,8 @@ HTTP_HEADERS = {
 
 TIMEOUT = 120
 MAX_IMAGE_B64 = 6_000_000
-MAX_FILE_CHARS = 1_000_000
+# Предел текста вложения: выше него запрос не помещается в контекст модели.
+MAX_FILE_CHARS = 100_000
 MAX_CHAT_MESSAGES = 200
 STREAM_THROTTLE = 0.15
 MAX_IMAGES_IN_HISTORY = 2
