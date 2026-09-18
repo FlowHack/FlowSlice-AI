@@ -8,6 +8,8 @@
   var MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
   var MAX_TEXT_CHARS = 100000;
   var MAX_TOTAL_TEXT_CHARS = 400000;
+  // Сколько последних запросов хранить для навигации стрелками в поле ввода.
+  var HISTORY_LIMIT = 50;
   // Разделы пресетов с выбором режима выгрузки (изменённые/все) в панели чата.
   var CONTEXT_MODE_KEYS = ["filament", "printer", "print"];
   var CONTEXT_LABELS = {
@@ -154,7 +156,7 @@
       "settings.help_max_tokens": "Maximum response length in tokens",
       "settings.help_reasoning": "Enable extended model reasoning before answering",
       "settings.vision": "Vision",
-      "settings.help_vision": "Whether the model can analyze images. Unknown sends both instructions.",
+      "settings.help_vision": "Whether the model can analyze images.",
       "settings.vision_yes": "Yes",
       "settings.vision_no": "No",
       "settings.vision_unknown": "Unknown",
@@ -340,7 +342,7 @@
       "settings.help_max_tokens": "Максимальная длина ответа в токенах",
       "settings.help_reasoning": "Включить расширенное мышление модели перед ответом",
       "settings.vision": "Зрение",
-      "settings.help_vision": "Умеет ли модель распознавать изображения. «Не знаю» — отправляются обе инструкции.",
+      "settings.help_vision": "Умеет ли модель распознавать изображения.",
       "settings.vision_yes": "Есть",
       "settings.vision_no": "Нет",
       "settings.vision_unknown": "Не знаю",
@@ -526,7 +528,7 @@
       "settings.help_max_tokens": "Maksimalna dužina odgovora u tokenima",
       "settings.help_reasoning": "Uključi produženo razmišljanje modela pre odgovora",
       "settings.vision": "Vid",
-      "settings.help_vision": "Da li model analizira slike. „Ne znam“ šalje obe instrukcije.",
+      "settings.help_vision": "Da li model analizira slike.",
       "settings.vision_yes": "Ima",
       "settings.vision_no": "Nema",
       "settings.vision_unknown": "Ne znam",
@@ -707,6 +709,9 @@
   var streamThought = ""; // накопленные размышления текущего стрима
   var pendingEditId = null; // id сообщения, которое редактируется
   var attachments = []; // вложения перед отправкой
+  var inputHistory = []; // отправленные запросы (текст + вложения), новые в конце
+  var historyIndex = -1; // позиция навигации по истории (-1 — черновик)
+  var historyDraft = null; // черновик ввода, временно вытесненный историей
   var userScrolledUp = false; // пользователь прокрутил историю вверх
 
   /* ===== Хелперы ===== */
@@ -1366,6 +1371,11 @@
     }
     if (msg.role === "system") {
       wrap.appendChild(el("div", "msg-bubble", msg.text || ""));
+      var sysActions = el("div", "msg-actions");
+      sysActions.appendChild(actionBtn(t("common.copy"), function () {
+        copyText(msg.text || "");
+      }));
+      wrap.appendChild(sysActions);
       return wrap;
     }
     var bubble = el("div", "msg-bubble");
@@ -1751,6 +1761,76 @@
   }
 
   /* ===== Отправка сообщения ===== */
+  /* ===== История ввода (стрелки вверх/вниз) ===== */
+  // Копия вложений: объекты плоские (строки data/name), достаточно поэлементно.
+  function cloneAttachments(list) {
+    var copy = [];
+    for (var i = 0; i < list.length; i++) {
+      var att = list[i];
+      copy.push({
+        kind: att.kind,
+        name: att.name,
+        ready: att.ready,
+        tokens: att.tokens,
+        data: att.data
+      });
+    }
+    return copy;
+  }
+
+  function pushInputHistory(text, list) {
+    inputHistory.push({ text: text, attachments: cloneAttachments(list) });
+    if (inputHistory.length > HISTORY_LIMIT) {
+      inputHistory.shift();
+    }
+  }
+
+  // Показываем запись истории (или черновик) в поле ввода.
+  function applyHistoryEntry(entry) {
+    byId("input").value = entry.text || "";
+    attachments = cloneAttachments(entry.attachments || []);
+    renderAttachments();
+    autoResize();
+    updateRequestTokens();
+    var input = byId("input");
+    input.focus();
+    // Курсор в конец, чтобы следующая стрелка вверх продолжила навигацию.
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+
+  // direction: -1 — вверх (к старым), 1 — вниз (к новым/черновику).
+  function navigateHistory(direction) {
+    if (inputHistory.length === 0) {
+      return false;
+    }
+    if (direction < 0) {
+      if (historyIndex === -1) {
+        // Вход в историю: запоминаем текущий черновик.
+        historyDraft = { text: byId("input").value, attachments: cloneAttachments(attachments) };
+        historyIndex = inputHistory.length - 1;
+      } else if (historyIndex > 0) {
+        historyIndex -= 1;
+      } else {
+        return true; // уже на самом старом запросе
+      }
+      applyHistoryEntry(inputHistory[historyIndex]);
+      return true;
+    }
+    if (historyIndex === -1) {
+      return false; // уже в черновике
+    }
+    historyIndex += 1;
+    if (historyIndex >= inputHistory.length) {
+      historyIndex = -1;
+      var draft = historyDraft || { text: "", attachments: [] };
+      historyDraft = null;
+      applyHistoryEntry(draft);
+      return true;
+    }
+    applyHistoryEntry(inputHistory[historyIndex]);
+    return true;
+  }
+
   function sendMessage() {
     var input = byId("input");
     var text = input.value.trim();
@@ -1785,6 +1865,12 @@
       payload.edit_id = editId;
     }
     post(payload);
+    // В историю навигации попадают только обычные отправки (не правки).
+    if (!editId) {
+      pushInputHistory(text, attachments);
+    }
+    historyIndex = -1;
+    historyDraft = null;
     attachments = [];
     renderAttachments();
     byId("input").value = "";
@@ -1967,6 +2053,28 @@
         e.preventDefault();
         closeCmdSuggest();
         return;
+      }
+    }
+    // Навигация по истории ввода: стрелки работают только на границе строки.
+    if (
+      (e.key === "ArrowUp" || e.key === "ArrowDown") &&
+      !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey
+    ) {
+      var input = byId("input");
+      var noSelection = input.selectionStart === input.selectionEnd;
+      if (noSelection && e.key === "ArrowUp") {
+        var before = input.value.slice(0, input.selectionStart);
+        if (before.indexOf("\n") === -1 && navigateHistory(-1)) {
+          e.preventDefault();
+          return;
+        }
+      }
+      if (noSelection && e.key === "ArrowDown") {
+        var after = input.value.slice(input.selectionEnd);
+        if (after.indexOf("\n") === -1 && navigateHistory(1)) {
+          e.preventDefault();
+          return;
+        }
       }
     }
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
@@ -3149,6 +3257,9 @@
     });
     byId("input").addEventListener("keydown", onInputKey);
     byId("input").addEventListener("input", function () {
+      // Ручной ввод завершает навигацию по истории.
+      historyIndex = -1;
+      historyDraft = null;
       autoResize();
       updateCmdSuggest();
       updateRequestTokens();

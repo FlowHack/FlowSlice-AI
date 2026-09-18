@@ -402,12 +402,9 @@ select option {
   overflow-y: auto;
 }
 .msg-actions {
-  display: none;
+  display: flex;
   gap: 4px;
   margin-top: 4px;
-}
-.msg-wrap:hover .msg-actions {
-  display: flex;
 }
 .msg-action {
   border: 1px solid var(--orca-border);
