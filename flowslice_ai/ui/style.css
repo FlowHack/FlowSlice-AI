@@ -704,6 +704,15 @@ select option {
 .key-row input {
   flex: 1;
 }
+.key-status {
+  display: none;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--orca-muted);
+}
+.key-status.set {
+  display: inline-block;
+}
 .eye-btn {
   border: 1px solid var(--orca-border);
   background: transparent;

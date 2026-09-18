@@ -100,6 +100,7 @@
       "settings.provider": "Provider",
       "settings.api_key": "API key",
       "settings.key_set": "Key is set — type a new one to replace",
+      "settings.key_saved": "Key saved",
       "settings.test_key": "Test key",
       "settings.base_url": "Base URL",
       "settings.scheme": "API scheme",
@@ -167,7 +168,6 @@
       "dd.model_search": "Search models...",
       "dd.scheme_search": "Search scheme...",
       "dd.theme_search": "Search theme...",
-      "dd.style_search": "Search style...",
       "dd.period_search": "Search period...",
       "dd.language_search": "Search language...",
       "scheme.openai": "OpenAI-compatible",
@@ -264,6 +264,7 @@
       "settings.provider": "Провайдер",
       "settings.api_key": "API-ключ",
       "settings.key_set": "Ключ задан — введите новый, чтобы заменить",
+      "settings.key_saved": "Ключ сохранён",
       "settings.test_key": "Проверить ключ",
       "settings.base_url": "Базовый URL API",
       "settings.scheme": "Схема API",
@@ -331,7 +332,6 @@
       "dd.model_search": "Поиск модели…",
       "dd.scheme_search": "Поиск схемы…",
       "dd.theme_search": "Поиск темы…",
-      "dd.style_search": "Поиск стиля…",
       "dd.period_search": "Поиск периода…",
       "dd.language_search": "Поиск языка…",
       "scheme.openai": "OpenAI-совместимая",
@@ -428,6 +428,7 @@
       "settings.provider": "Provajder",
       "settings.api_key": "API ključ",
       "settings.key_set": "Ključ je postavljen — unesite novi da zamenite",
+      "settings.key_saved": "Ključ sačuvan",
       "settings.test_key": "Testiraj ključ",
       "settings.base_url": "Osnovni URL API",
       "settings.scheme": "API šema",
@@ -495,7 +496,6 @@
       "dd.model_search": "Pretraga modela…",
       "dd.scheme_search": "Pretraga šeme…",
       "dd.theme_search": "Pretraga teme…",
-      "dd.style_search": "Pretraga stila…",
       "dd.period_search": "Pretraga perioda…",
       "dd.language_search": "Pretraga jezika…",
       "scheme.openai": "OpenAI-kompatibilna",
@@ -654,6 +654,18 @@
     }
     field.value = "";
     field.placeholder = hasKey ? t("settings.key_set") : t("settings.api_key");
+    // Видимый статус: пустое поле не должно выглядеть как «ключ не задан».
+    var wrap = field.closest(".field");
+    if (!wrap) {
+      return;
+    }
+    var status = wrap.querySelector(".key-status");
+    if (!status) {
+      status = el("span", "key-status");
+      wrap.appendChild(status);
+    }
+    status.textContent = hasKey ? "✓ " + t("settings.key_saved") : "";
+    status.classList.toggle("set", hasKey);
   }
 
   function el(tag, cls, text) {
@@ -1756,7 +1768,7 @@
       { value: "system", label: t("font.system") },
       { value: "mono", label: t("font.mono") },
       { value: "serif", label: t("font.serif") }
-    ], "system", null, t("dd.style_search"));
+    ], "system", null, null, false);
     setPeriodDD = makeDropdown("setPeriodDD", [
       { value: "all", label: t("usage.period.all") },
       { value: "today", label: t("usage.period.today") },

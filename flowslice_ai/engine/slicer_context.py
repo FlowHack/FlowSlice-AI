@@ -22,7 +22,7 @@ try:
 except ImportError:
     orca = None  # type: ignore[assignment]
 
-from flowslice_ai.constants import SYSTEM_PROMPT
+from flowslice_ai.constants import MAX_CONTEXT_CHARS, SYSTEM_PROMPT
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _HAS_NUMPY, _np
 from flowslice_ai.slicer_context import (
@@ -555,7 +555,13 @@ class SlicerContextMixin:
     def _estimate_context_tokens(
         self: "_ChatEngine", flags: dict[str, Any], modes: dict[str, Any] | None = None
     ) -> int:
-        """Оценивает число токенов контекста по флагам и режимам пресетов."""
+        """Оценивает реальный объём контекста (промпт + история) в токенах.
+
+        Считается именно то, что уйдёт в модель: системный промпт со всеми
+        выбранными данными слайсера и история чата (при флаге history).
+        Тексты изображений (data URI) не учитываются — их токены считает
+        провайдер отдельно.
+        """
         try:
             ctx = self._collect_context(flags, modes)
         except Exception as exc:  # noqa: BLE001
@@ -563,4 +569,32 @@ class SlicerContextMixin:
                 "Не удалось собрать контекст слайсера: %s", exc, exc_info=True
             )
             ctx = {}
-        return self._estimate_tokens(json.dumps(ctx, ensure_ascii=False))
+        try:
+            system = self._build_system_prompt(ctx)
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.warning(
+                "Не удалось собрать системный промпт: %s", exc, exc_info=True
+            )
+            system = SYSTEM_PROMPT
+        chunks = [system]
+        if flags.get("history"):
+            chat = self._active_chat()
+            if chat is not None:
+                for msg in self._history_messages(chat, MAX_CONTEXT_CHARS):
+                    text = self._message_text(msg)
+                    if text:
+                        chunks.append(text)
+        return self._estimate_tokens("".join(chunks))
+
+    @staticmethod
+    def _message_text(msg: dict[str, Any]) -> str:
+        """Возвращает текстовую часть сообщения, пропуская изображения."""
+        content = msg.get("content")
+        if isinstance(content, str):
+            return content
+        parts: list[str] = []
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    parts.append(block["text"])
+        return "".join(parts)

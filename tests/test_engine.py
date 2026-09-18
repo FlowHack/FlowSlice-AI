@@ -376,3 +376,17 @@ def test_cmd_reset_chats_requires_confirmation(engine) -> None:
     assert len(engine._chats) == before
     engine._cmd_reset("/reset chats")
     assert len(engine._chats) == 1
+
+
+def test_estimate_context_tokens_grows_with_history(engine) -> None:
+    """Оценка токенов учитывает реальный промпт и историю чата."""
+    base = engine._estimate_context_tokens({"history": False}, {})
+    assert base > 0
+    chat = engine._active_chat()
+    chat["msgs"] = [
+        {"id": 1, "role": "user", "text": "вопрос " * 40, "ts": 0},
+        {"id": 2, "role": "assistant", "text": "ответ " * 40, "ts": 0},
+        {"id": 3, "role": "user", "text": "уточнение", "ts": 0},
+    ]
+    with_history = engine._estimate_context_tokens({"history": True}, {})
+    assert with_history > base
