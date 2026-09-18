@@ -133,3 +133,9 @@ def test_worker_stores_reasoning(engine, monkeypatch) -> None:
     assert saved["reasoning"] == "мысль"
     reply = [m for m in posts if m.get("type") == "reply"]
     assert reply and reply[0]["reasoning"] == "мысль"
+    # В конце воркер шлёт полный state: экспорт чата читает текст из state.chats,
+    # а не из DOM, поэтому финальный ответ обязан быть в свежем снимке.
+    states = [m for m in posts if m.get("type") == "state"]
+    assert states, "воркер обязан отправить state после генерации"
+    sent_chat = next(c for c in states[-1]["chats"] if c["id"] == chat["id"])
+    assert sent_chat["msgs"][-1]["text"] == "ответ"

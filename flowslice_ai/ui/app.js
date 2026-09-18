@@ -195,6 +195,7 @@
       "key.valid": "API key is valid",
       "key.invalid": "API key is invalid",
       "export.user": "User",
+      "export.title": "Chat",
       "export.chat": "Export chat"
     },
     ru: {
@@ -362,6 +363,7 @@
       "key.valid": "Ключ действителен",
       "key.invalid": "Ключ недействителен",
       "export.user": "Пользователь",
+      "export.title": "Чат",
       "export.chat": "Экспорт чата"
     },
     sr: {
@@ -529,6 +531,7 @@
       "key.valid": "API ključ je važeći",
       "key.invalid": "API ključ nije važeći",
       "export.user": "Korisnik",
+      "export.title": "Ćaskanje",
       "export.chat": "Izvezi razgovor"
     }
   };
@@ -2619,7 +2622,7 @@
       showToast(t("common.no_active_chat"), "err");
       return;
     }
-    var lines = [chat.title || t("common.new_chat")];
+    var lines = [t("export.title") + ": " + (chat.title || t("common.new_chat"))];
     var msgs = chat.msgs || [];
     for (var i = 0; i < msgs.length; i++) {
       var m = msgs[i];

@@ -520,6 +520,8 @@ class SlicerContextMixin:
         которая выводит данные отдельным блоком).
         """
         parts = [SYSTEM_PROMPT]
+        parts.append(self._t("prompt.parameter_names"))
+        parts.append(self._t("prompt.language"))
         notes = str(self._config.get("notes", "")).strip()
         if notes:
             parts.append(self._t("prompt.notes", notes=notes))

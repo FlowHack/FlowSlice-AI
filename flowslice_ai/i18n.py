@@ -87,6 +87,12 @@ I18N_PY: dict[str, dict[str, str]] = {
         "cmd.reset.done": "Settings reset to defaults.",
         "cmd.reset_chats.done": "Chat history cleared.",
         "prompt.notes": "User notes (important information, take it into account in your answers):\n{notes}",
+        "prompt.language": "Answer strictly in English.",
+        "prompt.parameter_names": (
+            "When pointing out parameters to change, use the names shown in the "
+            "OrcaSlicer interface (human-readable labels), not internal keys, and "
+            "explain in plain words what each parameter affects."
+        ),
         "prompt.model_data": "Model data from the plate:\n{data}",
         "prompt.print_profiles": "Print profiles:\n{data}",
         "prompt.environment": "Environment: Python {ver}, date/time: {time}",
@@ -181,6 +187,12 @@ I18N_PY: dict[str, dict[str, str]] = {
         "cmd.reset.done": "Настройки сброшены к заводским.",
         "cmd.reset_chats.done": "История чатов очищена.",
         "prompt.notes": "Заметки пользователя (важная информация, учитывай её при ответах):\n{notes}",
+        "prompt.language": "Отвечай строго на русском языке.",
+        "prompt.parameter_names": (
+            "Указывая параметры к изменению, называй их так, как они подписаны в "
+            "интерфейсе OrcaSlicer (понятные названия), а не внутренними ключами, "
+            "и простыми словами объясняй, на что влияет каждый параметр."
+        ),
         "prompt.model_data": "Данные модели со стола:\n{data}",
         "prompt.print_profiles": "Профили печати:\n{data}",
         "prompt.environment": "Окружение: Python {ver}, дата/время: {time}",
@@ -275,6 +287,12 @@ I18N_PY: dict[str, dict[str, str]] = {
         "cmd.reset.done": "Podešavanja su resetovana na podrazumevana.",
         "cmd.reset_chats.done": "Istorija ćaskanja je obrisana.",
         "prompt.notes": "Korisničke beleške (važne informacije, uzmi ih u obzir u odgovorima):\n{notes}",
+        "prompt.language": "Odgovaraj isključivo na srpskom jeziku.",
+        "prompt.parameter_names": (
+            "Kada navodiš parametre za promenu, koristi nazive onako kako su "
+            "označeni u interfejsu OrcaSlicer (razumljivi nazivi), a ne interne "
+            "ključeve, i jednostavnim rečima objasni na šta svaki parametar utiče."
+        ),
         "prompt.model_data": "Podaci o modelu sa stola:\n{data}",
         "prompt.print_profiles": "Profili štampe:\n{data}",
         "prompt.environment": "Okruženje: Python {ver}, datum/vreme: {time}",

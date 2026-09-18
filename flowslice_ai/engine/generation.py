@@ -84,8 +84,10 @@ class GenerationMixin:
         finally:
             with self._gen_lock:
                 self._gen = False
-            self._post({"type": "status", "text": ""})
             self._save_chats()
+            # Полный state: UI получает финальный текст ответа (нужен, например,
+            # для экспорта чата, где используется state.chats, а не DOM).
+            self._send_state()
 
     def _fail_generation(
         self: "_ChatEngine",

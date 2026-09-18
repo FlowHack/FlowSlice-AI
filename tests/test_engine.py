@@ -403,3 +403,15 @@ def test_estimate_context_tokens_grows_with_history(engine) -> None:
     ]
     with_history = engine._estimate_context_tokens({"history": True}, {})
     assert with_history > base
+
+
+def test_system_prompt_has_parameter_and_language_rules(engine) -> None:
+    """Промпт требует UI-названия параметров и язык интерфейса плагина."""
+    engine._config["language"] = "ru"
+    prompt_ru = engine._build_system_prompt({})
+    assert "интерфейсе OrcaSlicer" in prompt_ru
+    assert "Отвечай строго на русском языке." in prompt_ru
+    engine._config["language"] = "en"
+    prompt_en = engine._build_system_prompt({})
+    assert "Answer strictly in English." in prompt_en
+    assert "human-readable label" in prompt_en
