@@ -230,3 +230,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Артефакты dev-запуска плагина вне Orca
+/chats.json
+/tab_icon.svg
