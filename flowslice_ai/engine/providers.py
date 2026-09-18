@@ -14,6 +14,8 @@ import threading
 from typing import TYPE_CHECKING, Any
 
 from flowslice_ai.config import normalize_max_tokens, normalize_temperature
+from flowslice_ai.engine.net import normalize_base_url
+from flowslice_ai.errors import ConfigError
 
 if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
@@ -191,6 +193,11 @@ class ProvidersMixin:
             )
             return
         base_url = str(message.get("base_url", "")).strip()
+        try:
+            base_url = normalize_base_url(base_url)
+        except ConfigError as exc:
+            self._toast(self._t(str(exc)), "err")
+            return
         api_key = str(message.get("api_key", "")).strip()
         pid = self._slugify(name) + "_" + self._random_suffix()
         providers = self._config.setdefault("providers", {})
@@ -210,9 +217,6 @@ class ProvidersMixin:
             providers[pid]["models"][model_id] = {
                 "name": label,
                 "builtin": False,
-                "base_url": base_url,
-                "api_key": api_key,
-                "scheme": scheme,
             }
             # Сразу делаем нового провайдера и модель активными.
             self._config["active_provider"] = pid
@@ -239,7 +243,11 @@ class ProvidersMixin:
         if message.get("name") is not None:
             prov["name"] = str(message["name"]).strip() or prov.get("name", pid)
         if message.get("base_url") is not None:
-            prov["base_url"] = str(message["base_url"]).strip()
+            try:
+                prov["base_url"] = normalize_base_url(str(message["base_url"]))
+            except ConfigError as exc:
+                self._toast(self._t(str(exc)), "err")
+                return
         if message.get("api_key") is not None:
             api_key = str(message["api_key"]).strip()
             # Пустое поле = «не менять ключ» (UI не предзаполняет секрет).
@@ -345,16 +353,6 @@ class ProvidersMixin:
                 entry[price_key] = price_value
         if "price_in" in entry or "price_out" in entry:
             entry["price_source"] = "manual"
-        # URL/ключ/схема — только для пользовательских провайдеров.
-        if not prov.get("builtin", False):
-            if message.get("base_url") is not None:
-                entry["base_url"] = str(message["base_url"]).strip()
-            if message.get("api_key") is not None:
-                entry["api_key"] = str(message["api_key"]).strip()
-            if message.get("scheme") is not None:
-                entry["scheme"] = (
-                    "anthropic" if str(message["scheme"]) == "anthropic" else "openai"
-                )
         models[model_id] = entry
         self._config = self._normalize_config(self._config)
         self._persist_config()
@@ -411,8 +409,8 @@ class ProvidersMixin:
         """Обновляет поля пользовательской модели.
 
         Принимает provider, model_id и опционально name, temperature,
-        max_tokens, reasoning, base_url, api_key, scheme. URL/ключ/схему
-        можно менять только у не-встроенных моделей.
+        max_tokens, reasoning, vision, price_in, price_out. URL, ключ и схема
+        у моделей не хранятся: они задаются на уровне провайдера.
         """
         provider = str(message.get("provider", ""))
         model_id = str(message.get("model_id", ""))
@@ -467,32 +465,17 @@ class ProvidersMixin:
             if mdef.get("price_in") is None and mdef.get("price_out") is None:
                 mdef.pop("price_source", None)
             else:
-                mdef["price_source"] = "manual"
-        if mdef.get("builtin", False):
-            if any(
-                message.get(key) is not None
-                for key in ("base_url", "api_key", "scheme")
-            ):
-                self._post(
-                    {
-                        "type": "toast",
-                        "text": self._t("model.builtin_locked_fields"),
-                        "kind": "err",
-                    }
-                )
-                return
-        else:
-            if message.get("base_url") is not None:
-                mdef["base_url"] = str(message["base_url"]).strip()
-            if message.get("api_key") is not None:
-                api_key = str(message["api_key"]).strip()
-                # Пустое поле = «не менять ключ» (UI не предзаполняет секрет).
-                if api_key:
-                    mdef["api_key"] = api_key
-            if message.get("scheme") is not None:
-                mdef["scheme"] = (
-                    "anthropic" if str(message["scheme"]) == "anthropic" else "openai"
-                )
+                    mdef["price_source"] = "manual"
+        if any(message.get(key) is not None for key in ("base_url", "api_key", "scheme")):
+            # Легаси-поля модели: URL, ключ и схема теперь только у провайдера.
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("model.creds_at_provider"),
+                    "kind": "err",
+                }
+            )
+            return
         self._config = self._normalize_config(self._config)
         self._persist_config()
         self._send_state()

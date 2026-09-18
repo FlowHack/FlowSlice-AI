@@ -1,8 +1,14 @@
 """Тесты потокового разбора SSE, выбора media_type и защиты от гонок генерации."""
 from __future__ import annotations
 
+import io
 import json
 import time
+import urllib.error
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from email.message import Message
+from email.utils import format_datetime
 
 import pytest
 
@@ -500,4 +506,112 @@ def test_set_default_model_imports_api_model(engine) -> None:
     engine._handle_set_default_model({"provider": "openrouter", "model": "vendor/chat"})
     assert engine._config["default_model"] == "openrouter::vendor/chat"
     assert "vendor/chat" in engine._config["providers"]["openrouter"]["models"]
+
+
+class _FakeResponse:
+    """Минимальная заглушка HTTP-ответа для _open_with_retry()."""
+
+    def __enter__(self) -> "_FakeResponse":
+        return self
+
+    def __exit__(self, *args: object) -> bool:
+        return False
+
+
+def _http_error(code: int, headers: Message | None = None) -> urllib.error.HTTPError:
+    """Собирает HTTPError с заданным кодом и заголовками."""
+    return urllib.error.HTTPError(
+        "https://api.example.com/v1/models", code, "boom", headers, io.BytesIO(b"")
+    )
+
+
+def test_retry_backoff_grows_and_caps() -> None:
+    """Пауза растёт по попыткам и дальше не увеличивается."""
+    from flowslice_ai.engine.api_client import _RETRY_BACKOFF
+
+    assert engine_backoff(0) == _RETRY_BACKOFF[0]
+    assert engine_backoff(1) == _RETRY_BACKOFF[1]
+    assert engine_backoff(7) == _RETRY_BACKOFF[-1]
+
+
+def engine_backoff(attempt: int) -> float:
+    """Обёртка над статическим _retry_backoff() без создания движка."""
+    from flowslice_ai.engine.api_client import ApiClientMixin
+
+    return ApiClientMixin._retry_backoff(attempt)
+
+
+def test_retry_after_seconds_supports_http_date() -> None:
+    """Retry-After в виде HTTP-даты переводится в секунды."""
+    from flowslice_ai.engine.api_client import ApiClientMixin
+
+    headers = Message()
+    headers["Retry-After"] = format_datetime(
+        datetime.now(timezone.utc) + timedelta(seconds=30), usegmt=True
+    )
+    wait = ApiClientMixin._retry_after_seconds(_http_error(429, headers))
+    assert 25.0 <= wait <= 31.0
+
+
+def test_retry_after_seconds_reads_number() -> None:
+    """Числовой Retry-After возвращается как есть."""
+    from flowslice_ai.engine.api_client import ApiClientMixin
+
+    headers = Message()
+    headers["Retry-After"] = "7"
+    assert ApiClientMixin._retry_after_seconds(_http_error(429, headers)) == 7.0
+
+
+def test_net_active_covers_compaction(engine) -> None:
+    """Во время сжатия контекста сетевые запросы не считаются отменёнными."""
+    engine._gen = False
+    engine._compacting = True
+    assert engine._net_active() is True
+
+
+def test_open_with_retry_recovers_after_server_error(engine, monkeypatch) -> None:
+    """Ошибка 5xx повторяется, а успешный ответ возвращается."""
+    calls = {"n": 0}
+
+    def fake_urlopen(request, timeout=0):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _http_error(500)
+        return _FakeResponse()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(engine, "_wait_retry", lambda wait: None)
+    monkeypatch.setattr(engine, "_notify_retry", lambda *args, **kwargs: None)
+    engine._gen = True
+    request = urllib.request.Request("https://api.example.com/v1/models")
+    assert isinstance(engine._open_with_retry(request, "deepseek"), _FakeResponse)
+    assert calls["n"] == 2
+
+
+def test_open_with_retry_does_not_repeat_auth_error(engine, monkeypatch) -> None:
+    """Ошибка аутентификации (401) не повторяется."""
+    calls = {"n": 0}
+
+    def fake_urlopen(request, timeout=0):
+        calls["n"] += 1
+        raise _http_error(401)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    engine._gen = True
+    request = urllib.request.Request("https://api.example.com/v1/models")
+    with pytest.raises(urllib.error.HTTPError):
+        engine._open_with_retry(request, "deepseek")
+    assert calls["n"] == 1
+
+
+def test_open_with_retry_aborts_when_cancelled(engine) -> None:
+    """После «Стоп» ожидание повтора прерывается ошибкой остановки."""
+    from flowslice_ai.errors import StreamError
+
+    engine._gen = False
+    engine._compacting = False
+    request = urllib.request.Request("https://api.example.com/v1/models")
+    with pytest.raises(StreamError):
+        engine._open_with_retry(request, "deepseek")
+
 

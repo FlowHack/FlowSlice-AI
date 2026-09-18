@@ -116,7 +116,8 @@ class GenerationMixin:
         chat["msgs"].append(assistant_msg)
         self._save_chats()
         # Полный state с пустым ответом ассистента: UI привязывает стрим к нему.
-        self._send_state()
+        # Изображения передаются, чтобы только что прикреплённое фото отобразилось.
+        self._send_state(include_images=True)
         try:
             if chat.get("context_flags", {}).get("history") and self._should_compact(chat):
                 try:

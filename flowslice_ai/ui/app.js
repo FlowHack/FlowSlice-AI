@@ -77,6 +77,7 @@
       "attach.reading": "File is still being read, try again in a moment.",
       "attach.binary_unsupported": "Binary files are not supported: {name}. Attach a text file or an image.",
       "attach.read_failed": "Failed to read file: {name}.",
+      "attach.image_failed": "Failed to process image: {name}.",
       "attach.type_image": "Images",
       "attach.type_text": "Text files",
       "attach.file_too_big": "File \"{name}\" is too large (100 000 characters limit).",
@@ -294,6 +295,7 @@
       "attach.reading": "Файл ещё читается, повторите через мгновение.",
       "attach.binary_unsupported": "Бинарные файлы не поддерживаются: {name}. Прикрепите текстовый файл или изображение.",
       "attach.read_failed": "Не удалось прочитать файл: {name}.",
+      "attach.image_failed": "Не удалось обработать изображение: {name}.",
       "attach.type_image": "Изображения",
       "attach.type_text": "Текстовые файлы",
       "attach.file_too_big": "Файл «{name}» слишком большой (лимит 100 000 символов).",
@@ -511,6 +513,7 @@
       "attach.reading": "Datoteka se još čita, pokušajte ponovo za trenutak.",
       "attach.binary_unsupported": "Binarne datoteke nisu podržane: {name}. Priložite tekstualnu datoteku ili sliku.",
       "attach.read_failed": "Nije moguće pročitati datoteku: {name}.",
+      "attach.image_failed": "Nije moguće obraditi sliku: {name}.",
       "attach.type_image": "Slike",
       "attach.type_text": "Tekstualne datoteke",
       "attach.file_too_big": "Datoteka \"{name}\" je prevelika (ograničenje 100 000 znakova).",
@@ -816,6 +819,7 @@
   var historyIndex = -1; // позиция навигации по истории (-1 — черновик)
   var historyDraft = null; // черновик ввода, временно вытесненный историей
   var userScrolledUp = false; // пользователь прокрутил историю вверх
+  var pendingForceScroll = false; // требуется прокрутка вниз после перерисовки
 
   /* ===== Хелперы ===== */
   function byId(id) {
@@ -1830,7 +1834,9 @@
     if (state.status === "streaming" && streamThoughtEl) {
       streamThoughtEl.textContent = streamThought;
     }
-    scrollToBottom(true);
+    // Прокручиваем вниз только по явному запросу, чтобы не мешать чтению.
+    scrollToBottom(pendingForceScroll);
+    pendingForceScroll = false;
   }
 
   function scrollToBottom(force) {
@@ -2075,8 +2081,14 @@
       if (file.type && file.type.indexOf("image/") === 0) {
         // Фото: сжатие через canvas до 1024px по большей стороне
         var imgReader = new FileReader();
+        imgReader.onerror = function () {
+          showToast(t("attach.read_failed", { name: name }), "err");
+        };
         imgReader.onload = function (e) {
           var img = new Image();
+          img.onerror = function () {
+            showToast(t("attach.image_failed", { name: name }), "err");
+          };
           img.onload = function () {
             var maxSide = 1024;
             var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
@@ -2086,13 +2098,25 @@
             canvas.width = w;
             canvas.height = h;
             var ctx = canvas.getContext("2d");
+            if (!ctx) {
+              showToast(t("attach.image_failed", { name: name }), "err");
+              return;
+            }
             ctx.drawImage(img, 0, 0, w, h);
+            var data = "";
+            try {
+              data = canvas.toDataURL("image/jpeg", 0.85);
+            } catch (err) {
+              console.error("Не удалось закодировать изображение:", err);
+              showToast(t("attach.image_failed", { name: name }), "err");
+              return;
+            }
             attachments.push({
               kind: "image",
               name: name,
               ready: true,
               tokens: Math.max(85, Math.ceil((w * h) / 750)),
-              data: canvas.toDataURL("image/jpeg", 0.85)
+              data: data
             });
             renderAttachments();
           };
@@ -2313,6 +2337,9 @@
       payload.edit_id = editId;
     }
     post(payload);
+    // После отправки всегда показываем последнее сообщение, даже если
+    // пользователь был прокручен вверх.
+    pendingForceScroll = true;
     // В историю навигации попадают только обычные отправки (не правки).
     if (!editId) {
       pushInputHistory(text, attachments);
@@ -2541,8 +2568,6 @@
   var setFontStyleDD = null;
   var setLanguageDD = null;
   var setPeriodDD = null;
-  var amSchemeDD = null;
-  var setModelSchemeDD = null;
   var perModelDirty = false; // флаг: per-model настройки изменены вручную
   var currentModelKey = null; // ключ "provider::model" текущей редактируемой модели
   var perModelDrafts = {}; // черновики per-model настроек: ключ -> {temperature, max_tokens, reasoning}
@@ -2756,14 +2781,6 @@
     ], "all", function (val) {
       post({ type: "get_usage", period: val });
     }, t("dd.period_search"));
-    amSchemeDD = makeDropdown("amSchemeDD", [
-      { value: "openai", label: t("scheme.openai") },
-      { value: "anthropic", label: t("scheme.anthropic") }
-    ], "openai", null, t("dd.scheme_search"));
-    setModelSchemeDD = makeDropdown("setModelSchemeDD", [
-      { value: "openai", label: t("scheme.openai") },
-      { value: "anthropic", label: t("scheme.anthropic") }
-    ], "openai", null, t("dd.scheme_search"));
     setLanguageDD = makeDropdown("setLanguageDD", [
       { value: "en", label: t("lang.en") },
       { value: "ru", label: t("lang.ru") },
@@ -3146,8 +3163,7 @@
     if (hr) {
       hr.style.display = "block";
     }
-    // Поля URL/ключа/схемы доступны только персональным провайдерам.
-    byId("amCustomFields").style.display = provider.builtin ? "none" : "block";
+    // URL, ключ и схема задаются только у провайдера — у модели их нет.
     byId("amSubmit").style.display = "inline-block";
     byId("amCancel").style.display = "inline-block";
     if (hasModels) {
@@ -3163,25 +3179,16 @@
 
   /* Отправка формы добавления модели (общая для режимов «нет моделей» и «есть модели»). */
   function submitAddModel() {
-    var provider = setProviderDD.getSelected();
-    var prov = providerById(provider);
     var payload = {
       type: "add_model",
-      provider: provider,
+      provider: setProviderDD.getSelected(),
       model_id: byId("amSystemName").value.trim(),
       label: byId("amLabel").value.trim()
     };
-    if (prov && !prov.builtin) {
-      payload.base_url = byId("amBaseUrl").value.trim();
-      payload.api_key = byId("amApiKey").value.trim();
-      payload.scheme = amSchemeDD.getSelected();
-    }
     post(payload);
     byId("addModelForm").style.display = "none";
     byId("amSystemName").value = "";
     byId("amLabel").value = "";
-    byId("amBaseUrl").value = "";
-    byId("amApiKey").value = "";
   }
 
   function onVisionSelect() {
@@ -3307,9 +3314,6 @@
       customFields.style.display = "block";
       byId("setModelName").value = model.name || "";
       byId("setModelSystemName").value = model.id || "";
-      byId("setModelBaseUrl").value = model.base_url || "";
-      setKeyField("setModelApiKey", !!model.has_key);
-      setModelSchemeDD.setSelected(model.scheme || prov.scheme || "openai");
     } else {
       customFields.style.display = "none";
     }
@@ -3517,19 +3521,12 @@
       // Дополнительные поля пользовательской модели.
       var modelId = setModelDD.getSelected();
       if (modelId) {
-        var modelPayload = {
+        post({
           type: "update_model",
           provider: prov.id,
           model_id: modelId,
-          name: byId("setModelName").value,
-          base_url: byId("setModelBaseUrl").value,
-          scheme: setModelSchemeDD.getSelected()
-        };
-        var modelKey = byId("setModelApiKey").value.trim();
-        if (modelKey) {
-          modelPayload.api_key = modelKey;
-        }
-        post(modelPayload);
+          name: byId("setModelName").value
+        });
       }
     }
     saveCustomTab();
@@ -3776,14 +3773,95 @@
     scrollToBottom(false);
   }
 
+  // Кэш медиа сообщений. Сервер в общем снимке состояния не передаёт
+  // тяжёлые data URI изображений, поэтому UI запоминает их из полных снимков
+  // (загрузка, переключение чата, старт генерации) и восстанавливает по id.
+  var messageMediaCache = {};
+
+  function rememberMessageMedia(chats) {
+    (chats || []).forEach(function (chat) {
+      if (!chat || !Array.isArray(chat.msgs)) {
+        return;
+      }
+      chat.msgs.forEach(function (msg) {
+        if (!msg || !msg.id) {
+          return;
+        }
+        var hasImage = !!msg.image;
+        if (!hasImage && Array.isArray(msg.attachments)) {
+          hasImage = msg.attachments.some(function (att) {
+            return att && att.image;
+          });
+        }
+        if (hasImage) {
+          messageMediaCache[msg.id] = {
+            image: msg.image || null,
+            attachments: Array.isArray(msg.attachments) ? msg.attachments : null
+          };
+        }
+      });
+    });
+  }
+
+  function pruneMessageMedia(chats) {
+    var alive = {};
+    (chats || []).forEach(function (chat) {
+      if (!chat || !Array.isArray(chat.msgs)) {
+        return;
+      }
+      chat.msgs.forEach(function (msg) {
+        if (msg && msg.id) {
+          alive[msg.id] = true;
+        }
+      });
+    });
+    Object.keys(messageMediaCache).forEach(function (id) {
+      if (!alive[id]) {
+        delete messageMediaCache[id];
+      }
+    });
+  }
+
+  function restoreMessageMedia(chats) {
+    (chats || []).forEach(function (chat) {
+      if (!chat || !Array.isArray(chat.msgs)) {
+        return;
+      }
+      chat.msgs.forEach(function (msg) {
+        if (!msg || !msg.id) {
+          return;
+        }
+        var cached = messageMediaCache[msg.id];
+        if (!cached) {
+          return;
+        }
+        if (!msg.image && cached.image) {
+          msg.image = cached.image;
+        }
+        if ((!Array.isArray(msg.attachments) || !msg.attachments.length) && cached.attachments) {
+          msg.attachments = cached.attachments;
+        }
+      });
+    });
+    pruneMessageMedia(chats);
+  }
+
   function onMessage(msg) {
     if (!msg || typeof msg !== "object") {
       return;
     }
     switch (msg.type) {
       case "state":
+        rememberMessageMedia(state.chats);
+        var prevActiveState = state.active;
         state.chats = msg.chats || [];
+        restoreMessageMedia(state.chats);
         state.active = msg.active || null;
+        // При переключении чата показываем его конец.
+        if (state.active !== prevActiveState) {
+          userScrolledUp = false;
+          pendingForceScroll = true;
+        }
         state.settings = msg.settings || {};
         state.providers = msg.providers || [];
         state.commands = msg.commands || [];
@@ -3994,13 +4072,6 @@
       this.textContent = masked ? "🙈" : "👁";
       this.title = masked ? t("common.hide_key") : t("common.show_key");
     });
-    byId("setModelApiKeyEye").addEventListener("click", function () {
-      var keyInput = byId("setModelApiKey");
-      var masked = keyInput.type === "password";
-      keyInput.type = masked ? "text" : "password";
-      this.textContent = masked ? "🙈" : "👁";
-      this.title = masked ? t("common.hide_key") : t("common.show_key");
-    });
     byId("setTemperature").addEventListener("input", function () {
       byId("setTemperatureValue").textContent = this.value;
       perModelDirty = true;
@@ -4049,8 +4120,6 @@
       }
     });
     byId("addModelBtn").addEventListener("click", function () {
-      var provider = providerById(setProviderDD.getSelected());
-      byId("amCustomFields").style.display = (provider && !provider.builtin) ? "block" : "none";
       byId("amSubmit").style.display = "inline-block";
       byId("amCancel").style.display = "inline-block";
       byId("addModelForm").style.display = "block";
@@ -4230,6 +4299,7 @@
     formatCost: formatCost,
     formatPrice: formatPrice,
     codeBlockHtml: codeBlockHtml,
+    renderMarkdown: renderMarkdown,
   };
 
   document.addEventListener("DOMContentLoaded", init);

@@ -144,7 +144,10 @@ class CoreMixin:
             if pid in DEFAULT_PROVIDERS or pid == "custom" or not isinstance(pdef, dict):
                 continue
             user_models: dict[str, dict[str, Any]] = {}
-            for mid, mdef in pdef.get("models", {}).items():
+            raw_models = pdef.get("models", {})
+            if not isinstance(raw_models, dict):
+                raw_models = {}
+            for mid, mdef in raw_models.items():
                 if isinstance(mdef, dict):
                     user_models[mid] = dict(mdef)
             normalized_providers[pid] = {
@@ -182,13 +185,11 @@ class CoreMixin:
                 mdef["vision_source"] = (
                     source if source in ("default", "provider", "manual") else "default"
                 )
-                # Схема модели: нормализуется только у пользовательских провайдеров.
-                if not pdef.get("builtin", False):
-                    mdef["scheme"] = (
-                        "anthropic"
-                        if str(mdef.get("scheme", "openai")) == "anthropic"
-                        else "openai"
-                    )
+                # URL, ключ и схема задаются только у провайдера. Убираем
+                # легаси-поля моделей из старых конфигураций, чтобы они не
+                # перекрывали актуальные креды провайдера.
+                for legacy_key in ("base_url", "api_key", "scheme"):
+                    mdef.pop(legacy_key, None)
         # Активный провайдер и модель.
         active_provider = str(merged.get("active_provider", "deepseek"))
         if active_provider not in normalized_providers:
@@ -386,22 +387,26 @@ class CoreMixin:
         except (OSError, ValueError, TypeError) as exc:
             _LOGGER.warning("Не удалось загрузить историю чатов: %s", exc)
         chats = data.get("chats", [])
-        self._chats = list(chats) if isinstance(chats, list) else []
+        self._chats = [c for c in chats if isinstance(c, dict)] if isinstance(chats, list) else []
         # Миграция: пустой заголовок — маркер нового чата (JS подставляет
         # локализованный common.new_chat), старый русский маркер нормализуем.
         for chat in self._chats:
-            if isinstance(chat, dict) and chat.get("title") == "Новый чат":
+            if chat.get("title") == "Новый чат":
                 chat["title"] = ""
-            # Миграция: у старых чатов нет режимов выгрузки пресетов.
-            if isinstance(chat, dict) and not isinstance(chat.get("context_modes"), dict):
+            # Миграция: у старых чатов может не быть флагов и режимов
+            # выгрузки контекста — восстанавливаем значения по умолчанию.
+            if not isinstance(chat.get("context_flags"), dict):
+                chat["context_flags"] = {key: True for key in CONTEXT_OPTIONS}
+            if not isinstance(chat.get("context_modes"), dict):
                 chat["context_modes"] = {
                     key: "changed" for key in PRESET_CONTEXT_KEYS
                 }
+            if not isinstance(chat.get("msgs"), list):
+                chat["msgs"] = []
             # Миграция: старые версии дописывали метки вложений прямо в текст.
-            if isinstance(chat, dict):
-                for msg in chat.get("msgs", []):
-                    if isinstance(msg, dict) and isinstance(msg.get("text"), str):
-                        msg["text"] = self._strip_legacy_markers(msg["text"])
+            for msg in chat["msgs"]:
+                if isinstance(msg, dict) and isinstance(msg.get("text"), str):
+                    msg["text"] = self._strip_legacy_markers(msg["text"])
         self._active = self._as_int(data.get("active"), 0)
         self._next_id = self._as_int(data.get("next_id"), 1)
         self._msg_counter = self._as_int(data.get("next_msg_id"), 1)
@@ -442,8 +447,15 @@ class CoreMixin:
         """
         result: list[dict[str, Any]] = []
         for chat in self._chats:
+            if not isinstance(chat, dict):
+                continue
             flat_msgs: list[dict[str, Any]] = []
-            for msg in chat.get("msgs", []):
+            raw_msgs = chat.get("msgs", [])
+            if not isinstance(raw_msgs, list):
+                raw_msgs = []
+            for msg in raw_msgs:
+                if not isinstance(msg, dict):
+                    continue
                 flat = dict(msg)
                 if flat.get("image"):
                     flat.pop("image", None)
@@ -507,19 +519,21 @@ class CoreMixin:
 
     def _save_chats(self: "_ChatEngine") -> None:
         """Сохраняет историю чатов в файл под блокировкой без тяжёлых вложений."""
-        payload = {
-            "chats": self._flatten_chats(),
-            "active": self._active,
-            "next_id": self._next_id,
-            "next_msg_id": self._msg_counter,
-        }
         with self._persist_lock:
             try:
+                payload = {
+                    "chats": self._flatten_chats(),
+                    "active": self._active,
+                    "next_id": self._next_id,
+                    "next_msg_id": self._msg_counter,
+                }
                 CHATS_FILE.write_text(
                     json.dumps(payload, ensure_ascii=False), encoding="utf-8"
                 )
-            except OSError as exc:
-                _LOGGER.error("Не удалось сохранить историю чатов: %s", exc)
+            except (OSError, TypeError, ValueError) as exc:
+                _LOGGER.error(
+                    "Не удалось сохранить историю чатов: %s", exc, exc_info=True
+                )
 
     @staticmethod
     def _as_int(value: Any, default: int) -> int:
@@ -654,13 +668,20 @@ class CoreMixin:
         )
         return settings
 
-    def _send_state(self: "_ChatEngine") -> None:
-        """Формирует и отправляет полный снимок состояния в UI."""
+    def _send_state(self: "_ChatEngine", include_images: bool = False) -> None:
+        """Формирует и отправляет снимок состояния в UI.
+
+        По умолчанию изображения (data URI) не передаются: они тяжёлые, а UI
+        хранит их локально и сам восстанавливает по идентификатору сообщения.
+        Полный снимок с изображениями запрашивается только при загрузке,
+        переключении чата и старте генерации.
+        """
         chat = self._active_chat()
+        chats = self._chats if include_images else self._flatten_chats()
         self._post(
             {
                 "type": "state",
-                "chats": self._chats,
+                "chats": chats,
                 "active": self._active,
                 "settings": self._settings_snapshot(),
                 "providers": self._providers_snapshot(),
@@ -695,7 +716,10 @@ class CoreMixin:
             if not isinstance(pdef, dict):
                 continue
             models: list[dict[str, Any]] = []
-            for mid, mdef in pdef.get("models", {}).items():
+            raw_models = pdef.get("models", {})
+            if not isinstance(raw_models, dict):
+                raw_models = {}
+            for mid, mdef in raw_models.items():
                 if isinstance(mdef, dict):
                     vision = mdef.get("vision")
                     vision_source = str(mdef.get("vision_source", "default"))
@@ -715,15 +739,11 @@ class CoreMixin:
                         "temperature": mdef.get("temperature"),
                         "max_tokens": mdef.get("max_tokens"),
                         "reasoning": mdef.get("reasoning"),
-                        "scheme": str(mdef.get("scheme") or pdef.get("scheme") or "openai"),
-                        "has_key": bool(str(mdef.get("api_key", "")).strip()),
                         "vision": vision,
                         "vision_source": vision_source,
                         "price_in": mdef.get("price_in"),
                         "price_out": mdef.get("price_out"),
                     }
-                    if not mdef.get("builtin", False):
-                        entry["base_url"] = str(mdef.get("base_url", ""))
                     models.append(entry)
             prov_entry: dict[str, Any] = {
                 "id": pid,
@@ -737,6 +757,14 @@ class CoreMixin:
                 prov_entry["base_url"] = str(pdef.get("base_url", ""))
             result.append(prov_entry)
         return result
+
+    def _net_active(self: "_ChatEngine") -> bool:
+        """Возвращает True, пока сетевой запрос разрешён (генерация или сжатие).
+
+        Используется ретраями и блокирующими запросами: кнопка «Стоп»
+        переводит оба флага в False, прерывая ожидание и повторы.
+        """
+        return bool(self._gen or self._compacting)
 
     def _post(self: "_ChatEngine", payload: dict) -> None:
         """Отправляет payload в UI через установленный sink."""

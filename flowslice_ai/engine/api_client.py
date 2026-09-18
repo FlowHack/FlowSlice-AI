@@ -12,6 +12,8 @@
 import json
 import threading
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import TYPE_CHECKING, Any
 import urllib.error
 import urllib.request
@@ -19,8 +21,15 @@ import urllib.request
 if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
-from flowslice_ai.constants import HTTP_HEADERS, STREAM_THROTTLE, TIMEOUT
-from flowslice_ai.errors import ApiError, NetworkError, StreamError
+from flowslice_ai.constants import (
+    HTTP_HEADERS,
+    MAX_REPLY_CHARS,
+    MAX_THOUGHT_CHARS,
+    STREAM_THROTTLE,
+    TIMEOUT,
+)
+from flowslice_ai.engine.net import normalize_base_url
+from flowslice_ai.errors import ApiError, ConfigError, NetworkError, StreamError
 from flowslice_ai.logging import _LOGGER
 
 _OR_MODELS_TTL = 600.0  # секунд: срок жизни кэша списка моделей OpenRouter
@@ -58,8 +67,8 @@ class ApiClientMixin:
     ) -> tuple[str, str, str, str, str]:
         """Возвращает (provider_id, base_url, api_key, model, scheme) провайдера.
 
-        Учитывает переопределение base_url/api_key на уровне модели.
-        Схема API: per-model, затем провайдер, затем "openai".
+        URL, ключ и схема задаются ТОЛЬКО на уровне провайдера: у всех его
+        моделей один и тот же эндпоинт и один и тот же ключ доступа.
         """
         prov = self._config.get("providers", {}).get(provider_id)
         if not isinstance(prov, dict):
@@ -67,17 +76,7 @@ class ApiClientMixin:
         base_url = str(prov.get("base_url", ""))
         api_key = str(prov.get("api_key", ""))
         model = str(model_id or "")
-        mdef = prov.get("models", {}).get(model) if model else None
-        if isinstance(mdef, dict):
-            if mdef.get("base_url"):
-                base_url = str(mdef["base_url"])
-            if mdef.get("api_key"):
-                api_key = str(mdef["api_key"])
-        scheme = str(
-            (mdef.get("scheme") if isinstance(mdef, dict) else None)
-            or prov.get("scheme")
-            or "openai"
-        )
+        scheme = str(prov.get("scheme") or "openai")
         return provider_id, base_url, api_key, model, scheme
 
     def _active_api_credentials(self: "_ChatEngine") -> tuple[str, str, str, str, str]:
@@ -89,16 +88,20 @@ class ApiClientMixin:
         )
 
     def _active_scheme(self: "_ChatEngine") -> str:
-        """Возвращает схему API активной модели без повторной синхронизации."""
+        """Возвращает схему API активного провайдера без повторной синхронизации."""
         cfg = self._config
         provider_id = str(cfg.get("active_provider", "deepseek"))
         prov = cfg.get("providers", {}).get(provider_id)
         if not isinstance(prov, dict):
             return "openai"
-        mdef = prov.get("models", {}).get(str(cfg.get("active_model", "")))
-        if isinstance(mdef, dict):
-            return str(mdef.get("scheme") or prov.get("scheme") or "openai")
         return str(prov.get("scheme") or "openai")
+
+    def _validated_base_url(self: "_ChatEngine", base_url: str) -> str:
+        """Проверяет base_url перед запросом и переводит ошибку на язык UI."""
+        try:
+            return normalize_base_url(base_url)
+        except ConfigError as exc:
+            raise ConfigError(self._t(str(exc))) from exc
 
     def _openrouter_vision_map(self: "_ChatEngine") -> dict[str, bool]:
         """Возвращает карту «id модели OpenRouter → поддержка изображений».
@@ -213,6 +216,11 @@ class ApiClientMixin:
         base_url = str(prov.get("base_url", "")).strip()
         if not base_url:
             return {}
+        try:
+            base_url = normalize_base_url(base_url)
+        except ConfigError as exc:
+            _LOGGER.warning("Некорректный base_url провайдера %s: %s", provider_id, exc)
+            return cached[1] if cached else {}
         api_key = str(prov.get("api_key", "")).strip()
         headers = self._provider_models_headers(provider_id, api_key)
         url = self._provider_models_url(provider_id, base_url)
@@ -363,6 +371,11 @@ class ApiClientMixin:
         base_url = str(prov.get("base_url", "")).strip()
         if not base_url:
             return [], self._t("models.no_base_url")
+        try:
+            base_url = normalize_base_url(base_url)
+        except ConfigError as exc:
+            _LOGGER.warning("Некорректный base_url провайдера %s: %s", provider_id, exc)
+            return (cached[1] if cached else []), self._t("models.fetch_failed")
         api_key = str(prov.get("api_key", "")).strip()
         if not api_key and provider_id != "openrouter":
             return [], self._t("models.need_key")
@@ -512,17 +525,28 @@ class ApiClientMixin:
 
     @staticmethod
     def _retry_after_seconds(exc: urllib.error.HTTPError) -> float:
-        """Читает заголовок Retry-After, если сервер его прислал."""
+        """Читает заголовок Retry-After (число секунд или HTTP-дату)."""
         try:
             value = exc.headers.get("Retry-After") if exc.headers else None
         except (AttributeError, TypeError):
             return 0.0
         if not value:
             return 0.0
+        raw = str(value).strip()
         try:
-            return max(0.0, float(str(value).strip()))
+            return max(0.0, float(raw))
         except (TypeError, ValueError):
+            pass
+        # Некоторые провайдеры присылают Retry-After как HTTP-дату.
+        try:
+            parsed = parsedate_to_datetime(raw)
+        except (TypeError, ValueError, OverflowError):
             return 0.0
+        if parsed is None:
+            return 0.0
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return max(0.0, (parsed - datetime.now(timezone.utc)).total_seconds())
 
     def _notify_retry(
         self: "_ChatEngine", provider_id: str, attempt: int, wait: float, reason: str
@@ -547,7 +571,7 @@ class ApiClientMixin:
     def _wait_retry(self: "_ChatEngine", wait: float) -> None:
         """Пауза перед повтором с возможностью прервать ожидание кнопкой «Стоп»."""
         remaining = max(0.0, wait)
-        while remaining > 0 and self._gen:
+        while remaining > 0 and self._net_active():
             step = min(0.2, remaining)
             time.sleep(step)
             remaining -= step
@@ -563,7 +587,7 @@ class ApiClientMixin:
         """
         attempt = 0
         while True:
-            if not self._gen:
+            if not self._net_active():
                 raise StreamError(self._t("gen.stopped"))
             try:
                 return urllib.request.urlopen(request, timeout=TIMEOUT)
@@ -572,6 +596,8 @@ class ApiClientMixin:
                     raise
                 wait = self._retry_after_seconds(exc) or self._retry_backoff(attempt)
                 reason = "HTTP " + str(exc.code)
+                # Тело ответа при повторе не читаем — закрываем соединение.
+                exc.close()
             except PermissionError:
                 # Песочница Orca: повтор не поможет.
                 raise
@@ -591,6 +617,7 @@ class ApiClientMixin:
         """Выполняет запрос к API и возвращает (текст ответа, размышления)."""
         self._sync_config()
         provider_id, base_url, api_key, model, scheme = self._active_api_credentials()
+        base_url = self._validated_base_url(base_url)
         if not api_key:
             raise ApiError(self._t("err.api_key_required"))
         cfg = self._config
@@ -731,6 +758,7 @@ class ApiClientMixin:
         """
         self._sync_config()
         provider_id, base_url, api_key, model, scheme = self._active_api_credentials()
+        base_url = self._validated_base_url(base_url)
         if not api_key:
             raise ApiError(self._t("err.api_key_required"))
         if scheme == "anthropic":
@@ -863,6 +891,13 @@ class ApiClientMixin:
         for raw in resp:
             if not self._gen:
                 break
+            if len(acc) >= MAX_REPLY_CHARS or len(thought) >= MAX_THOUGHT_CHARS:
+                _LOGGER.warning(
+                    "Ответ модели превысил лимит (%s/%s символов) — чтение остановлено",
+                    len(acc),
+                    len(thought),
+                )
+                break
             line = raw.decode("utf-8", errors="replace").strip()
             if not line.startswith("data:"):
                 continue
@@ -924,6 +959,13 @@ class ApiClientMixin:
         last_post = 0.0
         for raw in resp:
             if not self._gen:
+                break
+            if len(acc) >= MAX_REPLY_CHARS or len(thought) >= MAX_THOUGHT_CHARS:
+                _LOGGER.warning(
+                    "Ответ модели превысил лимит (%s/%s символов) — чтение остановлено",
+                    len(acc),
+                    len(thought),
+                )
                 break
             line = raw.decode("utf-8", errors="replace").strip()
             if not line.startswith("data:"):
@@ -1010,12 +1052,14 @@ class ApiClientMixin:
                 {"type": "key_test", "ok": False, "text": self._t("key.missing")}
             )
             return
-        if not base_url:
+        try:
+            base_url = normalize_base_url(base_url)
+        except ConfigError as exc:
             self._post(
                 {
                     "type": "key_test",
                     "ok": False,
-                    "text": self._t("key.network_error", err="base_url не задан"),
+                    "text": self._t(str(exc)),
                 }
             )
             return

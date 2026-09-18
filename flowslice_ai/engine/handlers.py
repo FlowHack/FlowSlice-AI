@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 from flowslice_ai.config import DEFAULT_CONFIG, RESET_SCOPES, SETTINGS_KEYS
 from flowslice_ai.constants import (
+    CONTEXT_OPTIONS,
     MAX_ATTACHMENTS,
     MAX_FILE_CHARS,
     MAX_IMAGE_B64,
@@ -33,7 +34,24 @@ class HandlersMixin:
     """Обработчики сообщений из UI и вспомогательные методы состояния."""
 
     def handle_message(self: "_ChatEngine", message: dict) -> None:
-        """Разбирает входящее сообщение из UI и направляет в соответствующий хендлер."""
+        """Разбирает входящее сообщение из UI и направляет в соответствующий хендлер.
+
+        Верхнеуровневая защита: ошибка в одном хендлере не должна ронять
+        обработку очереди сообщений webview — она логируется с контекстом.
+        """
+        try:
+            self._dispatch_message(message)
+        except Exception as exc:  # pylint: disable=broad-except
+            msg_type = message.get("type", "") if isinstance(message, dict) else "?"
+            _LOGGER.error(
+                "Необработанная ошибка при обработке сообщения %s: %s",
+                msg_type,
+                exc,
+                exc_info=True,
+            )
+
+    def _dispatch_message(self: "_ChatEngine", message: dict) -> None:
+        """Маршрутизирует сообщение UI в конкретный хендлер."""
         self._sync_config()
         msg_type = message.get("type", "")
         if msg_type == "get_state":
@@ -104,8 +122,8 @@ class HandlersMixin:
     # ===== Хендлеры =====
 
     def _handle_get_state(self: "_ChatEngine") -> None:
-        """Отправляет полное состояние интерфейса."""
-        self._send_state()
+        """Отправляет полное состояние интерфейса вместе с изображениями."""
+        self._send_state(include_images=True)
 
     def _handle_chat(self: "_ChatEngine", message: dict) -> None:
         """Обрабатывает отправку или редактирование сообщения пользователя."""
@@ -195,6 +213,16 @@ class HandlersMixin:
                 return
         _LOGGER.warning("Не найдено сообщение для редактирования: %s", edit_id)
 
+    def _reject_while_generating(self: "_ChatEngine") -> bool:
+        """Запрещает разрушающие операции с чатами во время генерации.
+
+        Возвращает True, если операцию нужно прервать (пользователю показан тост).
+        """
+        if not self._gen:
+            return False
+        self._toast(self._t("chat.busy"), "warn")
+        return True
+
     def _handle_new_chat(self: "_ChatEngine") -> None:
         """Создаёт новый чат и обновляет интерфейс."""
         self._create_chat()
@@ -202,6 +230,8 @@ class HandlersMixin:
 
     def _handle_pick_chat(self: "_ChatEngine", message: dict) -> None:
         """Переключает активный чат по идентификатору."""
+        if self._reject_while_generating():
+            return
         chat_id = message.get("id")
         if self._chat_by_id(chat_id) is not None:
             self._active = chat_id
@@ -210,12 +240,18 @@ class HandlersMixin:
                 chat.get("context_flags", {}), chat.get("context_modes", {})
             )
             self._save_chats()
-            self._send_state()
+            self._send_state(include_images=True)
 
     def _handle_delete_chat(self: "_ChatEngine", message: dict) -> None:
         """Удаляет чат и корректирует активный идентификатор."""
+        if self._reject_while_generating():
+            return
         chat_id = message.get("id")
-        self._chats = [chat for chat in self._chats if chat.get("id") != chat_id]
+        self._chats = [
+            chat
+            for chat in self._chats
+            if isinstance(chat, dict) and chat.get("id") != chat_id
+        ]
         if self._active == chat_id:
             self._active = self._chats[0]["id"] if self._chats else 0
         if not self._chats:
@@ -225,6 +261,8 @@ class HandlersMixin:
 
     def _handle_clear_chats(self: "_ChatEngine") -> None:
         """Удаляет всю историю чатов и создаёт новый пустой чат."""
+        if self._reject_while_generating():
+            return
         self._chats = []
         self._active = 0
         self._create_chat()
@@ -251,9 +289,10 @@ class HandlersMixin:
         self._send_state()
 
     def _handle_stop(self: "_ChatEngine") -> None:
-        """Останавливает текущую генерацию."""
+        """Останавливает текущую генерацию и прерывает сжатие контекста."""
         with self._gen_lock:
             self._gen = False
+            self._compacting = False
         self._post({"type": "status", "text": ""})
 
     def _handle_context_flags(self: "_ChatEngine", message: dict) -> None:
@@ -266,9 +305,12 @@ class HandlersMixin:
         if not isinstance(flags, dict):
             return
         chat = self._active_chat()
+        current_flags = chat.get("context_flags")
+        if not isinstance(current_flags, dict):
+            current_flags = {}
         chat["context_flags"] = {
-            key: bool(flags.get(key, value))
-            for key, value in chat["context_flags"].items()
+            key: bool(flags.get(key, current_flags.get(key, True)))
+            for key in CONTEXT_OPTIONS
         }
         modes = message.get("modes")
         current_modes = chat.get("context_modes")
@@ -277,10 +319,16 @@ class HandlersMixin:
         if isinstance(modes, dict):
             for key in PRESET_CONTEXT_KEYS:
                 current_modes[key] = "all" if modes.get(key) == "all" else "changed"
-        chat["context_modes"] = {
+            model_mode = modes.get("model")
+            if model_mode in ("brief", "full", "deep"):
+                current_modes["model"] = model_mode
+        result_modes = {
             key: ("all" if current_modes.get(key) == "all" else "changed")
             for key in PRESET_CONTEXT_KEYS
         }
+        if current_modes.get("model") in ("brief", "full", "deep"):
+            result_modes["model"] = str(current_modes["model"])
+        chat["context_modes"] = result_modes
         self._ctx_tokens = self._estimate_context_tokens(
             chat["context_flags"], chat["context_modes"]
         )

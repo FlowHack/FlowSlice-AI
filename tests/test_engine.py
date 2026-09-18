@@ -1013,3 +1013,30 @@ def test_collect_model_full_has_no_deep_metrics(engine, monkeypatch) -> None:
     assert "base_area_cm2" not in instance
     assert "overhang_area_cm2" not in instance
 
+
+def test_context_flags_preserve_model_mode(engine) -> None:
+    """Смена флагов контекста не теряет выбранный режим модели."""
+    chat = {
+        "id": 7,
+        "msgs": [],
+        "context_flags": {"model": True},
+        "context_modes": {"model": "deep"},
+    }
+    engine._chats = [chat]
+    engine._active = 7
+    engine._handle_context_flags({"flags": {"model": True}, "modes": {"filament": "all"}})
+    assert chat["context_flags"]["model"] is True
+    assert chat["context_flags"]["history"] is True
+    assert chat["context_modes"]["model"] == "deep"
+    assert chat["context_modes"]["filament"] == "all"
+
+
+def test_context_flags_reject_non_dict(engine) -> None:
+    """Некорректные flags не меняют состояние чата."""
+    chat = {"id": 7, "msgs": [], "context_flags": {"model": False}}
+    engine._chats = [chat]
+    engine._active = 7
+    engine._handle_context_flags({"flags": "wrong"})
+    assert chat["context_flags"] == {"model": False}
+
+

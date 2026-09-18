@@ -141,21 +141,6 @@
               <label for="setModelSystemName"><span data-i18n="settings.model_system_name">Название в системе (id)</span> <span class="help-icon" data-i18n-tooltip="settings.help_model_name" data-i18n-title="settings.help_model_name">?</span></label>
               <input type="text" id="setModelSystemName" readonly>
             </div>
-            <div class="field">
-              <label for="setModelBaseUrl"><span data-i18n="settings.base_url">Базовый URL API</span> <span class="help-icon" data-i18n-tooltip="settings.help_url" data-i18n-title="settings.help_url">?</span></label>
-              <input type="text" id="setModelBaseUrl" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="setModelApiKey"><span data-i18n="settings.api_key">API-ключ</span> <span class="help-icon" data-i18n-tooltip="settings.help_api_key" data-i18n-title="settings.help_api_key">?</span></label>
-              <div class="key-row">
-                <input type="password" id="setModelApiKey" autocomplete="off">
-                <button type="button" id="setModelApiKeyEye" class="eye-btn" title="Показать ключ" data-i18n-title="common.show_key">👁</button>
-              </div>
-            </div>
-            <div class="field">
-              <label><span data-i18n="settings.scheme">Схема API</span> <span class="help-icon" data-i18n-tooltip="settings.help_scheme" data-i18n-title="settings.help_scheme">?</span></label>
-              <div class="dd-wrap" id="setModelSchemeDD"></div>
-            </div>
           </div>
           <hr class="settings-divider">
           <div class="settings-subtitle" data-i18n="settings.fine_tuning">Тонкие настройки</div>
@@ -203,12 +188,6 @@
           <div id="addModelForm" style="display:none;margin-top:8px">
             <input type="text" id="amSystemName" placeholder="Название в системе (id)" data-i18n-placeholder="settings.model_system_name">
             <input type="text" id="amLabel" placeholder="Удобное название" data-i18n-placeholder="settings.model_name">
-            <div id="amCustomFields">
-              <input type="text" id="amBaseUrl" placeholder="Базовый URL API" data-i18n-placeholder="settings.base_url">
-              <input type="password" id="amApiKey" placeholder="API-ключ" data-i18n-placeholder="settings.api_key">
-              <label for="amSchemeDD" data-i18n="settings.scheme">Схема API</label>
-              <div class="dd-wrap" id="amSchemeDD"></div>
-            </div>
             <div class="modal-actions">
               <button type="button" id="amSubmit" class="primary-btn" data-i18n="settings.add">Добавить</button>
               <button type="button" id="amCancel" class="ghost-btn" data-i18n="settings.cancel">Отмена</button>

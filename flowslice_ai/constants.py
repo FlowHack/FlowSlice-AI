@@ -60,6 +60,9 @@ MAX_IMAGES_IN_HISTORY = 2
 # Сколько изображений всего допускается в одном запросе.
 MAX_IMAGES_IN_REQUEST = 10
 MAX_CONTEXT_CHARS = 60_000
+# Предохранители от бесконечного/гигантского потока ответа модели.
+MAX_REPLY_CHARS = 1_000_000
+MAX_THOUGHT_CHARS = 400_000
 
 CONTEXT_OPTIONS = ("filament", "printer", "print", "model", "history")
 

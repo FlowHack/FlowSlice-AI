@@ -73,6 +73,17 @@ const codeHtml = pure.codeBlockHtml("&lt;b&gt;x&lt;/b&gt;");
 check("codeBlockHtml кнопка", codeHtml.indexOf('class="md-copy"') !== -1, true);
 check("codeBlockHtml код", codeHtml.indexOf("<code>&lt;b&gt;x&lt;/b&gt;</code>") !== -1, true);
 
+// Markdown: разметка строится, но HTML из ответа модели не исполняется.
+const heading = pure.renderMarkdown("# Заголовок");
+check("renderMarkdown заголовок", heading, "<h1>Заголовок</h1>");
+const fenced = pure.renderMarkdown("```\n<b>x</b>\n```");
+check("renderMarkdown блок кода", fenced.indexOf('class="md-code-wrap"') !== -1, true);
+check("renderMarkdown экранирование кода", fenced.indexOf("<code>&lt;b&gt;x&lt;/b&gt;</code>") !== -1, true);
+const injected = pure.renderMarkdown("<script>alert(1)</script>");
+check("renderMarkdown запрет script", injected.indexOf("<script>") === -1, true);
+const list = pure.renderMarkdown("- один\n- два");
+check("renderMarkdown список", list, "<ul><li>один</li><li>два</li></ul>");
+
 if (failures > 0) {
   console.error(`Провалено проверок: ${failures}`);
   process.exit(1);
