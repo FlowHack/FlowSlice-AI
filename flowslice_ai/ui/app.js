@@ -162,7 +162,8 @@
       "mp.search": "Search model or provider...",
       "mp.default": "Default",
       "mp.default_set": "Set as default model",
-      "mp.need_key": "Set an API key in settings",
+      "mp.need_key": "Set an API key for one of the providers or add your own model",
+      "mp.open_settings": "Open settings",
       "mp.selected": "Selected",
       "copy.title": "Copy the text manually",
       "dd.provider_search": "Search providers...",
@@ -327,7 +328,8 @@
       "mp.search": "Поиск модели или провайдера…",
       "mp.default": "По умолчанию",
       "mp.default_set": "Сделать моделью по умолчанию",
-      "mp.need_key": "Укажите токен в настройках",
+      "mp.need_key": "Укажите для одного из провайдеров токен или внесите свою модель",
+      "mp.open_settings": "Открыть настройки",
       "mp.selected": "Выбрано",
       "copy.title": "Скопируйте текст вручную",
       "dd.provider_search": "Поиск провайдера…",
@@ -492,7 +494,8 @@
       "mp.search": "Pretraga modela ili provajdera…",
       "mp.default": "Podrazumevano",
       "mp.default_set": "Postavi kao podrazumevani model",
-      "mp.need_key": "Postavite token u podešavanjima",
+      "mp.need_key": "Postavite token za jednog od provajdera ili dodajte sopstveni model",
+      "mp.open_settings": "Otvori podešavanja",
       "mp.selected": "Izabrano",
       "copy.title": "Kopirajte tekst ručno",
       "dd.provider_search": "Pretraga provajdera…",
@@ -910,7 +913,18 @@
           break;
         }
       }
-      list.appendChild(el("div", "mp-empty", t(hasAnyKey ? "common.nothing" : "mp.need_key")));
+      if (hasAnyKey) {
+        list.appendChild(el("div", "mp-empty", t("common.nothing")));
+      } else {
+        list.appendChild(el("div", "mp-empty", t("mp.need_key")));
+        var settingsBtn = el("button", "ghost-btn mp-empty-action", t("mp.open_settings"));
+        settingsBtn.type = "button";
+        settingsBtn.addEventListener("click", function () {
+          closeModelPicker();
+          openSettings();
+        });
+        list.appendChild(settingsBtn);
+      }
     }
   }
 

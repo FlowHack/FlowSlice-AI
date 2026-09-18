@@ -1009,6 +1009,10 @@ select option {
   color: var(--orca-muted);
   text-align: center;
 }
+.mp-empty-action {
+  display: block;
+  margin: 10px auto 4px;
+}
 
 /* ===== Кастомный дропдаун с поиском ===== */
 .dd-wrap {
