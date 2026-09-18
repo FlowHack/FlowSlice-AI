@@ -5,12 +5,12 @@ from flowslice_ai.constants import MAX_CHAT_MESSAGES
 
 
 def test_create_chat(engine) -> None:
-    """_create_chat() создаёт чат с id/title/msgs и делает его активным."""
+    """_create_chat() наполняет чат пустой историей и делает его активным."""
     chat = engine._create_chat()
-    assert "id" in chat
-    assert "title" in chat
-    assert "msgs" in chat
-    assert engine._active_chat()["id"] == chat["id"]
+    assert chat in engine._chats
+    assert chat["msgs"] == []
+    assert chat["title"] == ""
+    assert engine._active_chat() is chat
 
 
 def test_trim_chat(engine) -> None:
@@ -28,17 +28,31 @@ def test_auto_title(engine) -> None:
 
 
 def test_chat_by_id(engine) -> None:
-    """_chat_by_id() находит активный чат по его id."""
-    chat_id = engine._active_chat()["id"]
-    assert engine._chat_by_id(chat_id) is not None
+    """_chat_by_id() возвращает именно запрошенный чат и None для чужого id."""
+    chat = engine._active_chat()
+    assert engine._chat_by_id(chat["id"]) is chat
+    assert engine._chat_by_id(chat["id"] + 10_000) is None
 
 
 def test_save_load_chats(engine) -> None:
-    """_save_chats() пишет файл chats.json во временное хранилище."""
+    """_save_chats() пишет JSON, который _load_chats() читает обратно."""
+    import json
+
     from flowslice_ai.engine.core import CHATS_FILE
 
+    chat = engine._active_chat()
+    chat["msgs"] = [{"id": 1, "role": "user", "text": "сохрани меня", "ts": 0}]
     engine._save_chats()
-    assert CHATS_FILE.exists()
+
+    payload = json.loads(CHATS_FILE.read_text(encoding="utf-8"))
+    assert payload["active"] == chat["id"]
+    assert payload["chats"][0]["msgs"][-1]["text"] == "сохрани меня"
+
+    engine._chats = []
+    engine._load_chats()
+    restored = engine._active_chat()
+    assert restored is not None
+    assert restored["msgs"][-1]["text"] == "сохрани меня"
 
 
 def test_fail_generation_keeps_user_message(engine) -> None:

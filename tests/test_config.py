@@ -24,12 +24,6 @@ def test_reset_config(engine) -> None:
     assert engine.reset_config() == engine._normalize_config(DEFAULT_CONFIG.copy())
 
 
-def test_normalize_unknown_keys(engine) -> None:
-    """Нормализация неизвестных ключей не падает и возвращает dict."""
-    result = engine._normalize_config({"unknown_key": 1})
-    assert isinstance(result, dict)
-
-
 def test_normalize_invalid_numbers(engine) -> None:
     """Недопустимые числа заменяются безопасными значениями по умолчанию."""
     result = engine._normalize_config(

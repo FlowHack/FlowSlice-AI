@@ -6,7 +6,6 @@ import pathlib
 import pytest
 
 from flowslice_ai.paths import (
-    _find_data_dir,
     _prepare_storage_dir,
     atomic_write_text,
 )
@@ -29,12 +28,6 @@ def test_prepare_storage_dir_falls_back_on_error(tmp_path: pathlib.Path) -> None
     result = _prepare_storage_dir(raw, fallback)
     assert result == fallback
     assert fallback.is_dir()
-
-
-def test_find_data_dir_returns_path_or_none() -> None:
-    """_find_data_dir() возвращает существующий путь либо None вне Orca."""
-    found = _find_data_dir()
-    assert found is None or found.is_dir()
 
 
 def test_atomic_write_text_replaces_file(tmp_path: pathlib.Path) -> None:

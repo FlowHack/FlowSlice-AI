@@ -344,9 +344,6 @@ def test_vision_requires_text_output(engine) -> None:
 
 def test_http_error_detail_extracts_message(engine) -> None:
     """Текст ошибки HTTP извлекается из тела ответа для показа в UI."""
-    import io
-    import urllib.error
-
     def make(body: bytes) -> urllib.error.HTTPError:
         return urllib.error.HTTPError("u", 403, "Forbidden", {}, io.BytesIO(body))
 
@@ -525,6 +522,13 @@ def _http_error(code: int, headers: Message | None = None) -> urllib.error.HTTPE
     )
 
 
+def engine_backoff(attempt: int) -> float:
+    """Обёртка над статическим _retry_backoff() без создания движка."""
+    from flowslice_ai.engine.api_client import ApiClientMixin
+
+    return ApiClientMixin._retry_backoff(attempt)
+
+
 def test_retry_backoff_grows_and_caps() -> None:
     """Пауза растёт по попыткам и дальше не увеличивается."""
     from flowslice_ai.engine.api_client import _RETRY_BACKOFF
@@ -532,13 +536,6 @@ def test_retry_backoff_grows_and_caps() -> None:
     assert engine_backoff(0) == _RETRY_BACKOFF[0]
     assert engine_backoff(1) == _RETRY_BACKOFF[1]
     assert engine_backoff(7) == _RETRY_BACKOFF[-1]
-
-
-def engine_backoff(attempt: int) -> float:
-    """Обёртка над статическим _retry_backoff() без создания движка."""
-    from flowslice_ai.engine.api_client import ApiClientMixin
-
-    return ApiClientMixin._retry_backoff(attempt)
 
 
 def test_retry_after_seconds_supports_http_date() -> None:

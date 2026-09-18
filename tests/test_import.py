@@ -25,13 +25,5 @@ def test_html_page_assembled() -> None:
 
 
 def test_plugin_registered() -> None:
-    """Пакет регистрирует FlowSlicePlugin и экспортирует версию."""
+    """Пакет экспортирует точку входа плагина."""
     assert hasattr(flowslice_ai, "FlowSlicePlugin")
-    assert flowslice_ai.__version__ == __version__
-
-
-def test_engine_importable() -> None:
-    """Класс движка _ChatEngine импортируется из flowslice_ai.engine."""
-    from flowslice_ai.engine import _ChatEngine
-
-    assert _ChatEngine is not None

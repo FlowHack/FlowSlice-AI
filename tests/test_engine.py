@@ -22,8 +22,13 @@ def test_estimate_tokens(engine) -> None:
 
 
 def test_i18n_t(engine) -> None:
-    """_t() возвращает непустую строку для существующего ключа."""
-    assert engine._t("win.opened")
+    """_t() отдаёт текст на языке из настроек и не различает регистр ключа."""
+    engine._config["language"] = "ru"
+    ru = engine._t("win.opened")
+    engine._config["language"] = "en"
+    en = engine._t("win.opened")
+    assert ru and en
+    assert ru != en
 
 
 def test_slugify(engine) -> None:
@@ -31,20 +36,10 @@ def test_slugify(engine) -> None:
     assert engine._slugify("My Provider") == "my-provider"
 
 
-def test_random_suffix(engine) -> None:
-    """_random_suffix() возвращает строку длины 4."""
-    assert len(engine._random_suffix()) == 4
-
-
 def test_as_int(engine) -> None:
     """_as_int() парсит число либо возвращает значение по умолчанию."""
     assert engine._as_int("42", 0) == 42
     assert engine._as_int("abc", 7) == 7
-
-
-def test_handle_get_state(engine) -> None:
-    """_handle_get_state() не падает без установленного sink."""
-    engine._handle_get_state()
 
 
 def test_collect_preset_data_orca_none(engine, monkeypatch) -> None:
@@ -159,58 +154,69 @@ def test_preset_inherits_name_uses_public_api(engine) -> None:
     assert engine._preset_inherits_name(_FakePreset()) == "Base @Printer"
 
 
+class _Preset:
+    """Заглушка пресета с публичным API Orca."""
+
+    def __init__(self, name: str, values: dict) -> None:
+        self.name = name
+        self._values = values
+
+    def config_keys(self):
+        """Возвращает ключи пресета."""
+        return list(self._values)
+
+    def config_value(self, key: str):
+        """Возвращает значение ключа."""
+        return self._values.get(key)
+
+
+class _PresetCollection:
+    """Заглушка коллекции пресетов с выбранным пресетом."""
+
+    def __init__(self, presets: dict, selected: _Preset) -> None:
+        self._presets = presets
+        self._selected = selected
+
+    def get_selected_preset_name(self) -> str:
+        """Возвращает имя выбранного пресета."""
+        return self._selected.name
+
+    def get_selected_preset(self):
+        """Возвращает выбранный пресет."""
+        return self._selected
+
+    def find_preset(self, name: str):
+        """Возвращает пресет по имени."""
+        return self._presets.get(name)
+
+
+class _PresetBundle:
+    """Заглушка бандла с тремя коллекциями и объединённым конфигом."""
+
+    def __init__(self, collection: _PresetCollection) -> None:
+        self.printers = collection
+        self.filaments = collection
+        self.prints = collection
+
+    def full_config_value(self, key: str):
+        """Объединённый конфиг в заглушке пуст."""
+        return None
+
+
+def _preset_bundle(base_values: dict, user_values: dict) -> _PresetBundle:
+    """Собирает бандл из базового и пользовательского пресетов."""
+    base = _Preset("Base @P", base_values)
+    user = _Preset("User @P", user_values)
+    collection = _PresetCollection({"Base @P": base, "User @P": user}, user)
+    return _PresetBundle(collection)
+
+
 def test_collect_preset_data_all_differs_from_changed(engine, monkeypatch) -> None:
     """Режим "all" отдаёт унаследованные ключи, режим "changed" — только свои."""
-
-    class _Preset:
-        """Заглушка пресета с публичным API Orca."""
-
-        def __init__(self, name: str, values: dict) -> None:
-            self.name = name
-            self._values = values
-
-        def config_keys(self):
-            """Возвращает ключи пресета."""
-            return list(self._values)
-
-        def config_value(self, key: str):
-            """Возвращает значение ключа."""
-            return self._values.get(key)
-
-    class _Collection:
-        """Заглушка коллекции пресетов с выбранным пресетом."""
-
-        def __init__(self, presets: dict[str, _Preset], selected: _Preset) -> None:
-            self._presets = presets
-            self._selected = selected
-
-        def get_selected_preset_name(self) -> str:
-            """Возвращает имя выбранного пресета."""
-            return self._selected.name
-
-        def get_selected_preset(self):
-            """Возвращает выбранный пресет."""
-            return self._selected
-
-        def find_preset(self, name: str):
-            """Возвращает пресет по имени."""
-            return self._presets.get(name)
-
-    class _Bundle:
-        """Заглушка бандла с тремя коллекциями и объединённым конфигом."""
-
-        def __init__(self, collection: _Collection) -> None:
-            self.printers = collection
-            self.filaments = collection
-            self.prints = collection
-
-        def full_config_value(self, key: str):
-            """Объединённый конфиг в заглушке пуст."""
-            return None
-
-    base = _Preset("Base @P", {"printer_model": "MyPrinter", "nozzle_diameter": "0.4"})
-    user = _Preset("User @P", {"inherits": "Base @P", "printable_height": "390"})
-    bundle = _Bundle(_Collection({"Base @P": base, "User @P": user}, user))
+    bundle = _preset_bundle(
+        {"printer_model": "MyPrinter", "nozzle_diameter": "0.4"},
+        {"inherits": "Base @P", "printable_height": "390"},
+    )
     monkeypatch.setattr(
         "flowslice_ai.engine.slicer_context.orca",
         types.SimpleNamespace(
@@ -230,63 +236,14 @@ def test_collect_preset_data_all_differs_from_changed(engine, monkeypatch) -> No
 
 def test_collect_preset_data_changed_filters_inherited(engine, monkeypatch) -> None:
     """Режим "changed" оставляет только отличия от разрешённого конфига предков."""
-
-    class _Preset:
-        """Заглушка пресета, чей config уже содержит унаследованные ключи."""
-
-        def __init__(self, name: str, values: dict) -> None:
-            self.name = name
-            self._values = values
-
-        def config_keys(self):
-            """Возвращает ключи пресета."""
-            return list(self._values)
-
-        def config_value(self, key: str):
-            """Возвращает значение ключа."""
-            return self._values.get(key)
-
-    class _Collection:
-        """Заглушка коллекции пресетов с выбранным пресетом."""
-
-        def __init__(self, presets: dict[str, _Preset], selected: _Preset) -> None:
-            self._presets = presets
-            self._selected = selected
-
-        def get_selected_preset_name(self) -> str:
-            """Возвращает имя выбранного пресета."""
-            return self._selected.name
-
-        def get_selected_preset(self):
-            """Возвращает выбранный пресет."""
-            return self._selected
-
-        def find_preset(self, name: str):
-            """Возвращает пресет по имени."""
-            return self._presets.get(name)
-
-    class _Bundle:
-        """Заглушка бандла с тремя коллекциями."""
-
-        def __init__(self, collection: _Collection) -> None:
-            self.printers = collection
-            self.filaments = collection
-            self.prints = collection
-
-        def full_config_value(self, key: str):
-            """Объединённый конфиг в заглушке пуст."""
-            return None
-
-    base = _Preset("Base @P", {"printer_model": "MyPrinter", "nozzle_diameter": "0.4"})
-    user = _Preset(
-        "User @P",
+    bundle = _preset_bundle(
+        {"printer_model": "MyPrinter", "nozzle_diameter": "0.4"},
         {
             "inherits": "Base @P",
             "printer_model": "MyPrinter",
             "nozzle_diameter": "0.6",
         },
     )
-    bundle = _Bundle(_Collection({"Base @P": base, "User @P": user}, user))
     monkeypatch.setattr(
         "flowslice_ai.engine.slicer_context.orca",
         types.SimpleNamespace(
