@@ -183,12 +183,17 @@ class GenerationMixin:
         ctx = self._collect_context(flags, modes)
         # Изображения собираем заранее: от их наличия зависит системный промпт.
         images = self._collect_context_images(chat)
+        vision = self._model_supports_images()
         no_vision = False
-        if self._model_supports_images() is False:
+        if vision is False:
             # Модель без зрения: картинку не отправляем, но просим честно
             # сказать, что анализировать изображения она не умеет.
             no_vision = self._message_has_image(self._last_user_msg(chat) or {})
             images = []
+        elif vision is None and images:
+            # Возможности модели неизвестны: изображение отправляем, но на
+            # всякий случай добавляем подсказку — вдруг модель его не видит.
+            no_vision = True
         system = self._build_system_prompt(ctx, has_images=bool(images), no_vision=no_vision)
         if len(system) > MAX_CONTEXT_CHARS:
             system = system[:MAX_CONTEXT_CHARS]

@@ -192,6 +192,28 @@ def test_build_messages_adds_image_hints(engine, monkeypatch) -> None:
     assert "cannot process images" not in system
 
 
+def test_build_messages_unknown_vision_adds_both_hints(engine, monkeypatch) -> None:
+    """Если зрение модели неизвестно, картинка уходит, но добавляется обе подсказки."""
+    chat = engine._active_chat()
+    engine._config["language"] = "en"
+    monkeypatch.setattr(engine, "_model_supports_images", lambda: None)
+    chat["msgs"] = [
+        {
+            "id": 1,
+            "role": "user",
+            "text": "что не так?",
+            "ts": 0,
+            "attachments": [{"image": "data:image/jpeg;base64,AAAA", "name": "a.jpg"}],
+        }
+    ]
+    messages = engine._build_messages(chat, "что не так?")
+    system = messages[0]["content"]
+    assert "Visually analyze the defects" in system
+    assert "cannot process images" in system
+    user = messages[-1]["content"]
+    assert isinstance(user, list)
+
+
 def test_build_messages_no_vision_model_skips_images(engine) -> None:
     """Модель без зрения: картинки не уходят, промпт просит честно об этом сказать."""
     chat = engine._active_chat()
