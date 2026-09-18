@@ -412,7 +412,12 @@ class HandlersMixin:
         key = message.get("key")
         if not isinstance(key, str) or not key.strip():
             key = None
-        threading.Thread(target=self._test_key_worker, args=(key,), daemon=True).start()
+        provider_id = message.get("provider")
+        if not isinstance(provider_id, str) or not provider_id.strip():
+            provider_id = None
+        threading.Thread(
+            target=self._test_key_worker, args=(key, provider_id), daemon=True
+        ).start()
 
     def _handle_get_usage(self: "_ChatEngine", message: dict) -> None:
         """Отправляет статистику использования за выбранный период."""

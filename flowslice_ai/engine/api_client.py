@@ -39,29 +39,40 @@ _ANTHROPIC_VERSION = "2023-06-01"
 class ApiClientMixin:
     """Запросы к API провайдеров, чтение SSE-потоков, проверка ключей."""
 
-    def _active_api_credentials(self: "_ChatEngine") -> tuple[str, str, str, str, str]:
-        """Возвращает (provider_id, base_url, api_key, model, scheme).
+    def _api_credentials_for(
+        self: "_ChatEngine", provider_id: str, model_id: str = ""
+    ) -> tuple[str, str, str, str, str]:
+        """Возвращает (provider_id, base_url, api_key, model, scheme) провайдера.
 
-        Учитывает переопределение base_url/api_key на уровне выбранной модели.
+        Учитывает переопределение base_url/api_key на уровне модели.
         Схема API: per-model, затем провайдер, затем "openai".
         """
-        cfg = self._config
-        provider_id = str(cfg.get("active_provider", "deepseek"))
-        providers = cfg.get("providers", {})
-        prov = providers.get(provider_id)
+        prov = self._config.get("providers", {}).get(provider_id)
         if not isinstance(prov, dict):
             prov = {}
         base_url = str(prov.get("base_url", ""))
         api_key = str(prov.get("api_key", ""))
-        model = str(cfg.get("active_model", ""))
-        mdef = prov.get("models", {}).get(model)
+        model = str(model_id or "")
+        mdef = prov.get("models", {}).get(model) if model else None
         if isinstance(mdef, dict):
             if mdef.get("base_url"):
                 base_url = str(mdef["base_url"])
             if mdef.get("api_key"):
                 api_key = str(mdef["api_key"])
-        scheme = str(mdef.get("scheme") or prov.get("scheme") or "openai")
+        scheme = str(
+            (mdef.get("scheme") if isinstance(mdef, dict) else None)
+            or prov.get("scheme")
+            or "openai"
+        )
         return provider_id, base_url, api_key, model, scheme
+
+    def _active_api_credentials(self: "_ChatEngine") -> tuple[str, str, str, str, str]:
+        """Возвращает учётные данные активного провайдера и модели."""
+        cfg = self._config
+        return self._api_credentials_for(
+            str(cfg.get("active_provider", "deepseek")),
+            str(cfg.get("active_model", "")),
+        )
 
     def _active_scheme(self: "_ChatEngine") -> str:
         """Возвращает схему API активной модели без повторной синхронизации."""
@@ -532,18 +543,44 @@ class ApiClientMixin:
             self._post({"type": "delta", "chat_id": chat_id, "text": acc[sent:]})
         return acc, thought
 
-    def _test_key_worker(self: "_ChatEngine", key: str | None = None) -> None:
+    def _test_key_worker(
+        self: "_ChatEngine", key: str | None = None, provider_id: str | None = None
+    ) -> None:
         """Проверяет API-ключ фоновым запросом к провайдеру.
 
         Если передан непустой ключ, он имеет приоритет над сохранённым.
+        Если передан provider_id, проверяется именно он (а не активный
+        провайдер) — иначе ключ из формы уходил бы на чужой эндпоинт.
         """
         self._sync_config()
-        _, base_url, api_key, model, scheme = self._active_api_credentials()
+        cfg = self._config
+        if not provider_id or provider_id not in cfg.get("providers", {}):
+            provider_id = str(cfg.get("active_provider", "deepseek"))
+        active_provider = str(cfg.get("active_provider", ""))
+        if provider_id == active_provider:
+            model = str(cfg.get("active_model", ""))
+        else:
+            # Для неактивного провайдера берём его первую модель.
+            prov = cfg.get("providers", {}).get(provider_id)
+            models = prov.get("models", {}) if isinstance(prov, dict) else {}
+            model = str(next(iter(models), "")) if isinstance(models, dict) else ""
+        _, base_url, api_key, model, scheme = self._api_credentials_for(
+            provider_id, model
+        )
         if key and key.strip():
             api_key = key.strip()
         if not api_key:
             self._post(
                 {"type": "key_test", "ok": False, "text": self._t("key.missing")}
+            )
+            return
+        if not base_url:
+            self._post(
+                {
+                    "type": "key_test",
+                    "ok": False,
+                    "text": self._t("key.network_error", err="base_url не задан"),
+                }
             )
             return
         if scheme == "anthropic":

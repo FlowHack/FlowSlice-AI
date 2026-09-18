@@ -3186,7 +3186,7 @@
       post({ type: "reset_custom_models" });
     });
     byId("testKeyBtn").addEventListener("click", function () {
-      post({ type: "test_key", key: byId("setApiKey").value });
+      post({ type: "test_key", key: byId("setApiKey").value, provider: setProviderDD.getSelected() });
     });
     byId("setApiKeyEye").addEventListener("click", function () {
       var keyInput = byId("setApiKey");

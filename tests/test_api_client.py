@@ -270,3 +270,32 @@ def test_parse_vision_payload_xai_models_key(engine) -> None:
         {"models": [{"id": "grok-3", "input_modalities": ["text", "image"]}]}
     )
     assert result == {"grok-3": True}
+
+
+def test_test_key_worker_uses_selected_provider(engine, monkeypatch) -> None:
+    """Проверка ключа уходит на эндпоинт выбранного провайдера, а не активного."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    calls = []
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    def fake_urlopen(request, timeout=0):
+        calls.append(request)
+        return _Resp()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    engine._test_key_worker("test-key", "openrouter")
+    assert len(calls) == 1
+    assert calls[0].full_url.startswith("https://openrouter.ai/api/v1/")
+    assert calls[0].get_header("Authorization") == "Bearer test-key"
+    body = json.loads(calls[0].data.decode("utf-8"))
+    assert body["model"] in engine._config["providers"]["openrouter"]["models"]
