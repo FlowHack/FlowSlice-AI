@@ -50,7 +50,6 @@
     <!-- Панель контекста -->
     <div class="context-panel">
       <div class="context-checks" id="contextChecks"></div>
-      <div class="context-tokens" id="contextTokens">≈ 0 токенов</div>
     </div>
 
     <!-- Композер -->
@@ -70,6 +69,10 @@
           <span class="chip-label" id="modelChipLabel">—</span>
           <span class="chip-caret">▾</span>
         </button>
+        <div class="composer-metrics">
+          <div class="context-tokens" id="contextTokens">≈ 0 токенов</div>
+          <div class="context-tokens request-tokens" id="requestTokens" data-i18n-title="ctx.request_tokens_title">≈ 0 токенов</div>
+        </div>
       </div>
     </div>
   </section>

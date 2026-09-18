@@ -95,6 +95,8 @@
       "ctx.model_help": "Adds the loaded model data to the context: dimensions, volume, triangle count",
       "ctx.history_help": "Adds the current chat's message history to the context",
       "ctx.tokens": "Context tokens: {n}",
+      "ctx.request_tokens": "Request tokens: {n}",
+      "ctx.request_tokens_title": "Estimated tokens of the current message: text plus attachments.",
       "ctx.mode_changed": "changed",
       "ctx.mode_all": "all",
       "ctx.mode_title": "Preset export: only changed parameters or the full profile",
@@ -270,6 +272,8 @@
       "ctx.model_help": "Добавляет в контекст данные загруженной модели: размеры, объём, количество треугольников",
       "ctx.history_help": "Добавляет в контекст историю сообщений текущего чата",
       "ctx.tokens": "Токенов контекста: {n}",
+      "ctx.request_tokens": "Токенов запроса: {n}",
+      "ctx.request_tokens_title": "Оценка токенов текущего сообщения: текст и вложения.",
       "ctx.mode_changed": "изм.",
       "ctx.mode_all": "все",
       "ctx.mode_title": "Выгрузка пресета: только изменённые параметры или полный профиль",
@@ -445,6 +449,8 @@
       "ctx.model_help": "Dodaje u kontekst podatke učitanog modela: dimenzije, zapreminu, broj trouglova",
       "ctx.history_help": "Dodaje u kontekst istoriju poruka trenutnog razgovora",
       "ctx.tokens": "Tokeni konteksta: {n}",
+      "ctx.request_tokens": "Tokeni zahteva: {n}",
+      "ctx.request_tokens_title": "Procena tokena trenutne poruke: tekst i prilozi.",
       "ctx.mode_changed": "izm.",
       "ctx.mode_all": "sve",
       "ctx.mode_title": "Izvoz profila: samo izmenjeni parametri ili pun profil",
@@ -1406,6 +1412,26 @@
     userScrolledUp = !nearBottom;
   }
 
+  /* ===== Токены запроса (текст сообщения + вложения) ===== */
+  function updateRequestTokens() {
+    var el = byId("requestTokens");
+    if (!el) {
+      return;
+    }
+    var input = byId("input");
+    var total = input ? Math.ceil(input.value.length / 4) : 0;
+    for (var i = 0; i < attachments.length; i++) {
+      var att = attachments[i];
+      if (att.kind === "image") {
+        // Оценка как в Anthropic: площадь / 750, минимум 85.
+        total += att.tokens || 1100;
+      } else {
+        total += Math.ceil(String(att.data || "").length / 4);
+      }
+    }
+    el.textContent = "≈ " + t("ctx.request_tokens", { n: total });
+  }
+
   /* ===== Панель контекста ===== */
   function renderContext() {
     var container = byId("contextChecks");
@@ -1489,6 +1515,7 @@
     renderModelChip();
     renderSidebar();
     renderContext();
+    updateRequestTokens();
     renderMessages();
     applyTheme(state.settings);
     applyFont(state.settings);
@@ -1524,6 +1551,7 @@
       card.appendChild(removeBtn);
       container.appendChild(card);
     }
+    updateRequestTokens();
   }
 
   /* Нативный пикер (Chromium/WebView2) с жёстким фильтром без «Все файлы». */
@@ -1602,6 +1630,7 @@
               kind: "image",
               name: name,
               ready: true,
+              tokens: Math.max(85, Math.ceil((w * h) / 750)),
               data: canvas.toDataURL("image/jpeg", 0.85)
             });
             renderAttachments();
@@ -1628,6 +1657,7 @@
             kind: "text",
             name: name,
             ready: true,
+            tokens: Math.ceil(text.length / 4),
             data: text
           });
           renderAttachments();
@@ -1679,6 +1709,7 @@
     renderAttachments();
     byId("input").value = "";
     autoResize();
+    updateRequestTokens();
     byId("input").focus();
   }
 
@@ -1686,6 +1717,7 @@
     pendingEditId = msg.id;
     byId("input").value = msg.text || "";
     autoResize();
+    updateRequestTokens();
     byId("input").focus();
   }
 
@@ -2972,6 +3004,7 @@
     byId("input").addEventListener("input", function () {
       autoResize();
       updateCmdSuggest();
+      updateRequestTokens();
     });
     byId("input").addEventListener("blur", function () {
       // Небольшая задержка, чтобы клик по элементу списка успел сработать
