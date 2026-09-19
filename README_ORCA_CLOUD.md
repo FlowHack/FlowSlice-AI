@@ -1,8 +1,6 @@
 # FlowSlice AI
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/preview.png" width="280" alt="FlowSlice AI">
-</p>
+![FlowSlice AI](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/preview_orca.png)
 
 <p align="center">
   <b>An AI 3D-printing engineer right inside Orca Slicer.</b><br>
@@ -83,6 +81,22 @@ What the assistant can do:
 
 ---
 
+## 📸 Screenshots
+
+![Main screen: chat with print-defect analysis](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_chat.png)
+
+*Main screen: chat with print-defect analysis.*
+
+![Settings, Models tab: providers, favorites, prices and vision](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_models.png)
+
+*Settings, Models tab: providers, favorites, prices and vision.*
+
+![Settings, General tab: theme, language, context compaction](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_general.png)
+
+*Settings, General tab: theme, language, context compaction.*
+
+---
+
 ## 🧩 Requirements
 
 | Component | Version |
@@ -98,7 +112,7 @@ What the assistant can do:
 FlowSlice AI is distributed through **OrcaCloud**:
 
 1. Subscribe to **FlowSlice AI** on OrcaCloud.
-2. After subscribing, the plugin appears among the available plugins in Orca Slicer — install and enable it.
+2. After subscribing, the plugin appears in Orca Slicer under **File → Plugins** — install and enable it.
 3. Open the **FlowSlice AI** tab in Orca Slicer.
 4. Restart Orca Slicer if the tab does not appear right away.
 
