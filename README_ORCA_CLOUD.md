@@ -39,7 +39,7 @@ Ask about a failed print or paste a photo — every answer is tied to your real 
 
 ### 🎨 Interface and attachments
 
-- **Attachments:** photos (4 MB client limit, compressed to 1024 px) and text files (100,000 characters each).
+- **Attachments:** photos (compressed to 1024 px by default; side, JPEG quality and the 16 MB file limit are configurable in General settings) and text files (100,000 characters each).
 - **Localization:** English / Russian / Serbian.
 - **Themes:** auto / light / dark (pure `#ffffff` and `#000000`) with the red accent `#d9534f`.
 
@@ -141,7 +141,7 @@ Profiles export as **changed** (only parameters differing from the base preset) 
 
 ## 📎 Attachments and limits
 
-- **Photos:** compressed to 1024 px JPEG and sent only to image-capable models; 4 MB per image, up to 10 images per request (20 MB base64).
+- **Photos:** compressed to a configurable side (1024 px JPEG by default, 0 = send original) and sent only to image-capable models; 16 MB file limit, up to 10 images per request (32 MB base64).
 - **Text files:** up to 100,000 characters per file, 400,000 total, readable by any model.
 - Up to 10 attachments per message; 2 photos kept from history; 200 messages per chat; context window 128,000 tokens with auto-compaction at 80%.
 

@@ -1,1 +1,2 @@
-• OpenRouter batch variants (the ":batch" suffix, an asynchronous queued API) are excluded from the model list.
+• Photo settings on the General tab: compression side in pixels (1024 by default, 0 = send the original without compression), JPEG quality (85% by default) and the file size limit (16 MB by default). Camera photos for calibration (e.g. Pressure Advance) can now be attached without manual compression.
+• Server image limits raised: 12 MB base64 per image (was 6 MB) and 32 MB base64 per request (was 20 MB) — headroom for photos sent without client-side compression.
