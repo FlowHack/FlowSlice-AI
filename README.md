@@ -1,6 +1,8 @@
 # FlowSlice AI
 
-![FlowSlice AI](assets/preview.png)
+<p align="center">
+  <img src="assets/preview.png" width="260" alt="FlowSlice AI">
+</p>
 
 <p align="center">
   <b>ИИ-инженер 3D-печати прямо внутри Orca Slicer.</b><br>
