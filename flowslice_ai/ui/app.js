@@ -71,6 +71,7 @@
       "common.typing": "Typing...",
       "common.attachment": "Attachment",
       "common.reasoning": "Reasoning",
+      "common.reasoning_live": "Reasoning…",
       "common.remove_attachment": "Remove attachment",
       "common.attach_file": "Attach file",
       "attach.default_name": "file",
@@ -303,6 +304,7 @@
       "common.typing": "печатает…",
       "common.attachment": "Вложение",
       "common.reasoning": "Размышления",
+      "common.reasoning_live": "Размышления…",
       "common.remove_attachment": "Убрать вложение",
       "common.attach_file": "Прикрепить файл",
       "attach.default_name": "файл",
@@ -535,6 +537,7 @@
       "common.typing": "kuca…",
       "common.attachment": "Prilog",
       "common.reasoning": "Razmišljanje",
+      "common.reasoning_live": "Razmišljanje…",
       "common.remove_attachment": "Ukloni prilog",
       "common.attach_file": "Priloži datoteku",
       "attach.default_name": "datoteka",
@@ -1852,14 +1855,35 @@
     }
   }
 
+  // Блок размышлений раскрыт только у последнего assistant-сообщения во время стрима,
+  // чтобы перерисовка не сворачивала его раньше времени.
+  function shouldOpenReasoning(msg, index, msgs, status) {
+    if (!msg || msg.role !== "assistant" || status !== "streaming") {
+      return false;
+    }
+    if (typeof index !== "number" || !Array.isArray(msgs) || msgs.length === 0) {
+      return false;
+    }
+    return index === msgs.length - 1;
+  }
+
   // Сворачиваемый блок размышлений reasoning-моделей.
-  function buildReasoning(reasoning, open) {
+  // open — раскрыть сразу; live — режим живого стрима (акцент и подпись).
+  function buildReasoning(reasoning, open, live) {
     var det = document.createElement("details");
     det.className = "msg-reasoning";
     if (open) {
       det.open = true;
     }
-    det.appendChild(el("summary", null, t("common.reasoning")));
+    if (live) {
+      det.classList.add("msg-reasoning-live");
+    }
+    var summary = el("summary");
+    summary.appendChild(el("span", "msg-reasoning-chevron", "▸"));
+    summary.appendChild(
+      el("span", "msg-reasoning-label", t(live ? "common.reasoning_live" : "common.reasoning"))
+    );
+    det.appendChild(summary);
     det.appendChild(el("div", "msg-reasoning-text", reasoning || ""));
     return det;
   }
@@ -1913,7 +1937,8 @@
       bubble.appendChild(img);
     }
     if (msg.reasoning) {
-      bubble.appendChild(buildReasoning(msg.reasoning, false));
+      var reasoningOpen = shouldOpenReasoning(msg, index, msgs, state.status);
+      bubble.appendChild(buildReasoning(msg.reasoning, reasoningOpen, reasoningOpen));
     }
     var textNode = el("div", "msg-text");
     setMessageText(textNode, msg.text || "", msg.role === "assistant");
@@ -3127,8 +3152,8 @@
       ctModelDirty = false;
       return;
     }
-    var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
-    var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 4096;
+    var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.3;
+    var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 8192;
     var gReas = !!state.settings.reasoning;
     var hasTemp = model.temperature !== null && model.temperature !== undefined;
     var hasMax = model.max_tokens !== null && model.max_tokens !== undefined;
@@ -3218,12 +3243,12 @@
     payload[field] = null;
     post(payload);
     if (field === "temperature") {
-      var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
+      var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.3;
       byId("ctTemperature").value = String(gTemp);
       byId("ctTemperatureValue").textContent = String(gTemp);
       byId("ctTemperatureBadge").style.display = "inline-block";
     } else if (field === "max_tokens") {
-      var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 4096;
+      var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 8192;
       byId("ctMaxTokens").value = String(gMax);
       byId("ctMaxTokensBadge").style.display = "inline-block";
     } else if (field === "reasoning") {
@@ -3262,7 +3287,7 @@
     };
     if (ctModelDirty) {
       payload.temperature = parseFloat(byId("ctTemperature").value);
-      payload.max_tokens = parseInt(byId("ctMaxTokens").value, 10) || 4096;
+      payload.max_tokens = parseInt(byId("ctMaxTokens").value, 10) || 8192;
       payload.reasoning = byId("ctReasoning").checked;
     }
     if (ctVisionDD.getSelected() !== modelVisionChoice(modelById(pid, mid))) {
@@ -3402,7 +3427,7 @@
     if (currentModelKey && perModelDirty) {
       perModelDrafts[currentModelKey] = {
         temperature: parseFloat(byId("setTemperature").value),
-        max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
+        max_tokens: parseInt(byId("setMaxTokens").value, 10) || 8192,
         reasoning: byId("setReasoning").checked,
         vision: setVisionDD.getSelected()
       };
@@ -3428,8 +3453,8 @@
     var key = provider + "::" + model.id;
     currentModelKey = key;
     var draft = perModelDrafts[key];
-    var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
-    var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 4096;
+    var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.3;
+    var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 8192;
     var gReas = !!state.settings.reasoning;
     var hasTemp = model.temperature !== null && model.temperature !== undefined;
     var hasMax = model.max_tokens !== null && model.max_tokens !== undefined;
@@ -3487,9 +3512,9 @@
     setProviderDD.setSelected(hasActive ? s.active_provider : (builtin[0] ? builtin[0].id : ""));
     onProviderChange();
     byId("setNotes").value = s.notes || "";
-    byId("setGlobalTemperature").value = String(s.temperature !== undefined ? s.temperature : 0.7);
+    byId("setGlobalTemperature").value = String(s.temperature !== undefined ? s.temperature : 0.3);
     byId("setGlobalTemperatureValue").textContent = byId("setGlobalTemperature").value;
-    byId("setGlobalMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 4096);
+    byId("setGlobalMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 8192);
     byId("setGlobalReasoning").checked = !!s.reasoning;
     byId("setCompactEnabled").checked = s.compact_enabled !== false;
     byId("setAutoSyncEnabled").checked = s.auto_sync_providers !== false;
@@ -3690,12 +3715,12 @@
     }
     // Показываем глобальное значение и бейдж «общий».
     if (field === "temperature") {
-      var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.7;
+      var gTemp = state.settings.temperature !== undefined ? state.settings.temperature : 0.3;
       byId("setTemperature").value = String(gTemp);
       byId("setTemperatureValue").textContent = String(gTemp);
       byId("setTemperatureBadge").style.display = "inline-block";
     } else if (field === "max_tokens") {
-      var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 4096;
+      var gMax = state.settings.max_tokens !== undefined ? state.settings.max_tokens : 8192;
       byId("setMaxTokens").value = String(gMax);
       byId("setMaxTokensBadge").style.display = "inline-block";
     } else if (field === "reasoning") {
@@ -3719,7 +3744,7 @@
       active_model: activeModel,
       notes: byId("setNotes").value,
       temperature: parseFloat(byId("setGlobalTemperature").value),
-      max_tokens: parseInt(byId("setGlobalMaxTokens").value, 10) || 4096,
+      max_tokens: parseInt(byId("setGlobalMaxTokens").value, 10) || 8192,
       reasoning: byId("setGlobalReasoning").checked,
       compact_enabled: byId("setCompactEnabled").checked,
       auto_sync_providers: byId("setAutoSyncEnabled").checked,
@@ -3770,7 +3795,7 @@
         provider: provider,
         model_id: setModelDD.getSelected(),
         temperature: parseFloat(byId("setTemperature").value),
-        max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
+        max_tokens: parseInt(byId("setMaxTokens").value, 10) || 8192,
         reasoning: byId("setReasoning").checked
       };
       if (setVisionDD.getSelected() !== modelVisionChoice(currentModel)) {
@@ -3984,7 +4009,7 @@
       if (!bubble || !textNode) {
         return;
       }
-      var det = buildReasoning("", true);
+      var det = buildReasoning("", true, true);
       bubble.insertBefore(det, textNode);
       streamThoughtEl = det.querySelector(".msg-reasoning-text");
     }
@@ -4020,6 +4045,18 @@
           }
           if (streamThoughtEl) {
             streamThoughtEl.textContent = msg.reasoning;
+          }
+        }
+        // Финальный ответ: живой блок размышлений сворачиваем и снимаем live-режим.
+        if (streamThoughtEl) {
+          var reasoningBox = streamThoughtEl.closest("details.msg-reasoning");
+          if (reasoningBox) {
+            reasoningBox.open = false;
+            reasoningBox.classList.remove("msg-reasoning-live");
+            var reasoningLabel = reasoningBox.querySelector(".msg-reasoning-label");
+            if (reasoningLabel) {
+              reasoningLabel.textContent = t("common.reasoning");
+            }
           }
         }
       }
@@ -4659,6 +4696,7 @@
     codeBlockHtml: codeBlockHtml,
     renderMarkdown: renderMarkdown,
     matchesModelQuery: matchesModelQuery,
+    shouldOpenReasoning: shouldOpenReasoning,
   };
 
   document.addEventListener("DOMContentLoaded", init);

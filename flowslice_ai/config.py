@@ -2,6 +2,7 @@
 import json
 from typing import Any
 
+from flowslice_ai.constants import DEFAULT_MAX_TOKENS
 from flowslice_ai.providers_data import DEFAULT_PROVIDERS
 
 # Версия схемы конфигурации: увеличивается при несовместимых миграциях.
@@ -18,8 +19,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "font_style": "system",
     "language": "en",
     "context": {},
-    "temperature": 0.7,
-    "max_tokens": 4096,
+    "temperature": 0.3,
+    "max_tokens": DEFAULT_MAX_TOKENS,
     "reasoning": False,
     "compact_enabled": True,
     "auto_sync_providers": True,

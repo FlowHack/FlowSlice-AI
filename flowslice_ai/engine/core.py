@@ -27,6 +27,7 @@ from flowslice_ai.config import (
 )
 from flowslice_ai.constants import (
     CONTEXT_OPTIONS,
+    DEFAULT_MAX_TOKENS,
     DONATION_OPTIONS,
     MAX_CHAT_MESSAGES,
     MAX_PERSISTED_FILE_CHARS,
@@ -57,6 +58,8 @@ class CoreMixin:
         self._gen = False
         # Точный usage последнего ответа (если провайдер его прислал в потоке).
         self._last_usage: dict[str, Any] | None = None
+        # Провайдеры, отвергшие stream_options.include_usage (HTTP 400).
+        self._usage_unsupported: set[str] = set()
         self._compacting = False
         # Событие отмены: прерывает паузы между повторами запроса без опроса.
         self._cancel_event = threading.Event()
@@ -235,19 +238,19 @@ class CoreMixin:
         merged["notes"] = str(merged.get("notes", ""))
         # Температура: float 0.0–2.0.
         try:
-            temperature = float(merged.get("temperature", 0.7))
+            temperature = float(merged.get("temperature", 0.3))
         except (TypeError, ValueError):
-            temperature = 0.7
+            temperature = 0.3
         if temperature < 0.0 or temperature > 2.0:
-            temperature = 0.7
+            temperature = 0.3
         merged["temperature"] = temperature
         # Максимум токенов: int 1–100000.
         try:
-            max_tokens = int(merged.get("max_tokens", 4096))
+            max_tokens = int(merged.get("max_tokens", DEFAULT_MAX_TOKENS))
         except (TypeError, ValueError):
-            max_tokens = 4096
+            max_tokens = DEFAULT_MAX_TOKENS
         if max_tokens < 1 or max_tokens > 100000:
-            max_tokens = 4096
+            max_tokens = DEFAULT_MAX_TOKENS
         merged["max_tokens"] = max_tokens
         # Настройки сжатия контекста: вкл/выкл, порог в процентах, окно модели.
         compact_enabled = merged.get("compact_enabled", True)

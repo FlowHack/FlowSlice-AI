@@ -23,9 +23,11 @@ if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
 from flowslice_ai.constants import (
+    DEFAULT_MAX_TOKENS,
     HTTP_HEADERS,
     MAX_REPLY_CHARS,
     MAX_THOUGHT_CHARS,
+    REASONING_MIN_MAX_TOKENS,
     STREAM_THROTTLE,
     TIMEOUT,
 )
@@ -852,13 +854,17 @@ class ApiClientMixin:
         mdef = prov.get("models", {}).get(model) if isinstance(prov, dict) else {}
         temperature = mdef.get("temperature")
         if temperature is None:
-            temperature = float(cfg.get("temperature", 0.7))
-        max_tokens = mdef.get("max_tokens")
-        if max_tokens is None:
-            max_tokens = int(cfg.get("max_tokens", 4096))
+            temperature = float(cfg.get("temperature", 0.3))
         reasoning = mdef.get("reasoning")
         if reasoning is None:
             reasoning = bool(cfg.get("reasoning", False))
+        max_tokens = mdef.get("max_tokens")
+        if max_tokens is None:
+            max_tokens = int(cfg.get("max_tokens", DEFAULT_MAX_TOKENS))
+            # Размышления расходуют тот же лимит вывода, что и ответ,
+            # поэтому при включённом мышлении поднимаем его до разумного минимума.
+            if reasoning:
+                max_tokens = max(max_tokens, REASONING_MIN_MAX_TOKENS)
         if scheme == "anthropic":
             return self._call_anthropic(
                 messages,
@@ -881,8 +887,11 @@ class ApiClientMixin:
         # Reasoning-модели (GPT-5/o-серия) не принимают temperature.
         if not reasoning:
             payload["temperature"] = temperature
-        # OpenRouter умеет присылать точный usage последним чанком потока.
-        if provider_id == "openrouter":
+        # Точный usage последним чанком поддерживают OpenAI, OpenRouter и часть
+        # совместимых API. Если провайдер не понимает stream_options (HTTP 400),
+        # повторяем запрос без него и запоминаем это до конца сессии.
+        send_usage = provider_id not in self._usage_unsupported
+        if send_usage:
             payload["stream_options"] = {"include_usage": True}
         if reasoning:
             if provider_id == "openrouter":
@@ -896,7 +905,20 @@ class ApiClientMixin:
             method="POST",
         )
         try:
-            resp = self._open_with_retry(request, provider_id)
+            try:
+                resp = self._open_with_retry(request, provider_id)
+            except urllib.error.HTTPError as exc:
+                if not send_usage or exc.code != 400:
+                    raise
+                self._usage_unsupported.add(provider_id)
+                _LOGGER.info(
+                    "Провайдер %s не поддерживает stream_options.include_usage — "
+                    "повторяю запрос без него",
+                    provider_id,
+                )
+                payload.pop("stream_options", None)
+                request.data = json.dumps(payload).encode("utf-8")
+                resp = self._open_with_retry(request, provider_id)
             with resp:
                 return self._read_sse(resp, chat_id)
         except urllib.error.HTTPError as exc:
@@ -929,6 +951,7 @@ class ApiClientMixin:
 
         Возвращает пару (текст ответа, размышления).
         """
+        self._last_usage = None
         system = ""
         body_messages = messages
         if messages and messages[0].get("role") == "system":
@@ -943,7 +966,9 @@ class ApiClientMixin:
             "stream": True,
         }
         if reasoning:
-            budget = min(4096, max(1024, max_tokens // 2))
+            budget = max(1024, min(4096, max_tokens // 2))
+            # Anthropic требует, чтобы max_tokens был строго больше бюджета размышлений.
+            budget = min(budget, max(1, max_tokens - 1))
             payload["thinking"] = {"type": "enabled", "budget_tokens": budget}
         else:
             payload["temperature"] = temperature
@@ -1241,7 +1266,33 @@ class ApiClientMixin:
                 error = event.get("error")
                 detail = error.get("message") if isinstance(error, dict) else error
                 raise ApiError(str(detail) if detail else self._t("gen.empty_reply"))
+            if event.get("type") == "message_start":
+                # Anthropic присылает входные токены в начале потока.
+                start_message = event.get("message")
+                start_usage = (
+                    start_message.get("usage")
+                    if isinstance(start_message, dict)
+                    else None
+                )
+                if isinstance(start_usage, dict):
+                    started: dict[str, Any] = {}
+                    if start_usage.get("input_tokens") is not None:
+                        started["prompt_tokens"] = start_usage["input_tokens"]
+                    if start_usage.get("output_tokens") is not None:
+                        started["completion_tokens"] = start_usage["output_tokens"]
+                    if started:
+                        self._last_usage = started
+                continue
             if event.get("type") == "message_delta":
+                # Итоговое число выходных токенов приходит в usage события delta.
+                delta_usage = event.get("usage")
+                if (
+                    isinstance(delta_usage, dict)
+                    and delta_usage.get("output_tokens") is not None
+                ):
+                    merged: dict[str, Any] = dict(self._last_usage or {})
+                    merged["completion_tokens"] = delta_usage["output_tokens"]
+                    self._last_usage = merged
                 stop = (event.get("delta") or {}).get("stop_reason")
                 if stop:
                     last_finish = str(stop)

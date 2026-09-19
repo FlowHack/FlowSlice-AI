@@ -1,8 +1,11 @@
 """Тесты вспомогательных методов движка: токены, i18n, slugify, числа, состояние."""
 from __future__ import annotations
 
+import io
+import json
 import time
 import types
+import urllib.error
 
 import pytest
 
@@ -12,6 +15,7 @@ from flowslice_ai.constants import (
     MAX_FILE_CHARS,
     MAX_PERSISTED_FILE_CHARS,
     MAX_TOTAL_FILE_CHARS,
+    REASONING_MIN_MAX_TOKENS,
 )
 from flowslice_ai.errors import ApiError
 
@@ -723,6 +727,110 @@ def test_read_sse_reads_openrouter_reasoning_and_usage(engine) -> None:
     assert text == "ответ"
     assert thought == "думаю"
     assert engine._last_usage == {"prompt_tokens": 90, "completion_tokens": 43}
+
+
+def test_read_sse_anthropic_collects_usage(engine) -> None:
+    """Anthropic присылает токены в message_start и message_delta."""
+    engine._gen = True
+    lines = [
+        b'event: message_start\n',
+        b'data: {"type":"message_start","message":{"usage":{"input_tokens":120,"output_tokens":1}}}\n',
+        b'data: {"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"\xd0\xb4\xd1\x83\xd0\xbc\xd0\xb0\xd1\x8e"}}\n',
+        b'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"\xd0\xbe\xd1\x82\xd0\xb2\xd0\xb5\xd1\x82"}}\n',
+        b'data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":77}}\n',
+        b'data: {"type":"message_stop"}\n',
+    ]
+    text, thought = engine._read_sse_anthropic(iter(lines), 1)
+    assert text == "ответ"
+    assert thought == "думаю"
+    assert engine._last_usage == {"prompt_tokens": 120, "completion_tokens": 77}
+
+
+def test_call_anthropic_clamps_thinking_budget(engine, monkeypatch) -> None:
+    """Бюджет размышлений Anthropic всегда строго меньше max_tokens."""
+    captured = {}
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def __iter__(self):
+            return iter([b'data: {"type":"message_stop"}\n'])
+
+    def fake_open(request, provider_id):
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return FakeResp()
+
+    monkeypatch.setattr(engine, "_open_with_retry", fake_open)
+    engine._call_anthropic(
+        [{"role": "user", "content": "hi"}],
+        1,
+        "anthropic",
+        "https://api.anthropic.com/v1",
+        "key",
+        "claude-3",
+        0.3,
+        1024,
+        True,
+    )
+    payload = captured["payload"]
+    assert payload["thinking"]["budget_tokens"] < payload["max_tokens"]
+
+
+def test_call_api_falls_back_without_include_usage(engine, monkeypatch) -> None:
+    """HTTP 400 на stream_options: повтор без него и запоминание провайдера."""
+    monkeypatch.setattr(engine, "_sync_config", lambda: None)
+    engine._config = {"providers": {}}
+    engine._gen = True
+    monkeypatch.setattr(
+        engine,
+        "_active_api_credentials",
+        lambda: ("groq", "https://api.groq.com/openai/v1", "key", "llama", "openai"),
+    )
+    monkeypatch.setattr(engine, "_validated_base_url", lambda url: url)
+    payloads: list[dict] = []
+
+    def _fake_open(request, provider_id):
+        payloads.append(json.loads(request.data.decode("utf-8")))
+        if len(payloads) == 1:
+            raise urllib.error.HTTPError(
+                request.full_url, 400, "Bad Request", {}, io.BytesIO(b"{}")
+            )
+        return io.BytesIO(b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n')
+
+    monkeypatch.setattr(engine, "_open_with_retry", _fake_open)
+    text, _ = engine._call_api([{"role": "user", "content": "hi"}], 1)
+    assert text == "ok"
+    assert payloads[0]["stream_options"] == {"include_usage": True}
+    assert "stream_options" not in payloads[1]
+    assert "groq" in engine._usage_unsupported
+
+
+def test_call_api_raises_max_tokens_for_reasoning(engine, monkeypatch) -> None:
+    """При расширенном мышлении лимит вывода не опускается ниже минимума."""
+    monkeypatch.setattr(engine, "_sync_config", lambda: None)
+    engine._config = {"reasoning": True, "max_tokens": 4096, "providers": {}}
+    engine._gen = True
+    monkeypatch.setattr(
+        engine,
+        "_active_api_credentials",
+        lambda: ("openai", "https://api.openai.com/v1", "key", "gpt-5", "openai"),
+    )
+    monkeypatch.setattr(engine, "_validated_base_url", lambda url: url)
+    captured: dict = {}
+
+    def _fake_open(request, provider_id):  # pylint: disable=unused-argument
+        captured.update(json.loads(request.data.decode("utf-8")))
+        return io.BytesIO(b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n')
+
+    monkeypatch.setattr(engine, "_open_with_retry", _fake_open)
+    engine._call_api([{"role": "user", "content": "hi"}], 1)
+    assert captured["max_tokens"] == REASONING_MIN_MAX_TOKENS
+    assert "temperature" not in captured
+    assert captured["reasoning_effort"] == "high"
 
 
 def test_update_model_from_api_marks_provider_price(engine) -> None:

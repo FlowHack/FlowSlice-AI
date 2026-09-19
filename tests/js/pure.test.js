@@ -92,6 +92,18 @@ check("поиск кириллица перестановка", pure.matchesMode
 check("поиск нет совпадений", pure.matchesModelQuery("Free Models Router", "gpt"), false);
 check("поиск пустой запрос", pure.matchesModelQuery("Free Models Router", "  "), true);
 
+// Раскрытие блока размышлений: только у последнего assistant-сообщения во время стрима.
+const streamMsgs = [
+  { role: "user", text: "вопрос" },
+  { role: "assistant", text: "", reasoning: "размышляю" },
+];
+check("reasoning последнее при стриме", pure.shouldOpenReasoning(streamMsgs[1], 1, streamMsgs, "streaming"), true);
+check("reasoning не последнее", pure.shouldOpenReasoning(streamMsgs[0], 0, streamMsgs, "streaming"), false);
+check("reasoning без стрима", pure.shouldOpenReasoning(streamMsgs[1], 1, streamMsgs, "idle"), false);
+check("reasoning не assistant", pure.shouldOpenReasoning({ role: "user" }, 0, [{ role: "user" }], "streaming"), false);
+check("reasoning пустой список", pure.shouldOpenReasoning({ role: "assistant" }, 0, [], "streaming"), false);
+check("reasoning без msg", pure.shouldOpenReasoning(null, 0, streamMsgs, "streaming"), false);
+
 // Метки времени: Python присылает секунды, JS — миллисекунды.
 check("toMillis секунды", pure.toMillis(1789809720), 1789809720000);
 check("toMillis миллисекунды", pure.toMillis(1789809720000), 1789809720000);

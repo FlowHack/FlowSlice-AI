@@ -35,8 +35,8 @@ def test_normalize_invalid_numbers(engine) -> None:
             "context_window": 1,
         }
     )
-    assert result["temperature"] == 0.7
-    assert result["max_tokens"] == 4096
+    assert result["temperature"] == 0.3
+    assert result["max_tokens"] == 8192
     assert result["font_size"] == 14
     assert result["compact_threshold"] == 80
     assert result["context_window"] == 128000

@@ -457,20 +457,54 @@ select option {
   padding: 4px 8px;
   background: var(--orca-input);
 }
+/* Живой блок размышлений во время стрима: точечный красный акцент. */
+.msg-reasoning-live {
+  border-color: #d9534f;
+}
 .msg-reasoning > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
   font-size: 12px;
   color: var(--orca-muted);
   user-select: none;
+  list-style: none;
+  transition: color 0.15s ease;
+}
+.msg-reasoning > summary::-webkit-details-marker {
+  display: none;
+}
+.msg-reasoning > summary:hover {
+  color: var(--orca-fg);
+}
+.msg-reasoning-live > summary {
+  color: #d9534f;
+}
+.msg-reasoning-chevron {
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.msg-reasoning[open] > summary .msg-reasoning-chevron {
+  transform: rotate(90deg);
 }
 .msg-reasoning-text {
   margin-top: 4px;
   font-size: 12px;
+  line-height: 1.5;
   color: var(--orca-muted);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 320px;
   overflow-y: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .msg-reasoning > summary,
+  .msg-reasoning-chevron {
+    transition: none;
+  }
 }
 .msg-actions {
   display: flex;
