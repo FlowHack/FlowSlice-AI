@@ -165,6 +165,11 @@ jobs:
           name: wheel
           path: release-files/
 
+      - name: Установка Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Определение версии
         id: version
         run: |

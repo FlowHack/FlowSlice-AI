@@ -53,6 +53,7 @@
       <div class="header-right">
         <span class="model-status" id="modelStatus"></span>
         <button type="button" id="usageBtn" class="icon-btn" title="Статистика" data-i18n-title="common.stats">📊</button>
+        <button type="button" id="donateBtn" class="icon-btn" title="Поддержать проект" data-i18n-title="common.donate">♥</button>
         <button type="button" id="settingsBtn" class="icon-btn" title="Настройки" data-i18n-title="common.settings">⚙</button>
         <button type="button" id="newChatBtn" class="icon-btn" title="Новый чат" data-i18n-title="common.new_chat">+</button>
       </div>
@@ -440,6 +441,22 @@
     </div>
     <div class="modal-actions">
       <button type="button" id="usageModalOk" class="primary-btn" data-i18n="common.close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка поддержки проекта -->
+<div class="modal-overlay" id="donateModal" style="display:none" role="dialog" aria-modal="true" aria-label="Поддержать проект" data-i18n-aria-label="donate.title">
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="donate.title">Поддержать проект</span>
+      <button type="button" id="donateModalClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
+    </div>
+    <p class="donate-hint" data-i18n="donate.hint">Выберите удобный способ. Нажмите «Копировать» и вставьте адрес в приложении или на сайте.</p>
+    <div id="donateList"></div>
+    <p class="donate-note" data-i18n="donate.note">Крипто-адреса — это депозитные адреса биржи и могут измениться. Если адрес перестанет работать, актуальные реквизиты появятся в новой версии плагина.</p>
+    <div class="modal-actions">
+      <button type="button" id="donateModalOk" class="primary-btn" data-i18n="common.close">Закрыть</button>
     </div>
   </div>
 </div>

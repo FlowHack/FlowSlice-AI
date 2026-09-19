@@ -27,6 +27,7 @@ from flowslice_ai.config import (
 )
 from flowslice_ai.constants import (
     CONTEXT_OPTIONS,
+    DONATION_OPTIONS,
     MAX_CHAT_MESSAGES,
     MAX_PERSISTED_FILE_CHARS,
     PRESET_CONTEXT_KEYS,
@@ -712,6 +713,8 @@ class CoreMixin:
                 "context_modes": chat.get("context_modes", {}),
                 "context_tokens": self._ctx_tokens,
                 "status": "streaming" if self._gen else "",
+                # Копии словарей: UI не должен иметь возможности изменить константу.
+                "donate": [dict(item) for item in DONATION_OPTIONS],
             }
         )
 

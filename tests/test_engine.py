@@ -401,6 +401,21 @@ def test_save_settings_sends_fresh_providers(engine, monkeypatch) -> None:
     assert openrouter["has_key"] is True
 
 
+def test_send_state_includes_donation_options(engine, monkeypatch) -> None:
+    """Состояние содержит реквизиты донатов из единой константы."""
+    posts = []
+    monkeypatch.setattr(engine, "_post", posts.append)
+    engine._send_state()
+    states = [p for p in posts if p.get("type") == "state"]
+    assert states, "state не отправлен"
+    donate = states[-1]["donate"]
+    assert len(donate) == 3
+    values = {item["id"]: item["value"] for item in donate}
+    assert values["yoomoney"] == "4100119569298015"
+    assert values["usdt"] == "TJRUKLwmYk8DpjFCyakQxWzXeJL6hrFTxZ"
+    assert values["btc"] == "15f1swAtj7T1yVaXGEGWyLrfxSmDn1NKiY"
+
+
 def test_cmd_reset_chats_requires_confirmation(engine) -> None:
     """`/reset chats` очищает историю только после подтверждения."""
     before = len(engine._chats)

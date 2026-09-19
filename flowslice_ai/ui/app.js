@@ -34,6 +34,8 @@
     context_modes: {},
     context_tokens: 0,
     status: "idle",
+    // Способы поддержки проекта: [{ id, title, value, url }].
+    donate: [],
     // Подгруженные через API списки моделей: { providerId: { models, error } }.
     apiModels: {}
   };
@@ -220,6 +222,13 @@
       "usage.period.today": "Today",
       "usage.period.week": "This week",
       "usage.period.month": "This month",
+      "common.donate": "Support the project",
+      "donate.title": "Support the project",
+      "donate.hint": "Pick a method and copy the address into your wallet or payment app.",
+      "donate.open": "Open",
+      "donate.copy": "Copy",
+      "donate.copied": "Address copied",
+      "donate.note": "Crypto addresses are exchange deposit addresses and may change. If an address stops working, up-to-date details will arrive with a new plugin version.",
       "mp.title": "Choose active model",
       "mp.search": "Search model or provider...",
       "mp.default": "Default",
@@ -445,6 +454,13 @@
       "usage.period.today": "Сегодня",
       "usage.period.week": "Неделя",
       "usage.period.month": "Месяц",
+      "common.donate": "Поддержать проект",
+      "donate.title": "Поддержать проект",
+      "donate.hint": "Выберите удобный способ. Нажмите «Копировать» и вставьте адрес в приложении или на сайте.",
+      "donate.open": "Открыть",
+      "donate.copy": "Копировать",
+      "donate.copied": "Адрес скопирован",
+      "donate.note": "Крипто-адреса — это депозитные адреса биржи и могут измениться. Если адрес перестанет работать, актуальные реквизиты появятся в новой версии плагина.",
       "mp.title": "Выбор активной модели",
       "mp.search": "Поиск модели или провайдера…",
       "mp.default": "По умолчанию",
@@ -670,6 +686,13 @@
       "usage.period.today": "Danas",
       "usage.period.week": "Ova nedelja",
       "usage.period.month": "Ovaj mesec",
+      "common.donate": "Подржи пројекат",
+      "donate.title": "Подржи пројекат",
+      "donate.hint": "Изаберите начин и копирајте адресу у новчаник или апликацију.",
+      "donate.open": "Отвори",
+      "donate.copy": "Копирај",
+      "donate.copied": "Адреса је копирана",
+      "donate.note": "Крипто адресе су депозитне адресе берзе и могу се променити. Ако адреса престане да ради, актуелни подаци ће доћи у новој верзији додатка.",
       "mp.title": "Izbor aktivnog modela",
       "mp.search": "Pretraga modela ili provajdera…",
       "mp.default": "Podrazumevano",
@@ -2456,26 +2479,29 @@
     byId("input").focus();
   }
 
-  function copyText(text) {
+  // toastText позволяет показать свой текст успешного копирования (например, для доната).
+  function copyText(text, toastText) {
     var value = text || "";
+    var okText = toastText || t("common.copied");
     // Шаг 1: современный async API буфера обмена
     if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
       try {
         navigator.clipboard.writeText(value).then(function () {
-          showToast(t("common.copied"), "ok");
+          showToast(okText, "ok");
         }, function () {
-          copyTextFallback(value);
+          copyTextFallback(value, okText);
         });
         return;
       } catch (err) {
-        copyTextFallback(value);
+        copyTextFallback(value, okText);
         return;
       }
     }
-    copyTextFallback(value);
+    copyTextFallback(value, okText);
   }
 
-  function copyTextFallback(value) {
+  function copyTextFallback(value, toastText) {
+    var okText = toastText || t("common.copied");
     // Шаг 2: скрытый textarea + execCommand("copy")
     var ok = false;
     try {
@@ -2493,7 +2519,7 @@
       ok = false;
     }
     if (ok) {
-      showToast(t("common.copied"), "ok");
+      showToast(okText, "ok");
       return;
     }
     // Шаг 3: ручное копирование — модалка с авто-выделением
@@ -3493,8 +3519,70 @@
     byId("usageModal").style.display = "none";
   }
 
+  /* ===== Модалка поддержки проекта ===== */
+  // Карточки способов поддержки: данные приходят в state.donate (может отсутствовать).
+  function renderDonateState(items) {
+    var list = byId("donateList");
+    if (!list) {
+      return;
+    }
+    // Очистка контейнера; сами карточки собираем через DOM API без innerHTML с данными.
+    list.innerHTML = "";
+    var data = Array.isArray(items) ? items : [];
+    for (var i = 0; i < data.length; i++) {
+      var item = data[i] || {};
+      var card = el("div", "donate-item");
+
+      var title = el("div", "donate-title");
+      title.textContent = item.title == null ? "" : String(item.title);
+      card.appendChild(title);
+
+      var value = el("div", "donate-value");
+      value.textContent = item.value == null ? "" : String(item.value);
+      card.appendChild(value);
+
+      var actions = el("div", "donate-actions");
+
+      var copyBtn = el("button", "ghost-btn", t("donate.copy"));
+      copyBtn.type = "button";
+      copyBtn.setAttribute("data-i18n", "donate.copy");
+      // Замыкание захватывает значение конкретной карточки.
+      copyBtn.addEventListener("click", (function (val) {
+        return function () {
+          copyText(val, t("donate.copied"));
+        };
+      })(item.value == null ? "" : String(item.value)));
+      actions.appendChild(copyBtn);
+
+      var href = safeHref(item.url);
+      if (href) {
+        var link = document.createElement("a");
+        link.className = "donate-link";
+        link.href = href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.setAttribute("data-i18n", "donate.open");
+        link.textContent = t("donate.open");
+        actions.appendChild(link);
+      }
+
+      card.appendChild(actions);
+      list.appendChild(card);
+    }
+  }
+
+  function openDonate() {
+    renderDonateState(state.donate);
+    byId("donateModal").style.display = "flex";
+    focusModal(byId("donateModal"));
+  }
+
+  function closeDonate() {
+    byId("donateModal").style.display = "none";
+  }
+
   // Порядок модалок от самой верхней к нижней: нужен для Esc и ловушки фокуса.
-  var MODAL_IDS = ["modelPickerModal", "copyModal", "usageModal", "settingsModal"];
+  var MODAL_IDS = ["modelPickerModal", "copyModal", "usageModal", "donateModal", "settingsModal"];
 
   function visibleModal() {
     for (var i = 0; i < MODAL_IDS.length; i++) {
@@ -4026,6 +4114,11 @@
         state.context_flags = msg.context_flags || {};
         state.context_modes = msg.context_modes || {};
         state.context_tokens = msg.context_tokens || 0;
+        // Поле donate может отсутствовать — работаем без ошибок.
+        state.donate = Array.isArray(msg.donate) ? msg.donate : [];
+        if (byId("donateModal").style.display === "flex") {
+          renderDonateState(state.donate);
+        }
         state.status = msg.status || "idle";
         if (state.status !== "streaming") {
           streamText = "";
@@ -4187,6 +4280,14 @@
     byId("usageModal").addEventListener("click", function (e) {
       if (e.target === this) {
         closeUsage();
+      }
+    });
+    byId("donateBtn").addEventListener("click", openDonate);
+    byId("donateModalClose").addEventListener("click", closeDonate);
+    byId("donateModalOk").addEventListener("click", closeDonate);
+    byId("donateModal").addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeDonate();
       }
     });
     var tabBtns = document.querySelectorAll(".settings-tab");
@@ -4416,6 +4517,10 @@
         }
         if (byId("usageModal").style.display === "flex") {
           closeUsage();
+          return;
+        }
+        if (byId("donateModal").style.display === "flex") {
+          closeDonate();
           return;
         }
         if (byId("settingsModal").style.display === "flex") {
