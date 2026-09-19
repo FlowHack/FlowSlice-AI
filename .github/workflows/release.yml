@@ -17,6 +17,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Установка зависимостей
         run: |
           python -m pip install --upgrade pip
@@ -30,6 +34,12 @@ jobs:
 
       - name: pytest
         run: pytest tests/ -v
+
+      - name: Синтаксис JS
+        run: node --check flowslice_ai/ui/app.js
+
+      - name: JS-тесты чистых функций
+        run: node tests/js/pure.test.js
 
   build-wheel:
     name: Сборка wheel
@@ -51,7 +61,7 @@ jobs:
         run: |
           TAG="${{ github.ref_name }}"
           VERSION=$(python -c "from flowslice_ai.version import __version__; print(__version__)")
-          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && "$TAG" != "v$VERSION" ]]; then
+          if [[ "$TAG" == v* && "$TAG" != "v$VERSION" ]]; then
             echo "::error::Тег $TAG не совпадает с версией пакета $VERSION (flowslice_ai/version.py)"
             exit 1
           fi
@@ -85,15 +95,45 @@ jobs:
           if "Import-Name: flowslice_ai" not in metadata:
               raise SystemExit("В METADATA нет 'Import-Name: flowslice_ai'")
 
-          package_files = [n for n in names if n.startswith("flowslice_ai/") and n.endswith(".py")]
-          if "flowslice_ai/__init__.py" not in package_files:
-              raise SystemExit("В wheel нет flowslice_ai/__init__.py")
-          if "flowslice_ai/engine/core.py" not in package_files:
-              raise SystemExit("В wheel нет flowslice_ai/engine/core.py")
-          if not any(n == "flowslice_ai/ui/app.js" for n in names):
-              raise SystemExit("В wheel нет flowslice_ai/ui/app.js")
+          from flowslice_ai.version import __version__ as version
+          if f"Version: {version}" not in metadata:
+              raise SystemExit(f"METADATA не содержит Version: {version}")
 
-          print(f"OK: {whl}, файлов: {len(names)}, пакетных модулей: {len(package_files)}")
+          required = [
+              "flowslice_ai/__init__.py",
+              "flowslice_ai/version.py",
+              "flowslice_ai/paths.py",
+              "flowslice_ai/plugin.py",
+              "flowslice_ai/config.py",
+              "flowslice_ai/constants.py",
+              "flowslice_ai/errors.py",
+              "flowslice_ai/i18n.py",
+              "flowslice_ai/logging.py",
+              "flowslice_ai/providers_data.py",
+              "flowslice_ai/slicer_context.py",
+              "flowslice_ai/assets.py",
+              "flowslice_ai/orca_compat.py",
+              "flowslice_ai/engine/__init__.py",
+              "flowslice_ai/engine/api_client.py",
+              "flowslice_ai/engine/commands.py",
+              "flowslice_ai/engine/compaction.py",
+              "flowslice_ai/engine/core.py",
+              "flowslice_ai/engine/generation.py",
+              "flowslice_ai/engine/handlers.py",
+              "flowslice_ai/engine/net.py",
+              "flowslice_ai/engine/providers.py",
+              "flowslice_ai/engine/slicer_context.py",
+              "flowslice_ai/ui/__init__.py",
+              "flowslice_ai/ui/app.js",
+              "flowslice_ai/ui/index.html",
+              "flowslice_ai/ui/style.css",
+          ]
+          missing = [p for p in required if p not in names]
+          if missing:
+              raise SystemExit(f"В wheel отсутствуют обязательные файлы: {missing}")
+
+          package_files = [n for n in names if n.startswith("flowslice_ai/") and n.endswith(".py")]
+          print(f"OK: {whl}, файлов: {len(names)}, пакетных модулей: {len(package_files)}, версия {version}")
           EOF
 
       - name: Загрузка артефакта

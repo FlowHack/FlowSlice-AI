@@ -69,8 +69,8 @@ What the assistant can do:
 </tr>
 </table>
 
-- **Attachments:** photos (up to 6 MB) and text files (up to 1 MB).
-- **Localization:** English / Русский / Srpski (English by default).
+- **Attachments:** photos (up to 4 MB, compressed to 1024 px) and text files (up to 100,000 characters).
+- **Localization:** English / Russian / Serbian (English by default).
 - **Themes:** auto (native Orca) / pure white / pure black, signature red accent.
 
 ---
@@ -82,7 +82,7 @@ What the assistant can do:
 | Orca Slicer | with Python plugin support (2.x branch) |
 | OS | Windows / Linux / macOS (x64, macOS arm64) |
 | Python | 3.12+ (bundled with Orca Slicer) |
-| numpy | installed automatically with the plugin |
+| numpy | optional (extra `deep`) — enables deep model geometry analysis; the plugin works without it |
 | Internet | required to reach the selected provider's API |
 
 ### 📦 Installation
@@ -208,8 +208,8 @@ base preset) and **all** (the full profile). Selected checkboxes and modes are r
 - **Photos:** attach a photo of a print defect or a part. The image is compressed to 1024 px and sent
   only to models that support images. If the selected model does not, the plugin tells you and does not
   send the file.
-- **Text files:** the file contents (up to 1 MB) are added to the message as plain text, so they work
-  with any model.
+- **Text files:** the file contents (up to 100,000 characters per file, 400,000 in total) are added to
+  the message as plain text, so they work with any model.
 
 > To analyze photos, choose an image-capable model, e.g. via OpenRouter (`Auto`, `Free` or a specific
 > vision model).
@@ -224,8 +224,9 @@ Type a command in the chat input and press **Enter**.
 | --- | --- |
 | `/context` | Show slicer context (model, profiles, checkboxes, history) |
 | `/clear` | Clear the current chat |
-| `/model` | Show the current model and its settings |
-| `/printer` | Show printer information |
+| `/compact` | Compress the chat history into a short summary (manually) |
+| `/model` | Show the model-on-the-plate report |
+| `/printer` | Show the print-profile summary |
 | `/stats` | Show usage statistics |
 | `/help` | List commands |
 | `/reset` | Reset plugin settings |

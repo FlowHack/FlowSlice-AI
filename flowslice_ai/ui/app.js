@@ -1813,7 +1813,7 @@
     wrap.appendChild(el("div", "welcome-title", "FlowSlice AI"));
     wrap.appendChild(el("div", "welcome-sub", t("welcome.sub")));
     var list = el("div", "welcome-cmds");
-    var cmds = ["/context", "/clear", "/model", "/printer", "/stats", "/help", "/reset"];
+    var cmds = ["/context", "/compact", "/clear", "/model", "/printer", "/stats", "/help", "/reset"];
     for (var i = 0; i < cmds.length; i++) {
       list.appendChild(el("span", "welcome-cmd", cmds[i]));
     }
@@ -2334,12 +2334,6 @@
     var text = input.value.trim();
     if (!text && attachments.length === 0) {
       return;
-    }
-    for (var i = 0; i < attachments.length; i++) {
-      if (!attachments[i].ready) {
-        showToast(t("attach.reading"), "err");
-        return;
-      }
     }
     var totalChars = 0;
     for (var j = 0; j < attachments.length; j++) {
