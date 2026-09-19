@@ -302,12 +302,45 @@ Type a command in the chat input and press **Enter**.
 
 ## 🔐 Privacy & data
 
-- **API keys** are stored in the Orca Slicer plugin configuration and are sent only to the server of
-  the provider you selected.
-- **Chat history** is stored locally: `data_dir()/flowslice_ai/chats.json`.
-- **The plugin has no telemetry** and sends no data anywhere except the API request to the selected
-  model.
-- Requests go directly from your computer to the provider (no intermediate servers).
+The plugin follows a simple rule: only what is needed for an answer is sent. Below is exactly what
+leaves your machine and what never does.
+
+### What is sent to the AI provider
+
+- The text of your messages and the history of the current chat, within the context you enabled.
+- Slicer data enabled by the checkboxes in the chat panel:
+  - profile parameters (only those changed from the base preset, or all of them, depending on your export mode);
+  - profile notes and start/end G-code when those sections are enabled;
+  - model statistics: dimensions, volume, surface area, triangle count, position, mesh integrity
+    (manifold) and instance count; the `deep` analysis mode adds further geometric metrics.
+- Photos you attach (compressed to 1024 px) and text files.
+- The plugin system instruction and the selected request options.
+
+### What is never sent
+
+- **Your model file never leaves your machine.** Only computed numeric statistics are transmitted,
+  never the geometry or the file itself.
+- **Printer credentials** (`print_host`, `print_host_webui`, `printhost_apikey`, `printhost_user`,
+  `printhost_password`, `printhost_cafile` and any key containing `password`, `apikey`, `secret` or
+  `token`) are filtered out during context collection, including in the all-parameters export mode.
+- **Provider API keys** are never sent to the model and never stored in chat history.
+- There is no telemetry, analytics, sign-up or vendor server.
+
+### Where data is stored
+
+- **API keys** live in the Orca Slicer plugin configuration on your computer and are sent only to the
+  server of the provider you selected, over HTTPS.
+- **Chat history** is stored locally in `data_dir()/flowslice_ai/chats.json`; you can clear it with
+  the `/clear` command or by deleting a chat.
+- **Settings and usage statistics** are stored locally through the official Orca Slicer configuration API.
+
+### Network requests
+
+- API requests go directly from your computer to the selected provider, with no intermediate servers.
+- To keep prices and image-support flags up to date, the plugin downloads the public OpenRouter model
+  catalog (`https://openrouter.ai/api/v1/models`). That request carries no keys and no user data.
+
+The donation details are static addresses hard-coded in the plugin; copying them sends nothing anywhere.
 
 ---
 

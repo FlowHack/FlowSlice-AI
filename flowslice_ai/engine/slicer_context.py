@@ -34,6 +34,7 @@ from flowslice_ai.constants import (
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _HAS_NUMPY, _np
 from flowslice_ai.setting_labels import humanize_presets
+from flowslice_ai.slicer_context import is_sensitive_preset_key
 from flowslice_ai.slicer_context import (
     AMBIGUOUS_PRESET_KEYS,
     PRESET_METADATA_KEYS,
@@ -644,11 +645,22 @@ class SlicerContextMixin:
                     fval = getattr(fval, "value", fval)
                     if fval not in (None, ""):
                         result[str(fkey)] = fval
-        return {
-            fkey: fval
-            for fkey, fval in result.items()
-            if fkey not in PRESET_METADATA_KEYS
-        }
+        safe: dict[str, Any] = {}
+        secret_keys: list[str] = []
+        for fkey, fval in result.items():
+            if fkey in PRESET_METADATA_KEYS:
+                continue
+            if is_sensitive_preset_key(fkey):
+                secret_keys.append(fkey)
+                continue
+            safe[fkey] = fval
+        if secret_keys:
+            _LOGGER.debug(
+                "Из данных профиля исключены чувствительные параметры (%d): %s",
+                len(secret_keys),
+                ", ".join(sorted(secret_keys)),
+            )
+        return safe
 
     def _fallback_preset_value(self: "_ChatEngine", bundle: Any, key: str) -> Any:
         """Ищет значение ключа через объединённый конфиг пресетов."""

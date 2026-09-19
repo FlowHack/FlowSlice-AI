@@ -89,6 +89,27 @@ def test_preset_config_items_skips_metadata(engine) -> None:
     }
 
 
+def test_preset_config_items_hides_printer_credentials(engine) -> None:
+    """Учётные данные доступа к принтеру не попадают в контекст модели."""
+
+    class _FakePreset:
+        """Заглушка пресета с секретами и обычными параметрами."""
+
+        config = {
+            "print_host": "192.168.1.50",
+            "print_host_webui": "http://192.168.1.50",
+            "printhost_apikey": "super-secret",
+            "printhost_password": "qwerty",
+            "printhost_user": "admin",
+            "printhost_cafile": "C:/ca.pem",
+            "nozzle_diameter": 0.4,
+            "printer_model": "MyPrinter",
+        }
+
+    items = engine._preset_config_items(_FakePreset())
+    assert items == {"nozzle_diameter": 0.4, "printer_model": "MyPrinter"}
+
+
 def test_preset_inheritance_chain(engine) -> None:
     """_preset_inheritance_chain() строит цепочку от корня к текущему."""
 

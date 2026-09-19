@@ -33,6 +33,42 @@ PRESET_METADATA_KEYS: frozenset[str] = frozenset(
     }
 )
 
+# Ключи пресетов, которые НИКОГДА не отправляются модели: сетевой доступ к
+# принтеру и учётные данные. Фильтр применяется ко всем режимам сбора, включая
+# «все параметры», иначе пароли уехали бы в API-запрос вместе с профилем.
+SENSITIVE_PRESET_KEYS: frozenset[str] = frozenset(
+    {
+        "print_host",
+        "print_host_webui",
+        "printhost_port",
+        "printhost_user",
+        "printhost_authorization_type",
+        "printhost_ssl_ignore_revoke",
+        "bbl_use_printhost",
+    }
+)
+
+# Части имени ключа, по которым отсекаются любые секреты независимо от версии
+# OrcaSlicer (например, printhost_apikey, printhost_password, printhost_cafile).
+SENSITIVE_PRESET_KEY_PARTS: tuple[str, ...] = (
+    "password",
+    "passwd",
+    "apikey",
+    "api_key",
+    "secret",
+    "token",
+    "credential",
+    "cafile",
+)
+
+
+def is_sensitive_preset_key(key: str) -> bool:
+    """Проверяет, содержит ли ключ пресета секреты или доступ к принтеру."""
+    name = str(key).strip().lower()
+    if name in SENSITIVE_PRESET_KEYS:
+        return True
+    return any(part in name for part in SENSITIVE_PRESET_KEY_PARTS)
+
 # Разделы пресетов: ключ результата → (атрибут коллекции, поля для full_config_value).
 PRESET_SECTIONS: dict[str, tuple[str, tuple[str, ...]]] = {
     "printer": (
