@@ -29,6 +29,7 @@ from flowslice_ai.constants import (
 )
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.orca_compat import _HAS_NUMPY, _np
+from flowslice_ai.setting_labels import humanize_presets
 from flowslice_ai.slicer_context import (
     AMBIGUOUS_PRESET_KEYS,
     PRESET_METADATA_KEYS,
@@ -692,10 +693,18 @@ class SlicerContextMixin:
                     )
                 )
             if ctx.get("presets"):
+                lang = (
+                    self._config.get("language", "en")
+                    if isinstance(self._config, dict)
+                    else "en"
+                )
+                # Ключи пресетов заменяются на «Метка в интерфейсе (внутренний id)»,
+                # чтобы модель называла параметры человекочитаемо.
+                presets = humanize_presets(ctx["presets"], str(lang))
                 parts.append(
                     self._t(
                         "prompt.print_profiles",
-                        data=json.dumps(ctx["presets"], ensure_ascii=False, indent=2),
+                        data=json.dumps(presets, ensure_ascii=False, indent=2),
                         data_note=self._t("prompt.data_note"),
                     )
                 )
