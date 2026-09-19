@@ -3,6 +3,24 @@
 **An AI 3D-printing engineer right inside Orca Slicer.**
 It sees your model, profiles and print history, and helps with mechanics, Klipper and material fine-tuning.
 
+## 📖 Contents
+
+- [What it is](#-what-it-is)
+- [Features](#-features)
+- [Screenshots](#-screenshots)
+- [Installation](#-installation)
+- [Quick start for beginners](#-quick-start-for-beginners)
+- [Where to get an API key](#-where-to-get-an-api-key)
+- [Settings](#-settings)
+- [Model catalog sync](#-model-catalog-sync)
+- [Slicer context](#-slicer-context)
+- [Attachments and limits](#-attachments-and-limits)
+- [Commands](#-commands)
+- [Privacy & data](#-privacy--data)
+- [FAQ](#-faq)
+
+---
+
 ## 🤖 What it is
 
 **FlowSlice AI** is an assistant plugin for [Orca Slicer](https://github.com/OrcaSlicer/OrcaSlicer).
