@@ -1,18 +1,13 @@
-**An AI 3D-printing engineer right inside Orca Slicer.**
-It sees your model, profiles and print history, and helps with mechanics, Klipper and material fine-tuning.
+**FlowSlice AI** is an AI 3D-printing engineer built into Orca Slicer. It reads your model, profiles and print history, and answers questions about print defects, calibration, Klipper, mechanics and materials (PLA, PETG, TPU).
 
----
-
-## 🤖 What it is
-
-**FlowSlice AI** is an assistant plugin for [Orca Slicer](https://github.com/OrcaSlicer/OrcaSlicer). It adds a chat tab where an AI 3D-printing engineer answers with your slicer context, so advice is specific to your model, printer and material.
+Ask about a failed print or paste a photo — every answer is tied to your real printer, filament and settings. It is an assistant plugin for [Orca Slicer](https://github.com/OrcaSlicer/OrcaSlicer) with a chat tab, so advice is specific to your setup.
 
 - explains print defects and tells you which settings to change;
 - helps with calibration (flow, Pressure Advance, retraction, first layer);
 - advises on mechanics, firmware (Klipper, Marlin) and maintenance;
 - compares materials (PLA, PETG, ABS, TPU) and analyzes defect photos.
 
-> 💡 "Why is there bulging on the corners? I use PETG on an Ender-3." — the assistant sees your profile, temperature, speed and flow and gives concrete values.
+> 💡 "Why is there bulging on the corners?" — the assistant sees your profile, temperature, speed and flow and gives concrete values.
 
 ---
 
@@ -74,7 +69,7 @@ It sees your model, profiles and print history, and helps with mechanics, Klippe
 
 FlowSlice AI is distributed through **OrcaCloud**:
 
-1. Subscribe to **FlowSlice AI** on [OrcaCloud Plugins](https://cloud.orcaslicer.com/app/plugins/plugin-hub).
+1. Open the [FlowSlice AI page](https://cloud.orcaslicer.com/app/plugins/plugin-hub/3453f12e-d2d7-4ba6-ac05-6233918d990d) on OrcaCloud and subscribe.
 2. In Orca Slicer open **File → Plugins**, install the plugin and enable the **FlowSlice AI** toggle.
 3. Open the **FlowSlice AI** tab; restart Orca Slicer if it does not appear.
 
