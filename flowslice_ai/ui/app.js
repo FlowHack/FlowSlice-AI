@@ -504,7 +504,7 @@
       "key.invalid": "Ключ недействителен",
       "export.user": "Пользователь",
       "export.title": "Чат",
-      "export.chat": "Экспорт",
+      "export.chat": "Экспорт чата",
       "export.system": "Система",
       "export.failed": "Не удалось подготовить экспорт.",
       "export.fmt_md": "Markdown",
@@ -736,7 +736,7 @@
       "key.invalid": "API ključ nije važeći",
       "export.user": "Korisnik",
       "export.title": "Ćaskanje",
-      "export.chat": "Izvezi",
+      "export.chat": "Izvezi ćaskanje",
       "export.system": "Sistem",
       "export.failed": "Izrada izvoza nije uspela.",
       "export.fmt_md": "Markdown",
@@ -1417,7 +1417,6 @@
         if (price) {
           row.appendChild(price);
         }
-        row.appendChild(el("code", "mp-item-id", item.id));
         var star = el("button", "mp-star" + (isDefault ? " active" : ""), isDefault ? "★" : "☆");
         star.type = "button";
         star.title = t("mp.default_set");

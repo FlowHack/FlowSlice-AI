@@ -1124,7 +1124,10 @@ select option {
   flex-direction: column;
   min-width: 150px;
   padding: 4px;
-  background: var(--orca-input);
+  /* Непрозрачная подложка: базовый фон темы + слой --orca-input (в «Авто»
+     он полупрозрачный и ложится на непрозрачный --orca-bg). */
+  background-color: var(--orca-bg);
+  background-image: linear-gradient(var(--orca-input), var(--orca-input));
   border: 1px solid var(--orca-border);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
@@ -1228,9 +1231,6 @@ select option {
   color: var(--orca-muted);
   white-space: nowrap;
 }
-.mp-price.mp-free {
-  color: var(--orca-accent);
-}
 .mp-search {
   margin: 0 12px 8px;
   padding: 8px 12px;
@@ -1277,15 +1277,6 @@ select option {
 }
 .mp-item-name {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mp-item-id {
-  font-family: Consolas, monospace;
-  font-size: 11px;
-  color: var(--orca-muted);
-  max-width: 40%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
