@@ -1,23 +1,6 @@
 **An AI 3D-printing engineer right inside Orca Slicer.**
 It sees your model, profiles and print history, and helps with mechanics, Klipper and material fine-tuning.
 
-## 📖 Contents
-
-- [What it is](#-what-it-is)
-- [Features](#-features)
-- [Screenshots](#-screenshots)
-- [Installation](#-installation)
-- [Quick start for beginners](#-quick-start-for-beginners)
-- [Where to get an API key](#-where-to-get-an-api-key)
-- [Settings](#-settings)
-- [Model catalog sync](#-model-catalog-sync)
-- [Slicer context](#-slicer-context)
-- [Attachments and limits](#-attachments-and-limits)
-- [Commands](#-commands)
-- [Privacy & data](#-privacy--data)
-- [FAQ](#-faq)
-- [Links](#-links)
-
 ---
 
 ## 🤖 What it is
@@ -134,7 +117,7 @@ After installation, find the **FlowSlice AI** tab in Orca Slicer and open it.
 
 ### Step 2. Get an API key
 
-Pick any provider from the [table below](#-where-to-get-an-api-key), sign up and create an API key.
+Pick any provider from the table below, sign up and create an API key.
 It is free to start — almost all providers offer a trial quota.
 
 ### Step 3. Add the key to the plugin
