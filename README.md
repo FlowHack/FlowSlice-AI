@@ -32,7 +32,6 @@
 - [Команды](#-команды)
 - [Приватность и данные](#-приватность-и-данные)
 - [Частые вопросы](#-частые-вопросы)
-- [Разработка](#-разработка)
 - [Обратная связь](#-обратная-связь)
 - [Лицензия](#-лицензия)
 
@@ -448,62 +447,6 @@ OpenRouter) — плагин сам предупредит, если модел�
 провайдеров** на вкладке «Общие» — каталог, цены и признак поддержки изображений
 подтянутся автоматически.
 </details>
-
----
-
-## 🛠 Разработка
-
-```
-flowslice_ai/
-├── __init__.py          # @orca.plugin FlowSlicePlugin + register_capabilities
-├── version.py           # __version__ — ЕДИНЫЙ источник версии
-├── errors.py            # FlowSliceError и наследники
-├── logging.py           # _LOGGER (StreamHandler → sys.stderr)
-├── constants.py         # SYSTEM_PROMPT, HTTP_HEADERS, лимиты
-├── paths.py             # STORAGE_DIR, CHATS_FILE, ICON_FILE
-├── i18n.py              # локализация (en/ru/sr)
-├── providers_data.py    # встроенные провайдеры и модели
-├── config.py            # DEFAULT_CONFIG, SETTINGS_KEYS, COMMANDS
-├── slicer_context.py    # PRESET_SECTIONS
-├── setting_labels.py    # локализованные метки параметров OrcaSlicer
-├── setting_labels_data.py# сгенерированные словари меток (en/ru)
-├── assets.py            # _TAB_ICON_SVG
-├── orca_compat.py       # совместимость с API Orca
-├── sync/                # синхронизация каталога моделей
-│   ├── base.py          #   контракты источников
-│   ├── sources.py       #   источники моделей, цен и зрения
-│   ├── fetch.py         #   опрос источников и слияние
-│   └── merge.py         #   политика слияния с конфигом
-├── plugin.py            # FlowSliceTab, FlowSliceWindow
-├── engine/              # _ChatEngine из миксинов
-│   ├── core.py          #   конфиг, чаты, состояние
-│   ├── handlers.py      #   диспетчер UI-сообщений
-│   ├── providers.py     #   CRUD провайдеров и моделей
-│   ├── generation.py    #   генерация и стриминг
-│   ├── api_client.py    #   HTTP и SSE
-│   ├── net.py           #   нормализация и проверка URL (защита от SSRF)
-│   ├── compaction.py    #   автосжатие истории
-│   ├── slicer_context.py#   контекст слайсера, токены
-│   └── commands.py      #   slash-команды, статистика
-└── ui/                  # HTML_PAGE, CONFIG_PAGE и ресурсы (css/html/js)
-```
-
-- `flowslice_ai/version.py` — единый файл версии (меняется только здесь); текущая версия — `0.1.2`.
-- Сборка wheel: `python -m build --wheel` + `python tools/patch_wheel.py dist/*.whl`
-  (имя `FlowSlice AI` и автор `FlowHack` в METADATA; в wheel попадают только модули пакета).
-- `stubs/orca/` — стабы API Orca для локального QA (pylint/pyright вне слайсера).
-- `tests/` — pytest (мок `tests/mocks/orca/` — тесты работают без слайсера).
-- `assets/` — иконка вкладки и превью.
-- `docs/` — официальная документация API Orca Slicer (обязательно сверяться при правках).
-- `example/` — пример плагина (только для изучения синтаксиса `orca.host`).
-
-**QA-гейт** (обязателен перед коммитом):
-
-```bash
-PYTHONPATH=stubs pylint flowslice_ai --fail-under=9.0
-PYTHONPATH=stubs pyright flowslice_ai   # 0 errors
-pytest tests/
-```
 
 ---
 
