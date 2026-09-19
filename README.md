@@ -152,7 +152,7 @@
 
 ### Способ 2. Локальная установка `.whl` (для разработки)
 
-1. Скачайте файл `flowslice_ai-<версия>-py3-none-any.whl` со страницы
+1. Скачайте файл `flowslice_ai-<версия>-py3-none-any_any.whl` со страницы
    [**Releases**](https://github.com/FlowHack/flowslice-ai/releases) (тег `v0.1.0`).
 2. Откройте Orca Slicer и перейдите в **File → Plugins → Install local plugin**.
 3. Выберите скачанный `.whl`-файл и подтвердите установку.
