@@ -75,35 +75,25 @@ Other:
 
 ## 📸 Screenshots
 
+*Main screen:*
+
 ![Main screen](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_chat.png)
 
-*Main screen.*
+*Settings, Models tab: providers, API keys and per-model parameters (temperature, tokens, reasoning, vision):*
 
 ![Settings, Models tab: providers, API keys and per-model parameters](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_models.png)
 
-*Settings, Models tab: providers, API keys and per-model parameters (temperature, tokens, reasoning, vision).*
+*Settings, General tab: context notes, default model parameters, context compaction, provider auto-refresh and data reset:*
 
 ![Settings, General tab: context notes, default model parameters, compaction](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_general.png)
 
-*Settings, General tab: context notes, default model parameters, context compaction, provider auto-refresh and data reset.*
+*Chat in action:*
 
 ![Chat in action](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_reasoning.png)
 
-*Chat in action.*
-
 ---
 
-## 🧩 Requirements
-
-| Component | Version |
-| --- | --- |
-| Orca Slicer | with Python plugin support (2.x branch) |
-| OS | Windows / Linux / macOS (x64, macOS arm64) |
-| Python | 3.12+ (bundled with Orca Slicer) |
-| numpy | optional (extra `deep`) — enables deep model geometry analysis; the plugin works without it |
-| Internet | required to reach the selected provider's API |
-
-### 📦 Installation
+## 📦 Installation
 
 FlowSlice AI is distributed through **OrcaCloud**:
 

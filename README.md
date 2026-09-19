@@ -119,23 +119,23 @@
 ## 📸 Скриншоты
 
 <p align="center">
-  <img src="assets/screenshot_chat.png" width="720" alt="Главный экран">
-  <br><sub>Главный экран</sub>
+  <sub>Главный экран:</sub>
+  <br><img src="assets/screenshot_chat.png" width="720" alt="Главный экран">
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_models.png" width="720" alt="Настройки, вкладка «Модели»">
-  <br><sub>Настройки, вкладка «Модели»: провайдеры, API-ключи и параметры моделей (температура, токены, мышление, зрение)</sub>
+  <sub>Настройки, вкладка «Модели»: провайдеры, API-ключи и параметры моделей (температура, токены, мышление, зрение):</sub>
+  <br><img src="assets/screenshot_models.png" width="720" alt="Настройки, вкладка «Модели»">
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_general.png" width="720" alt="Настройки, вкладка «Общие»">
-  <br><sub>Настройки, вкладка «Общие»: заметки для контекста, дефолтные параметры моделей, сжатие контекста, автообновление провайдеров и сброс данных</sub>
+  <sub>Настройки, вкладка «Общие»: заметки для контекста, дефолтные параметры моделей, сжатие контекста, автообновление провайдеров и сброс данных:</sub>
+  <br><img src="assets/screenshot_general.png" width="720" alt="Настройки, вкладка «Общие»">
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_reasoning.png" width="720" alt="Пример работы чата">
-  <br><sub>Пример работы чата</sub>
+  <sub>Пример работы чата:</sub>
+  <br><img src="assets/screenshot_reasoning.png" width="720" alt="Пример работы чата">
 </p>
 
 ---
