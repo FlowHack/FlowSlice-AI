@@ -1,5 +1,3 @@
-# FlowSlice AI
-
 **An AI 3D-printing engineer right inside Orca Slicer.**
 It sees your model, profiles and print history, and helps with mechanics, Klipper and material fine-tuning.
 
@@ -116,7 +114,7 @@ What the assistant can do:
 
 FlowSlice AI is distributed through **OrcaCloud**:
 
-1. Subscribe to **FlowSlice AI** on OrcaCloud.
+1. Subscribe to **FlowSlice AI** on [OrcaCloud Plugins](https://cloud.orcaslicer.com/app/plugins/plugin-hub).
 2. After subscribing, the plugin appears in Orca Slicer under **File → Plugins** — install it.
 3. Enable the **FlowSlice AI** toggle in the plugins list.
 4. Open the **FlowSlice AI** tab in Orca Slicer.
