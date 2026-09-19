@@ -182,9 +182,12 @@ jobs:
           fi
 
       - name: Удаление существующего релиза
+        # БЕЗ --cleanup-tag: пересоздание тега через API триггерит новое push-событие
+        # (tag), которое запускает этот же workflow повторно — бесконечный цикл.
+        # Удаляем только релиз, тег оставляем нетронутым.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release delete "v${{ steps.version.outputs.version }}" --yes --cleanup-tag 2>/dev/null || true
+        run: gh release delete "v${{ steps.version.outputs.version }}" --yes 2>/dev/null || true
 
       - name: Создание релиза
         # gh release create: с GITHUB_TOKEN событие release: published НЕ порождает
