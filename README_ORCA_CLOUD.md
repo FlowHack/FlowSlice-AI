@@ -349,39 +349,12 @@ The donation details are static addresses hard-coded in the plugin; copying them
 
 ## ❓ FAQ
 
-### The plugin tab did not appear.
-
-Make sure the plugin subscription is active on OrcaCloud and the plugin is enabled in the Orca Slicer
-plugin list. Restart Orca Slicer. Check that your Orca Slicer version supports Python plugins (2.x
-branch).
-
-### "API key missing" or "invalid key" error.
-
-Open **Settings → Models**, check that the key was pasted without extra spaces, and click the key
-check button. Make sure the provider account has funds on balance.
-
-### The model does not accept photos.
-
-The selected model does not support images. Choose a vision model (e.g. via OpenRouter) — the plugin
-will warn you automatically if a model cannot handle images.
-
-### Responses are cut off or arrive slowly.
-
-Check your internet connection and the provider limits. Try increasing **Max tokens** in the model
-settings or choose a faster provider (e.g. Groq or Cerebras). For reasoning models the inherited limit
-is raised to at least `16384` automatically; a per-model **Max tokens** value you set yourself is not
-increased.
-
-### Where is the chat history stored?
-
-In `data_dir()/flowslice_ai/chats.json` inside the Orca Slicer data directory.
-
-### Can I use my own server?
-
-Yes. On the **Custom** tab, add your own provider: specify the base URL, API scheme (OpenAI- or
-Anthropic-compatible), key and model ID.
-
-### What if the model list is out of date?
-
-Click **Refresh models** next to the provider, or enable **Auto-refresh providers** on the
-**General** tab — the catalog, prices and image-support flag will update automatically.
+| Question | Answer |
+| --- | --- |
+| The plugin tab did not appear. | Make sure the plugin subscription is active on OrcaCloud and the plugin is enabled in the Orca Slicer plugin list. Restart Orca Slicer. Check that your Orca Slicer version supports Python plugins (2.x branch). |
+| "API key missing" or "invalid key" error. | Open **Settings → Models**, check that the key was pasted without extra spaces, and click the key check button. Make sure the provider account has funds on balance. |
+| The model does not accept photos. | The selected model does not support images. Choose a vision model (e.g. via OpenRouter) — the plugin will warn you automatically if a model cannot handle images. |
+| Responses are cut off or arrive slowly. | Check your internet connection and the provider limits. Try increasing **Max tokens** in the model settings or choose a faster provider (e.g. Groq or Cerebras). For reasoning models the inherited limit is raised to at least `16384` automatically; a per-model **Max tokens** value you set yourself is not increased. |
+| Where is the chat history stored? | In `data_dir()/flowslice_ai/chats.json` inside the Orca Slicer data directory. |
+| Can I use my own server? | Yes. On the **Custom** tab, add your own provider: specify the base URL, API scheme (OpenAI- or Anthropic-compatible), key and model ID. |
+| What if the model list is out of date? | Click **Refresh models** next to the provider, or enable **Auto-refresh providers** on the **General** tab — the catalog, prices and image-support flag will update automatically. |
