@@ -5,21 +5,14 @@ It sees your model, profiles and print history, and helps with mechanics, Klippe
 
 ## 🤖 What it is
 
-**FlowSlice AI** is an assistant plugin for [Orca Slicer](https://github.com/OrcaSlicer/OrcaSlicer).
-It adds a dedicated chat tab where an AI 3D-printing engineer answers. The assistant works with your
-slicer context, so its advice is specific to your model, your printer and your material — not generic
-tips.
+**FlowSlice AI** is an assistant plugin for [Orca Slicer](https://github.com/OrcaSlicer/OrcaSlicer). It adds a chat tab where an AI 3D-printing engineer answers with your slicer context, so advice is specific to your model, printer and material.
 
-What the assistant can do:
+- explains print defects and tells you which settings to change;
+- helps with calibration (flow, Pressure Advance, retraction, first layer);
+- advises on mechanics, firmware (Klipper, Marlin) and maintenance;
+- compares materials (PLA, PETG, ABS, TPU) and analyzes defect photos.
 
-- explain print defects and tell you which settings to change and where;
-- help with calibration (flow, Pressure Advance, retraction, first layer);
-- advise on mechanics, firmware (Klipper, Marlin) and printer maintenance;
-- compare materials (PLA, PETG, ABS, TPU, etc.) for a specific task;
-- analyze photos of defects when an image-capable model is selected.
-
-> 💡 **Example.** "Why is there bulging on the corners? I use PETG on an Ender-3." — the assistant
-> will see your profile, temperature, speed and flow and give concrete values to change.
+> 💡 "Why is there bulging on the corners? I use PETG on an Ender-3." — the assistant sees your profile, temperature, speed and flow and gives concrete values.
 
 ---
 
@@ -27,49 +20,33 @@ What the assistant can do:
 
 ### 💬 Chat
 
-- Streaming responses (SSE) — text appears as it is generated
-- Reasoning blocks for reasoning models: expandable, open while streaming and auto-collapsed when the answer is done (chevron, red live highlight). Supported for OpenRouter (`delta.reasoning`), DeepSeek and Anthropic
-- Stop generation; an empty reply is marked as interrupted by the user, while already received text is kept as is
-- Regenerate the last reply
-- Edit and resend any of your messages (edit & resend)
-- Answer variants with switching between them
+- Streaming responses (SSE); stop generation and regenerate the last reply.
+- Reasoning blocks: expandable while streaming, auto-collapsed when done (OpenRouter, DeepSeek, Anthropic).
+- Edit & resend any message; answer variants.
 
 ### 🗂 Multi-chat
 
-- Unlimited conversations
-- Automatic titles from the first question
-- Chat history search
-- Pin important chats
-- History saved between sessions
-- Up to 200 messages per chat
-- The selected model is remembered per chat and restored on restart, with a footnote showing the model that produced each answer
+- Unlimited conversations with automatic titles, search and pinning; up to 200 messages per chat.
+- History persists between sessions; the model is remembered per chat.
 
 ### 🧠 Slicer context
 
-- Model on the plate: dimensions, volume, surface area, triangles, position, mesh integrity (manifold), instances
-- Printer, filament and print profiles
-- Full parameter dump or only changed vs. the base preset
-- Human-readable, localized parameter names, e.g. "Brim type (brim_type)" — 823 OrcaSlicer settings with 753 Russian translations (English and Russian)
-- Profile notes and start/end G-code
-- Context checkboxes right in the chat panel, remembered per chat
+- Model on the plate: dimensions, volume, surface area, triangles, position, manifold check, instances.
+- Printer, filament and print profiles: full dump or only changed parameters.
+- Localized parameter names ("Brim type (brim_type)"): 823 OrcaSlicer settings, 753 Russian translations.
+- Profile notes, start/end G-code and per-chat context checkboxes.
 
 ### 🔌 Providers & models
 
-- 11 built-in providers out of the box
-- Your own OpenAI/Anthropic-compatible providers
-- Favorite models: a pinned "Favorites" group and a ♥ button; the choice is kept across restarts
-- Model catalog sync: "Refresh models" button and auto-refresh
-- Model search independent of word order (finds full ids with `/` and `:` and versions like `3.7`)
-- Per-model tuning: temperature, max tokens, reasoning mode, image support
-- Default model (a star in the model list)
-- Tokens come from provider usage when it is reported (OpenRouter together with the real `cost`, Anthropic with exact token counts), otherwise they are estimated; automatic fallback on HTTP 400. Cost is shown only when both input and output prices are known
-- Usage statistics (📊)
+- 11 built-in providers plus your own OpenAI/Anthropic-compatible ones; favorite models (♥) survive restarts.
+- Catalog sync ("Refresh models" and auto-refresh) and word-order-independent search; per-model temperature, max tokens, reasoning mode and image support.
+- Token and cost statistics (📊) from provider usage when reported, otherwise estimated; fallback on HTTP 400.
 
 ### 🎨 Interface and attachments
 
-- **Attachments:** photos (up to 4 MB on the client, compressed to 1024 px; 20 MB base64 total per request) and text files (up to 100,000 characters each, 400,000 in total).
-- **Localization:** English / Russian / Serbian (English by default).
-- **Themes:** auto (native Orca) / light / dark (pure white `#ffffff` and black `#000000`), signature red accent `#d9534f`.
+- **Attachments:** photos (4 MB client limit, compressed to 1024 px) and text files (100,000 characters each).
+- **Localization:** English / Russian / Serbian.
+- **Themes:** auto / light / dark (pure `#ffffff` and `#000000`) with the red accent `#d9534f`.
 
 ---
 
@@ -79,13 +56,13 @@ What the assistant can do:
 
 ![Main screen](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_chat.png)
 
-*Settings, Models tab: providers, API keys and per-model parameters (temperature, tokens, reasoning, vision):*
+*Settings, Models tab: providers, API keys and per-model parameters:*
 
-![Settings, Models tab: providers, API keys and per-model parameters](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_models.png)
+![Settings, Models tab](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_models.png)
 
-*Settings, General tab: context notes, default model parameters, context compaction, provider auto-refresh and data reset:*
+*Settings, General tab: context notes, default model parameters, compaction:*
 
-![Settings, General tab: context notes, default model parameters, compaction](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_general.png)
+![Settings, General tab](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_general.png)
 
 *Chat in action:*
 
@@ -98,12 +75,8 @@ What the assistant can do:
 FlowSlice AI is distributed through **OrcaCloud**:
 
 1. Subscribe to **FlowSlice AI** on [OrcaCloud Plugins](https://cloud.orcaslicer.com/app/plugins/plugin-hub).
-2. After subscribing, the plugin appears in Orca Slicer under **File → Plugins** — install it.
-3. Enable the **FlowSlice AI** toggle in the plugins list.
-4. Open the **FlowSlice AI** tab in Orca Slicer.
-5. Restart Orca Slicer if the tab does not appear right away.
-
-> Installation is done entirely from the interface.
+2. In Orca Slicer open **File → Plugins**, install the plugin and enable the **FlowSlice AI** toggle.
+3. Open the **FlowSlice AI** tab; restart Orca Slicer if it does not appear.
 
 ---
 
@@ -122,140 +95,74 @@ Never used AI chats and APIs before? It takes a couple of minutes.
 
 ## 🔑 Where to get an API key
 
-All keys are created in the providers' personal dashboards. The **API key** field is under
-**Settings → Models**.
+Create keys in the providers' dashboards; paste them under **Settings → Models**.
 
-| Provider | Where to get the key | Note |
-| --- | --- | --- |
-| **DeepSeek** | https://platform.deepseek.com/api_keys | inexpensive, great for text |
-| **OpenRouter** | https://openrouter.ai/keys | one key — many models, free options |
-| **Google Gemini** | https://aistudio.google.com/app/apikey | free tier available |
-| **Anthropic** | https://console.anthropic.com/settings/keys | Claude models |
-| **OpenAI** | https://platform.openai.com/api-keys | GPT models |
-| **Groq** | https://console.groq.com/keys | very high speed |
-| **Zhipu GLM** | https://open.bigmodel.cn/ | GLM models |
-| **Cerebras** | https://cloud.cerebras.ai/ | fast inference |
-| **Mistral** | https://console.mistral.ai/api-keys | Mistral models |
-| **xAI** | https://console.x.ai/ | Grok models |
-| **NordRouter** | https://nordrouter.com/ | OpenAI-compatible aggregator, public price list |
+| Provider | Key page |
+| --- | --- |
+| **DeepSeek** | https://platform.deepseek.com/api_keys |
+| **OpenRouter** | https://openrouter.ai/keys |
+| **Google Gemini** | https://aistudio.google.com/app/apikey |
+| **Anthropic** | https://console.anthropic.com/settings/keys |
+| **OpenAI** | https://platform.openai.com/api-keys |
+| **Groq** | https://console.groq.com/keys |
+| **Zhipu GLM** | https://open.bigmodel.cn/ |
+| **Cerebras** | https://cloud.cerebras.ai/ |
+| **Mistral** | https://console.mistral.ai/api-keys |
+| **xAI** | https://console.x.ai/ |
+| **NordRouter** | https://nordrouter.com/ |
 
-> 🔒 The key is stored locally in the Orca Slicer plugin settings and is sent only to the server of
-> the provider you selected. The plugin never forwards it to third parties.
+> 🔒 The key is stored locally and sent only to the provider you selected.
 
 ---
 
 ## ⚙️ Settings
 
-Settings open via the gear in the chat window and are split into four tabs.
+Settings open via the gear in the chat window and have four tabs.
 
 | Tab | What you can configure |
 | --- | --- |
-| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode, image support. The **Refresh models** and **Delete selected model** buttons sit next to it. |
-| **Custom** | Your own OpenAI/Anthropic-compatible providers and models: base URL, API scheme, key, model ID and name, plus per-model temperature / max tokens / reasoning mode / vision / prices. |
-| **General** | Context compaction (`compact_enabled`, threshold %, window size, number of photos kept from history); notes for the context, default temperature / max tokens / reasoning mode; provider auto-refresh (`auto_sync_providers`); reset models. |
-| **Appearance** | Theme (auto / light / dark), font size 10–20 and style (system / mono / serif), interface language. |
+| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode, image support; **Refresh models**, **Delete selected model**. |
+| **Custom** | Your own OpenAI/Anthropic-compatible providers: base URL, scheme, key, model ID, per-model parameters and prices. |
+| **General** | Context compaction, context notes, default parameters, provider auto-refresh, reset models. |
+| **Appearance** | Theme, font size and style, interface language. |
 
-- Model values can be tuned individually; if a field is left empty, the general defaults apply
-  (`temperature = 0.3`, `max_tokens = 8192`, reasoning off by default). When reasoning is enabled, the
-  inherited token limit is never lower than `16384` so the model has room to think; a per-model
-  `max_tokens` you set yourself is not raised.
-- Prices for input and output tokens apply to custom models and are used to show the cost of a reply;
-  the cost appears only when both prices are known. Tokens and cost come from the provider when
-  available and are estimated otherwise.
-- The **Reset** button affects only the current tab.
-- The **General** tab has **Reset models** and **Reset custom models**.
-- Changes apply only after clicking **Save**.
-
----
-
-## 🔄 Model catalog sync
-
-- Every provider has a **Refresh models** button. It loads the provider's full model list into
-  a session cache — the config does not grow. Names, prices and the image-support flag are refreshed.
-- The **Auto-refresh providers** checkbox (`auto_sync_providers`) is on by default. Auto-sync starts
-  lazily (when the provider list is built in the UI) and after an API key is saved; it walks providers
-  that have a key plus OpenRouter and NordRouter, which are always checked. New models are not added —
-  only existing ones are updated.
-- Model search does not depend on word order: full ids with `/` and `:` and versions like `3.7` are
-  found without separators.
-- **Favorite models** are collected in a pinned **Favorites** group at the top of the model list and
-  toggled with the ♥ button. The selection is stored in the config and survives restarts.
-- **Prices** come from the specific provider: OpenRouter uses its own pricing catalog, NordRouter uses
-  its public price list; for the other providers prices are set manually.
-- **Image support** comes from the provider's own catalog first (Google, Anthropic, Mistral, xAI),
-  with the OpenRouter catalog as a fallback.
-- When a model is added or imported, its metadata is requested from the provider immediately.
-- Manual values and `temperature` / `max_tokens` / `reasoning` are never overwritten by auto-sync.
+Empty per-model fields inherit the defaults (`temperature = 0.3`, `max_tokens = 8192`, reasoning off); with reasoning the limit is at least `16384`. Cost appears only when both prices are known; changes apply after **Save**.
 
 ---
 
 ## 🧠 Slicer context
 
-The context panel in the chat decides what the assistant learns about your project:
-
 | Checkbox | What it sends |
 | --- | --- |
-| **Model on the plate** | Dimensions, volume, surface area, triangle count, position on the plate, mesh integrity (manifold), number of instances. The model has **brief**, **full** and **deep** modes. |
-| **Filament** | Filament profile: material, temperatures, flow, cooling and notes. |
-| **Printer** | Printer profile: kinematics, nozzle, bed, limits and start/end G-code. |
-| **Print settings** | Process profile: layers, perimeters, infill, speeds, supports. |
+| **Model on the plate** | Dimensions, volume, surface area, triangles, position, manifold check, instances; **brief**, **full** and **deep** modes. |
+| **Filament** | Material, temperatures, flow, cooling and notes. |
+| **Printer** | Kinematics, nozzle, bed, limits and start/end G-code. |
+| **Print settings** | Layers, perimeters, infill, speeds, supports. |
 | **Chat history** | Previous messages of the current chat. |
 
-For profiles, two export modes are available: **changed** (only the parameters changed relative to the
-base preset) and **all** (the full profile). Selected checkboxes and modes are remembered per chat.
-
-Parameter keys are enriched with interface labels before they are sent, so the model writes
-"Brim type (brim_type)" instead of the internal key. The dictionary covers 823 OrcaSlicer settings;
-753 of them have Russian translations. For Serbian, parameter labels are taken from the English table
-as a fallback.
+Profiles export as **changed** (only parameters differing from the base preset) or **all**; checkboxes and modes are remembered per chat ("Brim type (brim_type)" labels: 823 settings, 753 Russian translations).
 
 ---
 
 ## 📎 Attachments and limits
 
-- **Photos:** attach a photo of a print defect or a part. The image is compressed to 1024 px (JPEG)
-  and sent only to models that support images. The client limit is 4 MB per image, the server limit is
-  6 MB base64. If the selected model does not support images, the plugin tells you and does not send
-  the file.
-- **Text files:** the file contents (up to 100,000 characters per file, 400,000 in total) are added to
-  the message as plain text, so they work with any model. When the history is saved, long text
-  attachments are truncated.
-- **Count:** up to 10 attachments per message, including up to 10 images per request (20 MB base64 in
-  total).
-
-> To analyze photos, choose an image-capable model, e.g. via OpenRouter (`Auto`, `Free` or a specific
-> vision model).
-
-### Limits and auto-compaction
-
-| Parameter | Value |
-| --- | --- |
-| Attachments per message | up to 10 |
-| Images per request | up to 10 |
-| Total images per request | up to 20 MB base64 |
-| Photos kept from history | up to 2 |
-| Single image | 1024 px, JPEG; client 4 MB, server 6 MB base64 |
-| Text attachment | 100,000 characters; 400,000 in total |
-| Messages per chat | up to 200 |
-| Context window | 128,000 tokens |
-| Auto-compaction | at 80% of the window (can be disabled in settings) |
+- **Photos:** compressed to 1024 px JPEG and sent only to image-capable models; 4 MB per image, up to 10 images per request (20 MB base64).
+- **Text files:** up to 100,000 characters per file, 400,000 total, readable by any model.
+- Up to 10 attachments per message; 2 photos kept from history; 200 messages per chat; context window 128,000 tokens with auto-compaction at 80%.
 
 ---
 
 ## ⌨️ Commands
 
-Type a command in the chat input and press **Enter**.
-
 | Command | Description |
 | --- | --- |
-| `/context` | Show the actual message list that will be sent to the model (full system prompt, history, images summarized) and an estimated token count of that request |
-| `/compact` | Compress the chat history into a short summary (manually) |
+| `/context` | The exact request that will be sent, with a token estimate |
+| `/compact` | Compress the chat history into a summary |
 | `/clear` | Clear the current chat |
-| `/model` | Show the model-on-the-plate report |
-| `/printer` | Show the print-profile summary with human-readable parameter labels |
-| `/stats` | Show usage statistics |
-| `/help` | List commands |
-| `/reset` | Reset plugin settings (`/reset chats` — clear chats) |
+| `/model` | Model-on-the-plate report |
+| `/printer` | Print-profile summary with readable labels |
+| `/stats` | Usage statistics |
+| `/reset` | Reset settings (`/reset chats` — clear chats) |
 
 **Hotkeys:** `Enter` — send, `Shift+Enter` — new line.
 
@@ -263,45 +170,13 @@ Type a command in the chat input and press **Enter**.
 
 ## 🔐 Privacy & data
 
-The plugin follows a simple rule: only what is needed for an answer is sent. Below is exactly what
-leaves your machine and what never does.
+Only what is needed for an answer is sent.
 
-### What is sent to the AI provider
+**Sent:** the current chat's text and history; slicer data enabled by the context checkboxes (profile parameters, notes, start/end G-code, model statistics); attached photos and text files; the system instruction.
 
-- The text of your messages and the history of the current chat, within the context you enabled.
-- Slicer data enabled by the checkboxes in the chat panel:
-  - profile parameters (only those changed from the base preset, or all of them, depending on your export mode);
-  - profile notes and start/end G-code when those sections are enabled;
-  - model statistics: dimensions, volume, surface area, triangle count, position, mesh integrity
-    (manifold) and instance count; the `deep` analysis mode adds further geometric metrics.
-- Photos you attach (compressed to 1024 px) and text files.
-- The plugin system instruction and the selected request options.
+**Never sent:** your model file — only computed numeric statistics; printer credentials (`print_host`, `print_host_webui`, `printhost_apikey`, `printhost_user`, `printhost_password`, `printhost_cafile` and any key with `password`, `apikey`, `secret` or `token`) are filtered out even in the all-parameters mode; API keys never go to the model and are not stored in chat history; there is no telemetry or vendor server.
 
-### What is never sent
-
-- **Your model file never leaves your machine.** Only computed numeric statistics are transmitted,
-  never the geometry or the file itself.
-- **Printer credentials** (`print_host`, `print_host_webui`, `printhost_apikey`, `printhost_user`,
-  `printhost_password`, `printhost_cafile` and any key containing `password`, `apikey`, `secret` or
-  `token`) are filtered out during context collection, including in the all-parameters export mode.
-- **Provider API keys** are never sent to the model and never stored in chat history.
-- There is no telemetry, analytics, sign-up or vendor server.
-
-### Where data is stored
-
-- **API keys** live in the Orca Slicer plugin configuration on your computer and are sent only to the
-  server of the provider you selected, over HTTPS.
-- **Chat history** is stored locally in `data_dir()/flowslice_ai/chats.json`; you can clear it with
-  the `/clear` command or by deleting a chat.
-- **Settings and usage statistics** are stored locally through the official Orca Slicer configuration API.
-
-### Network requests
-
-- API requests go directly from your computer to the selected provider, with no intermediate servers.
-- To keep prices and image-support flags up to date, the plugin downloads the public OpenRouter model
-  catalog (`https://openrouter.ai/api/v1/models`). That request carries no keys and no user data.
-
-The donation details are static addresses hard-coded in the plugin; copying them sends nothing anywhere.
+**Storage and network:** keys live in the plugin configuration and go only to the selected provider over HTTPS; chats are stored in `data_dir()/flowslice_ai/chats.json`; requests go straight to the provider, and the public OpenRouter catalog (`https://openrouter.ai/api/v1/models`) is fetched for prices and image support.
 
 ---
 
@@ -309,4 +184,4 @@ The donation details are static addresses hard-coded in the plugin; copying them
 
 - Author: [@FlowHack](https://github.com/FlowHack)
 - Source code: [FlowHack/flowslice-ai](https://github.com/FlowHack/flowslice-ai)
-- Questions and bug reports: [Issues](https://github.com/FlowHack/flowslice-ai/issues)
+- Issues: [FlowHack/flowslice-ai/issues](https://github.com/FlowHack/flowslice-ai/issues)
