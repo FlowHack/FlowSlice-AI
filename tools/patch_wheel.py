@@ -6,19 +6,12 @@ METADATA имя ``FlowSlice-AI``. Orca Slicer показывает в диало
 переписывает заголовок ``Name`` на человекочитаемый ``FlowSlice AI`` и
 обновляет хеш METADATA в RECORD.
 
-Дополнительно скрипт готовит артефакт для публикации в OrcaCloud: копию
-wheel с суффиксом целевой платформы (``..._any.whl``). Форма публикации
-OrcaCloud требует, чтобы имя файла заканчивалось поддерживаемой целью
-ОС/архитектуры, а плагин является чистым Python (Tag ``py3-none-any``),
-поэтому его цель — ``any``.
-
 Запуск: ``python tools/patch_wheel.py dist/flowslice_ai-*.whl``.
 """
 from __future__ import annotations
 
 import base64
 import hashlib
-import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -30,10 +23,6 @@ DISPLAY_NAME = "FlowSlice AI"
 # над нормализованным Name, поэтому задаём его явно: это снимает зависимость
 # отображения (Name с пробелом) от разрешения пакета.
 IMPORT_NAME = "flowslice_ai"
-
-# Суффикс целевой платформы для формы публикации OrcaCloud. Плагин — чистый
-# Python, поэтому единственная корректная цель — универсальная ``any``.
-ORCA_CLOUD_TARGET_SUFFIX = "_any"
 
 
 def _record_row(archive_path: str, data: bytes) -> str:
@@ -92,20 +81,6 @@ def patch_wheel(wheel: Path) -> None:
     print(f"Патч METADATA применён: {wheel.name} -> Name: {DISPLAY_NAME}")
 
 
-def make_orca_cloud_copy(wheel: Path) -> Path | None:
-    """Готовит копию wheel с суффиксом цели OrcaCloud (``..._any.whl``).
-
-    Возвращает путь к созданной копии. Если файл уже является такой копией,
-    ничего не делает и возвращает ``None`` (идемпотентность повторного запуска).
-    """
-    if wheel.stem.endswith(ORCA_CLOUD_TARGET_SUFFIX):
-        return None
-    target = wheel.with_name(f"{wheel.stem}{ORCA_CLOUD_TARGET_SUFFIX}{wheel.suffix}")
-    shutil.copy2(wheel, target)
-    print(f"Артефакт OrcaCloud подготовлен: {target.name}")
-    return target
-
-
 def main(argv: list[str]) -> int:
     """Точка входа: патчит переданные wheel или все из dist/."""
     targets = [Path(arg) for arg in argv[1:]]
@@ -116,7 +91,6 @@ def main(argv: list[str]) -> int:
         return 1
     for wheel in targets:
         patch_wheel(wheel)
-        make_orca_cloud_copy(wheel)
     return 0
 
 

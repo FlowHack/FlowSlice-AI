@@ -8,13 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.patch_wheel import (
-    IMPORT_NAME,
-    ORCA_CLOUD_TARGET_SUFFIX,
-    _record_row,
-    make_orca_cloud_copy,
-    patch_wheel,
-)
+from tools.patch_wheel import IMPORT_NAME, _record_row, patch_wheel
 
 _META = "flowslice_ai-0.1.0.dist-info/METADATA"
 _RECORD = "flowslice_ai-0.1.0.dist-info/RECORD"
@@ -65,19 +59,6 @@ def test_patch_wheel_is_idempotent(tmp_path: Path) -> None:
 
     metadata = _read(wheel, _META)
     assert metadata.count("Import-Name:") == 1
-
-
-def test_make_orca_cloud_copy_adds_target_suffix(tmp_path: Path) -> None:
-    """Копия для OrcaCloud получает суффикс цели ``_any`` и совпадает байт-в-байт."""
-    wheel = tmp_path / "flowslice_ai-0.1.0-py3-none-any.whl"
-    _make_wheel(wheel)
-
-    patched = make_orca_cloud_copy(wheel)
-
-    assert patched is not None
-    assert patched.name == f"flowslice_ai-0.1.0-py3-none-any{ORCA_CLOUD_TARGET_SUFFIX}.whl"
-    assert patched.read_bytes() == wheel.read_bytes()
-    assert make_orca_cloud_copy(patched) is None
 
 
 def test_patch_wheel_requires_metadata(tmp_path: Path) -> None:

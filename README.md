@@ -152,7 +152,7 @@
 
 ### Способ 2. Локальная установка `.whl` (для разработки)
 
-1. Скачайте файл `flowslice_ai-<версия>-py3-none-any_any.whl` со страницы
+1. Скачайте файл `flowslice_ai-<версия>-py3-none-any.whl` со страницы
    [**Releases**](https://github.com/FlowHack/flowslice-ai/releases) (тег `v0.1.0`).
 2. Откройте Orca Slicer и перейдите в **File → Plugins → Install local plugin**.
 3. Выберите скачанный `.whl`-файл и подтвердите установку.
@@ -491,8 +491,6 @@ flowslice_ai/
 - `flowslice_ai/version.py` — единый файл версии (меняется только здесь); текущая версия — `0.1.0`.
 - Сборка wheel: `python -m build --wheel` + `python tools/patch_wheel.py dist/*.whl`
   (имя `FlowSlice AI` и автор `FlowHack` в METADATA; в wheel попадают только модули пакета).
-  Второй шаг дополнительно создаёт `flowslice_ai-<версия>-py3-none-any_any.whl` — копию
-  с суффиксом универсальной цели `any` для формы публикации OrcaCloud.
 - `stubs/orca/` — стабы API Orca для локального QA (pylint/pyright вне слайсера).
 - `tests/` — pytest (мок `tests/mocks/orca/` — тесты работают без слайсера).
 - `assets/` — иконка вкладки и превью.

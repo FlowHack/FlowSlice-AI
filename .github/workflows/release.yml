@@ -79,8 +79,7 @@ jobs:
           import glob
           import zipfile
 
-          # Проверяем канонический wheel (копия для OrcaCloud — байт-в-байт та же).
-          whl = next(w for w in sorted(glob.glob("dist/*.whl")) if not w.endswith("_any.whl"))
+          whl = glob.glob("dist/*.whl")[0]
           archive = zipfile.ZipFile(whl)
           names = archive.namelist()
           bad = [n for n in names if any(
@@ -146,7 +145,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wheel
-          path: dist/*_any.whl
+          path: dist/*.whl
           retention-days: 7
 
   create-release:
