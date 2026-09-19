@@ -84,7 +84,7 @@ What the assistant can do:
 - Tokens come from provider usage when it is reported (OpenRouter together with the real `cost`, Anthropic with exact token counts), otherwise they are estimated; automatic fallback on HTTP 400. Cost is shown only when both input and output prices are known
 - Usage statistics (📊)
 
-Other:
+### 🎨 Interface and attachments
 
 - **Attachments:** photos (up to 4 MB on the client, compressed to 1024 px; 20 MB base64 total per request) and text files (up to 100,000 characters each, 400,000 in total).
 - **Localization:** English / Russian / Serbian (English by default).
