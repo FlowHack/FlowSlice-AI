@@ -11,8 +11,8 @@ from flowslice_ai.sync.base import (
     SourceResult,
     http_json,
 )
-from flowslice_ai.sync.fetch import fetch_provider_metadata
-from flowslice_ai.sync.merge import apply_models
+from flowslice_ai.sync.fetch import fetch_provider_metadata, resolve_vision
+from flowslice_ai.sync.merge import apply_models, update_model
 from flowslice_ai.sync.sources import SOURCES, sources_for
 
 __all__ = [
@@ -25,5 +25,7 @@ __all__ = [
     "base",
     "fetch_provider_metadata",
     "http_json",
+    "resolve_vision",
     "sources_for",
+    "update_model",
 ]

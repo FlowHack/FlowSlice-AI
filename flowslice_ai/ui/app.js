@@ -149,6 +149,9 @@
       "settings.compact_title": "Context compaction",
       "settings.compact_enabled": "Automatically compress history",
       "settings.help_compact_enabled": "Replace old messages with a short summary when the context approaches the limit",
+      "settings.providers_title": "Providers",
+      "settings.auto_sync": "Auto-refresh providers",
+      "settings.help_auto_sync": "Automatically refreshes provider model data on plugin start and after saving an API key. It updates prices and image-support flags only for models present in your config; manually set values and tuning (temperature, max_tokens, reasoning) are never touched.",
       "settings.compact_threshold": "Compaction threshold, %",
       "settings.help_compact_threshold": "Share of the context window at which the history is compressed",
       "settings.context_window": "Context window, tokens",
@@ -371,6 +374,9 @@
       "settings.compact_title": "Сжатие контекста",
       "settings.compact_enabled": "Автоматически сжимать историю",
       "settings.help_compact_enabled": "Заменять старые сообщения короткой сводкой, когда контекст приближается к пределу",
+      "settings.providers_title": "Провайдеры",
+      "settings.auto_sync": "Автообновление провайдеров",
+      "settings.help_auto_sync": "Автоматически обновляет данные моделей провайдеров: при запуске плагина и после сохранения API-ключа. Обновляются цены и признак поддержки изображений только у моделей, которые есть в вашем конфиге; заданные вручную значения и настройки (temperature, max_tokens, reasoning) не затрагиваются.",
       "settings.compact_threshold": "Порог сжатия, %",
       "settings.help_compact_threshold": "Доля окна контекста, при которой история сжимается",
       "settings.context_window": "Окно контекста, токенов",
@@ -593,6 +599,9 @@
       "settings.compact_title": "Sažimanje konteksta",
       "settings.compact_enabled": "Automatski sažmi istoriju",
       "settings.help_compact_enabled": "Zameni stare poruke kratkim sažetkom kada se kontekst približi limitu",
+      "settings.providers_title": "Провајдери",
+      "settings.auto_sync": "Аутоматско освежавање провајдера",
+      "settings.help_auto_sync": "Аутоматски освежава податке модела провајдера при покретању додатка и након чувања API кључа. Ажурира цене и подршку за слике само за моделе који су у вашој конфигурацији; ручно задате вредности и подешавања (temperature, max_tokens, reasoning) се не мењају.",
       "settings.compact_threshold": "Prag sažimanja, %",
       "settings.help_compact_threshold": "Deo prozora konteksta pri kojem se istorija sažima",
       "settings.context_window": "Prozor konteksta, tokena",
@@ -3423,6 +3432,7 @@
     byId("setGlobalMaxTokens").value = String(s.max_tokens !== undefined ? s.max_tokens : 4096);
     byId("setGlobalReasoning").checked = !!s.reasoning;
     byId("setCompactEnabled").checked = s.compact_enabled !== false;
+    byId("setAutoSyncEnabled").checked = s.auto_sync_providers !== false;
     byId("setCompactThreshold").value = String(s.compact_threshold !== undefined ? s.compact_threshold : 80);
     byId("setContextWindow").value = String(s.context_window !== undefined ? s.context_window : 128000);
     updateThemeSwitch();
@@ -3590,6 +3600,7 @@
       max_tokens: parseInt(byId("setGlobalMaxTokens").value, 10) || 4096,
       reasoning: byId("setGlobalReasoning").checked,
       compact_enabled: byId("setCompactEnabled").checked,
+      auto_sync_providers: byId("setAutoSyncEnabled").checked,
       compact_threshold: parseInt(byId("setCompactThreshold").value, 10) || 80,
       context_window: parseInt(byId("setContextWindow").value, 10) || 128000,
       theme: themeBtn ? themeBtn.getAttribute("data-theme") : "auto",

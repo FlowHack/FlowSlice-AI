@@ -251,6 +251,11 @@ class CoreMixin:
         if isinstance(compact_enabled, str):
             compact_enabled = compact_enabled.strip().lower() in ("1", "true", "yes", "on")
         merged["compact_enabled"] = bool(compact_enabled)
+        # Автообновление метаданных провайдеров: bool, по умолчанию включено.
+        auto_sync = merged.get("auto_sync_providers", True)
+        if isinstance(auto_sync, str):
+            auto_sync = auto_sync.strip().lower() in ("1", "true", "yes", "on")
+        merged["auto_sync_providers"] = bool(auto_sync)
         try:
             compact_threshold = int(merged.get("compact_threshold", 80))
         except (TypeError, ValueError):

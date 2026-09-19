@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import time
 import urllib.parse
 from typing import Any
 
@@ -24,6 +25,47 @@ _OPENROUTER_CATALOG_URL = "https://openrouter.ai/api/v1/models"
 # Подстроки в идентификаторе модели, по которым отсекаются заведомо
 # нетекстовые модели (распознавание речи, эмбеддинги, генерация картинок).
 _NON_TEXT_MODEL_HINTS = ("whisper", "tts", "embedding", "dall-e", "moderation", "image")
+# Кросс-карта зрения общая для всех провайдеров: каталог OpenRouter
+# запрашивается один раз и переиспользуется _OPENROUTER_VISION_TTL секунд.
+_OPENROUTER_VISION_TTL = 600
+_openrouter_vision_cache: dict[str, Any] = {"ts": 0.0, "map": {}}
+
+
+def _parse_openrouter_vision(payload: Any) -> dict[str, bool]:
+    """Разбирает каталог OpenRouter в карту «id модели -> зрение»."""
+    vision: dict[str, bool] = {}
+    for entry in _payload_items(payload):
+        if not isinstance(entry, dict):
+            continue
+        model_id = _entry_id(entry, "openrouter")
+        value = vision_from_entry(entry)
+        if model_id and value is not None:
+            vision[model_id] = value
+    return vision
+
+
+def _openrouter_vision_cached(timeout: int) -> dict[str, bool]:
+    """Возвращает карту зрения OpenRouter, используя общий TTL-кэш.
+
+    Каталог публичный и не требует ключа, поэтому запрашивается один раз на
+    все источники. При ошибке сети исключение пробрасывается наверх, чтобы
+    ``MetadataSource.fetch`` корректно отдал её текстом.
+    """
+    now = time.time()
+    cached_map = _openrouter_vision_cache["map"]
+    if cached_map and now - _openrouter_vision_cache["ts"] < _OPENROUTER_VISION_TTL:
+        return dict(cached_map)
+    payload = base.http_json(_OPENROUTER_CATALOG_URL, dict(HTTP_HEADERS), timeout)
+    vision = _parse_openrouter_vision(payload)
+    _openrouter_vision_cache["map"] = vision
+    _openrouter_vision_cache["ts"] = now
+    return dict(vision)
+
+
+def reset_vision_cache() -> None:
+    """Сбрасывает общий кэш зрения (используется тестами)."""
+    _openrouter_vision_cache["map"] = {}
+    _openrouter_vision_cache["ts"] = 0.0
 
 
 def vision_from_entry(entry: dict[str, Any]) -> bool | None:
@@ -304,9 +346,11 @@ class NordRouterPricingSource(MetadataSource):
 class VisionCrossMapSource(MetadataSource):
     """Определяет зрение по совпадению id с публичным каталогом OpenRouter.
 
-    Нужен провайдерам-агрегаторам (например, NordRouter), которые не отдают
-    модальности моделей в собственном API. Список провайдеров расширяется
-    параметром ``provider_ids``.
+    Большинство провайдеров не отдают модальности моделей в собственном API,
+    поэтому каталог OpenRouter используется как общая основа: для моделей с
+    совпадающим id признак «принимает изображения, отвечает текстом» берётся
+    оттуда. OpenRouter исключён — у него собственный каталог. Параметр
+    ``provider_ids`` позволяет в будущем ограничить набор провайдеров.
     """
 
     id = "vision_cross_map"
@@ -315,23 +359,18 @@ class VisionCrossMapSource(MetadataSource):
     requires_key = False
 
     def __init__(self, provider_ids: frozenset[str] | None = None) -> None:
-        self.provider_ids = provider_ids or frozenset({"nordrouter"})
+        self.provider_ids = provider_ids
 
     def matches(self, ctx: SourceContext) -> bool:
-        """Применим к провайдерам из списка ``provider_ids``."""
+        """Применим ко всем провайдерам, кроме OpenRouter с его каталогом."""
+        if ctx.provider_id == "openrouter":
+            return False
+        if self.provider_ids is None:
+            return True
         return ctx.provider_id in self.provider_ids
 
     def _fetch(self, ctx: SourceContext) -> SourceResult:
-        payload = base.http_json(_OPENROUTER_CATALOG_URL, dict(HTTP_HEADERS), ctx.timeout)
-        vision: dict[str, bool] = {}
-        for entry in _payload_items(payload):
-            if not isinstance(entry, dict):
-                continue
-            model_id = _entry_id(entry, "openrouter")
-            value = vision_from_entry(entry)
-            if model_id and value is not None:
-                vision[model_id] = value
-        return SourceResult(vision=vision)
+        return SourceResult(vision=_openrouter_vision_cached(ctx.timeout))
 
 
 # Порядок в кортеже не важен: ``sources_for`` сортирует по ``priority``.

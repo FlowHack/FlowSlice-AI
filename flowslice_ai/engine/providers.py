@@ -16,6 +16,9 @@ from typing import TYPE_CHECKING, Any
 from flowslice_ai.config import normalize_max_tokens, normalize_temperature
 from flowslice_ai.engine.net import normalize_base_url
 from flowslice_ai.errors import ConfigError
+from flowslice_ai.logging import _LOGGER
+from flowslice_ai.sync.base import FetchedModel
+from flowslice_ai.sync.merge import update_model
 
 if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
@@ -228,7 +231,7 @@ class ProvidersMixin:
             {"type": "toast", "text": self._t("provider.added", name=name), "kind": "ok"}
         )
         if model_id:
-            self._start_vision_lookup(pid, model_id)
+            self._start_model_metadata_lookup(pid, model_id)
 
     def _handle_update_provider(self: "_ChatEngine", message: dict) -> None:
         """Обновляет поля пользовательского провайдера."""
@@ -368,7 +371,7 @@ class ProvidersMixin:
             {"type": "toast", "text": self._t("model.added", name=model_id), "kind": "ok"}
         )
         # Пытаемся уточнить поддержку изображений у провайдера (OpenRouter).
-        self._start_vision_lookup(provider, model_id)
+        self._start_model_metadata_lookup(provider, model_id)
 
     def _start_vision_lookup(self: "_ChatEngine", provider: str, model_id: str) -> None:
         """Запускает фоновое определение поддержки изображений у модели."""
@@ -395,6 +398,85 @@ class ProvidersMixin:
         mdef["vision_source"] = "provider"
         self._persist_config()
         self._send_state()
+
+    def _start_model_metadata_lookup(
+        self: "_ChatEngine", provider: str, model_id: str
+    ) -> None:
+        """Запускает фоновое уточнение метаданных только что добавленной модели."""
+        threading.Thread(
+            target=self._model_metadata_worker,
+            args=(provider, model_id),
+            name="flowslice-model-metadata",
+            daemon=True,
+        ).start()
+
+    def _model_metadata_worker(
+        self: "_ChatEngine", provider: str, model_id: str
+    ) -> None:
+        """Догружает данные модели у провайдера, а при их отсутствии — у OpenRouter.
+
+        Источник приоритета: ответ самого провайдера (имя/зрение/цены), затем
+        публичный каталог OpenRouter (только зрение). Ручные значения модели
+        не перезаписываются: это обеспечивает :func:`update_model`.
+        """
+        try:
+            fetched = self._fetched_model_for(provider, model_id)
+            if fetched is None:
+                return
+            prov = self._config.get("providers", {}).get(provider)
+            if not isinstance(prov, dict):
+                return
+            mdef = prov.get("models", {}).get(model_id)
+            if not isinstance(mdef, dict):
+                return
+            if not update_model(mdef, fetched):
+                return
+            name = str(mdef.get("name") or model_id)
+            self._config = self._normalize_config(self._config)
+            self._persist_config()
+            self._send_state()
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("model.metadata_updated", name=name),
+                    "kind": "ok",
+                }
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            _LOGGER.exception(
+                "Не удалось обновить метаданные модели %s провайдера %s: %s",
+                model_id,
+                provider,
+                exc,
+            )
+
+    def _fetched_model_for(
+        self: "_ChatEngine", provider: str, model_id: str
+    ) -> FetchedModel | None:
+        """Собирает метаданные модели из ответа провайдера либо каталога OpenRouter.
+
+        Возвращает None, если модель не найдена ни у провайдера, ни в публичном
+        каталоге OpenRouter.
+        """
+        models, _error = self._fetch_provider_models(provider, force=True)
+        info = next((item for item in models if item.get("id") == model_id), None)
+        if info is not None:
+            return FetchedModel(
+                id=model_id,
+                name=info.get("name"),
+                vision=info.get("vision"),
+                price_in=info.get("price_in"),
+                price_out=info.get("price_out"),
+            )
+        value = self._openrouter_vision_map().get(model_id)
+        if value is None:
+            _LOGGER.debug(
+                "Модель %s провайдера %s не найдена в каталоге OpenRouter",
+                model_id,
+                provider,
+            )
+            return None
+        return FetchedModel(id=model_id, vision=value)
 
     @staticmethod
     def _normalize_price(value: Any) -> float | None:

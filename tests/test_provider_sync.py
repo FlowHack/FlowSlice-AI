@@ -1,14 +1,18 @@
 """Тесты системы синхронизации метаданных моделей провайдеров."""
 from __future__ import annotations
 
+import time
+
 import pytest
 
 from flowslice_ai.sync import (
     FetchedModel,
     SourceContext,
+    SourceResult,
     apply_models,
     fetch_provider_metadata,
     sources_for,
+    update_model,
 )
 
 
@@ -340,3 +344,255 @@ def test_handle_sync_provider_rejects_unknown(engine, monkeypatch) -> None:
     monkeypatch.setattr(engine, "_post", messages.append)
     engine._handle_sync_provider({"provider": "nope"})
     assert messages and messages[0]["kind"] == "err"
+
+
+# ===== Зрение из OpenRouter как общий фолбэк =====
+
+def _fresh_openrouter_cache(engine, mapping: dict[str, bool]) -> None:
+    """Кладёт в движок свежий кэш каталога OpenRouter."""
+    engine._or_models_cache = dict(mapping)
+    engine._or_models_ts = time.time()
+
+
+def test_apply_openrouter_vision_sets_only_unknown(engine) -> None:
+    """Зрение из каталога OpenRouter проставляется только неизвестным моделям."""
+    _fresh_openrouter_cache(engine, {"vendor/chat": True, "vendor/text": False})
+    models = [
+        FetchedModel(id="vendor/chat"),
+        FetchedModel(id="vendor/text"),
+        FetchedModel(id="vendor/known", vision=True),
+        FetchedModel(id="vendor/missing"),
+    ]
+    result = engine._apply_openrouter_vision(models)
+    assert [item.vision for item in result] == [True, False, True, None]
+    # Исходные объекты (frozen dataclass) не мутируются.
+    assert [item.vision for item in models] == [None, None, True, None]
+
+
+def test_ui_models_from_fetched_uses_openrouter_fallback(engine) -> None:
+    """UI-список берёт зрение из каталога OpenRouter, если провайдер его не дал."""
+    _fresh_openrouter_cache(engine, {"vendor/chat": True})
+    fetched = SourceResult(models=[FetchedModel(id="vendor/chat", name="Chat")])
+    models = engine._ui_models_from_fetched("deepseek", fetched)
+    assert models[0]["vision"] is True
+
+
+def test_ui_models_from_fetched_keeps_known_vision(engine) -> None:
+    """Известное зрение провайдера не перезаписывается данными OpenRouter."""
+    _fresh_openrouter_cache(engine, {"vendor/chat": False})
+    fetched = SourceResult(models=[FetchedModel(id="vendor/chat", vision=True)])
+    models = engine._ui_models_from_fetched("deepseek", fetched)
+    assert models[0]["vision"] is True
+
+
+def test_resolve_vision_for_non_openrouter_uses_catalog(engine) -> None:
+    """Для провайдера без собственной карты зрение берётся из каталога OpenRouter."""
+    _fresh_openrouter_cache(engine, {"vendor/chat": True})
+    assert engine._resolve_vision_for("deepseek", "vendor/chat") is True
+    assert engine._resolve_vision_for("deepseek", "vendor/absent") is None
+
+
+def test_resolve_vision_for_provider_map_none_falls_back(engine, monkeypatch) -> None:
+    """Пустая карта провайдера с модальностями уступает каталогу OpenRouter."""
+    _fresh_openrouter_cache(engine, {"vendor/chat": True})
+    monkeypatch.setattr(engine, "_provider_vision_map", lambda _provider: {})
+    assert engine._resolve_vision_for("mistral", "vendor/chat") is True
+
+
+def test_model_supports_images_uses_cached_catalog_no_network(
+    engine, monkeypatch
+) -> None:
+    """Фолбэк зрения берётся из свежего кэша OpenRouter, сеть не дёргается."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "vendor/chat"
+    engine._config["providers"]["deepseek"]["models"]["vendor/chat"] = {"name": "Chat"}
+    _fresh_openrouter_cache(engine, {"vendor/chat": True})
+
+    def fail_urlopen(*_args, **_kwargs):
+        raise AssertionError("сеть не должна вызываться")
+
+    monkeypatch.setattr(
+        "flowslice_ai.engine.api_client.urllib.request.urlopen", fail_urlopen
+    )
+    assert engine._model_supports_images() is True
+    # Просроченный кэш не используется и не обновляется на UI-потоке.
+    engine._or_models_ts = 0.0
+    assert engine._model_supports_images() is None
+
+
+# ===== Автообновление провайдеров =====
+
+def test_all_provider_sync_worker_disabled(engine, monkeypatch) -> None:
+    """При auto_sync_providers=False автосинк не делает ни одного вызова."""
+    engine._config["auto_sync_providers"] = False
+    calls: list[tuple] = []
+
+    def fake_sync(provider_id, full=False):
+        calls.append((provider_id, full))
+        return 0, 0, ""
+
+    monkeypatch.setattr(engine, "_sync_provider_metadata", fake_sync)
+    engine._all_provider_sync_worker()
+    assert calls == []
+
+
+def _prepare_save_settings(engine, monkeypatch, calls: list[str]) -> None:
+    """Готовит движок к вызову сохранения настроек с перехватом фоновых запусков."""
+    monkeypatch.setattr(engine, "_post", lambda _message: None)
+    monkeypatch.setattr(engine, "_post_settings", lambda: None)
+    monkeypatch.setattr(engine, "_send_state", lambda include_images=False: None)
+    monkeypatch.setattr(
+        engine, "_start_provider_sync", lambda provider_id, full=False: calls.append("sync")
+    )
+    monkeypatch.setattr(
+        engine, "_schedule_vision_refresh", lambda: calls.append("vision")
+    )
+
+
+def test_save_settings_skips_sync_when_disabled(engine, monkeypatch) -> None:
+    """Сохранение ключа не запускает автосинк при выключенном флаге."""
+    calls: list[str] = []
+    _prepare_save_settings(engine, monkeypatch, calls)
+    engine._handle_save_settings(
+        {"settings": {"auto_sync_providers": False, "api_key": "sk-test"}}
+    )
+    assert calls == []
+
+
+def test_save_settings_starts_sync_when_enabled(engine, monkeypatch) -> None:
+    """Сохранение ключа запускает автосинк при включённом флаге."""
+    calls: list[str] = []
+    _prepare_save_settings(engine, monkeypatch, calls)
+    engine._config["auto_sync_providers"] = True
+    engine._handle_save_settings(
+        {"settings": {"auto_sync_providers": True, "api_key": "sk-test"}}
+    )
+    assert calls == ["sync"]
+
+
+# ===== Точечное обновление метаданных добавленной модели =====
+
+def test_update_model_wrapper_delegates() -> None:
+    """update_model обновляет известные поля и сообщает об изменении."""
+    mdef: dict = {"name": "Old", "vision": None}
+    assert update_model(mdef, FetchedModel(id="m1", vision=True)) is True
+    assert mdef["vision"] is True
+
+
+def test_model_metadata_worker_updates_from_provider(engine, monkeypatch) -> None:
+    """Данные модели берутся из ответа провайдера и пишутся в конфиг."""
+    engine._config["providers"]["deepseek"]["models"]["deepseek-chat"] = {
+        "name": "Chat",
+        "source": "user",
+    }
+    messages: list[dict] = []
+    monkeypatch.setattr(engine, "_post", messages.append)
+    monkeypatch.setattr(
+        engine,
+        "_fetch_provider_models",
+        lambda provider, force=False: (
+            [
+                {
+                    "id": "deepseek-chat",
+                    "name": "DeepSeek Chat v2",
+                    "vision": True,
+                    "price_in": 0.1,
+                    "price_out": 0.2,
+                }
+            ],
+            "",
+        ),
+    )
+    engine._model_metadata_worker("deepseek", "deepseek-chat")
+    mdef = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    assert mdef["name"] == "DeepSeek Chat v2"
+    assert mdef["vision"] is True
+    assert mdef["vision_source"] == "provider"
+    assert mdef["price_in"] == 0.1
+    assert mdef["price_out"] == 0.2
+    assert mdef["price_source"] == "provider"
+    toasts = [msg for msg in messages if msg.get("type") == "toast"]
+    assert toasts and "DeepSeek Chat v2" in toasts[0]["text"]
+
+
+def test_model_metadata_worker_respects_manual(engine, monkeypatch) -> None:
+    """Ручные имя, зрение и цены воркер не перетирает."""
+    engine._config["providers"]["deepseek"]["models"]["deepseek-chat"] = {
+        "name": "Manual",
+        "name_source": "manual",
+        "vision": False,
+        "vision_source": "manual",
+        "price_in": 9.0,
+        "price_out": 9.5,
+        "price_source": "manual",
+    }
+    messages: list[dict] = []
+    monkeypatch.setattr(engine, "_post", messages.append)
+    monkeypatch.setattr(
+        engine,
+        "_fetch_provider_models",
+        lambda provider, force=False: (
+            [
+                {
+                    "id": "deepseek-chat",
+                    "name": "Vendor",
+                    "vision": True,
+                    "price_in": 0.1,
+                    "price_out": 0.2,
+                }
+            ],
+            "",
+        ),
+    )
+    engine._model_metadata_worker("deepseek", "deepseek-chat")
+    mdef = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    assert mdef["name"] == "Manual"
+    assert mdef["vision"] is False
+    assert mdef["price_in"] == 9.0
+    assert not [msg for msg in messages if msg.get("type") == "toast"]
+
+
+def test_model_metadata_worker_falls_back_to_openrouter(engine, monkeypatch) -> None:
+    """Если провайдер не отдал модель, зрение берётся из каталога OpenRouter."""
+    engine._config["providers"]["deepseek"]["models"]["vendor/chat"] = {
+        "name": "Chat",
+        "source": "user",
+    }
+    _fresh_openrouter_cache(engine, {"vendor/chat": True})
+    monkeypatch.setattr(engine, "_post", lambda _message: None)
+    monkeypatch.setattr(
+        engine, "_fetch_provider_models", lambda provider, force=False: ([], "")
+    )
+    engine._model_metadata_worker("deepseek", "vendor/chat")
+    mdef = engine._config["providers"]["deepseek"]["models"]["vendor/chat"]
+    assert mdef["vision"] is True
+    assert mdef["vision_source"] == "provider"
+
+
+# ===== Сопоставление id с каталогом OpenRouter =====
+
+def test_resolve_vision_matches_provider_prefix() -> None:
+    """Модель провайдера сопоставляется с префиксом каталога OpenRouter."""
+    from flowslice_ai.sync import resolve_vision
+
+    catalog = {"openai/gpt-5.4": True, "google/gemini-3.1-pro": False}
+    assert resolve_vision("openai", "gpt-5.4", catalog) is True
+    assert resolve_vision("google", "gemini-3.1-pro", catalog) is False
+
+
+def test_resolve_vision_normalizes_dots_and_case() -> None:
+    """Точки, подчёркивания и регистр не мешают сопоставлению."""
+    from flowslice_ai.sync import resolve_vision
+
+    catalog = {"anthropic/claude-sonnet-4.6": True}
+    assert resolve_vision("anthropic", "claude-sonnet-4-6", catalog) is True
+    assert resolve_vision("anthropic", "Claude_Sonnet_4.6", catalog) is True
+
+
+def test_resolve_vision_no_cross_provider_false_positive() -> None:
+    """Без префикса провайдера чужие модели не подставляются."""
+    from flowslice_ai.sync import resolve_vision
+
+    catalog = {"openai/gpt-5.4": True}
+    assert resolve_vision("groq", "gpt-5.4", catalog) is None
+    assert resolve_vision("openai", "absent", catalog) is None

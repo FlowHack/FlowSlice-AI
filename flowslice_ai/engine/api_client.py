@@ -12,6 +12,7 @@
 import json
 import threading
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import TYPE_CHECKING, Any
@@ -32,9 +33,9 @@ from flowslice_ai.engine.net import normalize_base_url
 from flowslice_ai.errors import ApiError, ConfigError, NetworkError, StreamError
 from flowslice_ai.logging import _LOGGER
 from flowslice_ai.sync.base import SourceContext, SourceResult
-from flowslice_ai.sync.fetch import fetch_provider_metadata
+from flowslice_ai.sync.fetch import fetch_provider_metadata, resolve_vision
 from flowslice_ai.sync.merge import apply_models
-from flowslice_ai.sync.sources import VisionCrossMapSource, vision_from_entry
+from flowslice_ai.sync.sources import vision_from_entry
 
 _OR_MODELS_TTL = 600.0  # секунд: срок жизни кэша списка моделей OpenRouter
 _OR_MODELS_TIMEOUT = 6  # секунд: короткий таймаут, чтобы не блокировать UI
@@ -45,9 +46,6 @@ _OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
 # Cerebras исключён: по официальной доке /v1/models возвращает только
 # id/object/created/owned_by, признака модальностей там нет.
 _VISION_API_PROVIDERS = ("openrouter", "anthropic", "mistral", "xai")
-# Провайдеры без собственных модальностей: зрение определяется по каталогу
-# OpenRouter через VisionCrossMapSource (см. пакет flowslice_ai.sync).
-_VISION_CROSS_PROVIDERS = ("nordrouter",)
 _VISION_CACHE_TTL = 600.0  # секунд: срок жизни кэша зрения по провайдеру
 _VISION_TIMEOUT = 8  # секунд
 _ANTHROPIC_VERSION = "2023-06-01"
@@ -147,6 +145,44 @@ class ApiClientMixin:
         if result:
             self._or_models_cache = result
             self._or_models_ts = now
+        return result
+
+    def _cached_openrouter_vision(self: "_ChatEngine") -> dict[str, bool]:
+        """Возвращает карту зрения OpenRouter только из свежего кэша, без сети.
+
+        Используется на UI-потоке, где блокирующий запрос недопустим: если
+        кэш пуст или просрочен, возвращается пустой словарь.
+        """
+        now = time.time()
+        if self._or_models_cache and now - self._or_models_ts < _OR_MODELS_TTL:
+            return self._or_models_cache
+        return {}
+
+    def _apply_openrouter_vision(
+        self: "_ChatEngine",
+        models: list[Any],
+        refresh: bool = False,
+        provider_id: str = "",
+    ) -> list[Any]:
+        """Проставляет зрение моделей по публичному каталогу OpenRouter.
+
+        Данные каталога запрашиваются один раз (с учётом кэша _OR_MODELS_TTL).
+        Идентификатор модели сопоставляется с каталогом с учётом префикса
+        провайдера. Модели, у которых зрение уже известно, и исходные объекты
+        не меняются: возвращается новый список, а обновлённые элементы — через
+        :func:`dataclasses.replace`.
+        """
+        mapping = self._openrouter_vision_map(refresh=refresh)
+        if not mapping:
+            return models
+        result: list[Any] = []
+        for model in models:
+            if model.vision is None:
+                value = resolve_vision(provider_id, model.id, mapping)
+                if value is not None:
+                    result.append(replace(model, vision=bool(value)))
+                    continue
+            result.append(model)
         return result
 
     def _provider_models_url(self: "_ChatEngine", provider_id: str, base_url: str) -> str:
@@ -450,6 +486,11 @@ class ApiClientMixin:
             known = fetched.error.startswith("models.")
             error_key = fetched.error if known else "models.fetch_failed"
             return 0, 0, self._t(error_key)
+        # Зрение берём из каталога OpenRouter для моделей без собственного
+        # признака; кэш каталога обновляется фоновым уточнением зрения.
+        fetched.models = self._apply_openrouter_vision(
+            fetched.models, provider_id=provider_id
+        )
         models = prov.setdefault("models", {})
         added, updated = apply_models(models, fetched.models, full, allow_add=False)
         self._api_models_cache[provider_id] = (
@@ -469,12 +510,16 @@ class ApiClientMixin:
         configured = prov.get("models", {}) if isinstance(prov, dict) else {}
         if not isinstance(configured, dict):
             configured = {}
+        # Каталог OpenRouter — общий фолбэк зрения; берём его один раз до цикла.
+        or_vision = self._openrouter_vision_map()
         result: list[dict[str, Any]] = []
         for model in fetched.models:
             mdef = configured.get(model.id)
             if not isinstance(mdef, dict):
                 mdef = {}
             vision = model.vision if model.vision is not None else mdef.get("vision")
+            if vision is None:
+                vision = resolve_vision(provider_id, model.id, or_vision)
             price_in = model.price_in if model.price_in is not None else mdef.get("price_in")
             price_out = model.price_out if model.price_out is not None else mdef.get("price_out")
             result.append(
@@ -567,6 +612,10 @@ class ApiClientMixin:
 
     def _all_provider_sync_worker(self: "_ChatEngine") -> None:
         """Автосинхронизация: провайдеры с ключом плюс публичные каталоги."""
+        # Автообновление отключено пользователем: молча выходим. Явный ручной
+        # синк по кнопке и загрузка списка моделей работают независимо.
+        if self._config.get("auto_sync_providers") is False:
+            return
         providers = self._config.get("providers", {})
         changed = False
         for provider_id, pdef in providers.items():
@@ -587,33 +636,10 @@ class ApiClientMixin:
         if changed:
             self._send_state()
 
-    def _vision_cross_map(self: "_ChatEngine", provider_id: str) -> dict[str, bool]:
-        """Определяет зрение провайдера по публичному каталогу OpenRouter."""
-        now = time.time()
-        cached = self._vision_cache.get(provider_id)
-        if cached and now - cached[0] < _VISION_CACHE_TTL:
-            return cached[1]
-        prov = self._config.get("providers", {}).get(provider_id)
-        if not isinstance(prov, dict):
-            return {}
-        ctx = SourceContext(
-            provider_id=provider_id,
-            base_url=str(prov.get("base_url", "")),
-            api_key="",
-            scheme=str(prov.get("scheme") or "openai"),
-        )
-        result: dict[str, bool] = {}
-        source = VisionCrossMapSource()
-        if source.matches(ctx):
-            result = source.fetch(ctx).vision
-        if result:
-            self._vision_cache[provider_id] = (now, result)
-        return result
-
     def _refresh_provider_vision(self: "_ChatEngine", provider_id: str) -> None:
         """Фоновое уточнение зрения моделей провайдера и сохранение в конфиг."""
         if provider_id == "openrouter":
-            mapping = self._openrouter_vision_map()
+            mapping = self._openrouter_vision_map(refresh=True)
         else:
             mapping = self._provider_vision_map(provider_id)
         if not mapping:
@@ -660,18 +686,19 @@ class ApiClientMixin:
         threading.Thread(target=self._refresh_all_vision, daemon=True).start()
 
     def _resolve_vision_for(self: "_ChatEngine", provider_id: str, model_id: str) -> bool | None:
-        """Пытается определить поддержку изображений через API провайдера.
+        """Определяет поддержку изображений по провайдеру и каталогу OpenRouter.
 
-        Возвращает True/False, если провайдер отдаёт сведения о модальностях
-        модели, иначе None.
+        Сначала используется собственная карта провайдера (если он отдаёт
+        модальности), затем — общий фолбэк по публичному каталогу OpenRouter.
+        Возвращает True/False либо None, если данных нигде нет.
         """
         if provider_id == "openrouter":
-            return self._openrouter_vision_map().get(model_id)
+            return resolve_vision(provider_id, model_id, self._openrouter_vision_map())
         if provider_id in _VISION_API_PROVIDERS:
-            return self._provider_vision_map(provider_id).get(model_id)
-        if provider_id in _VISION_CROSS_PROVIDERS:
-            return self._vision_cross_map(provider_id).get(model_id)
-        return None
+            value = self._provider_vision_map(provider_id).get(model_id)
+            if value is not None:
+                return value
+        return resolve_vision(provider_id, model_id, self._openrouter_vision_map())
 
     def _model_supports_images(
         self: "_ChatEngine", refresh: bool = False
@@ -680,7 +707,8 @@ class ApiClientMixin:
 
         True/False — если признак известен, None — если данных нет
         (неизвестно — изображения разрешены, решение остаётся за провайдером).
-        Сеть запрашивается только при refresh=True (фоновые потоки).
+        Сеть запрашивается только при refresh=True (фоновые потоки); фолбэк по
+        каталогу OpenRouter берётся исключительно из свежего кэша.
         """
         provider_id, _base_url, _api_key, model, _scheme = self._active_api_credentials()
         if provider_id == "openrouter":
@@ -694,7 +722,20 @@ class ApiClientMixin:
         vision = mdef.get("vision")
         if vision is None:
             vision = prov.get("vision")
-        return bool(vision) if vision is not None else None
+        if vision is not None:
+            return bool(vision)
+        # Последняя попытка — свежий кэш каталога OpenRouter, без выхода в сеть.
+        cached = self._cached_openrouter_vision()
+        value = resolve_vision(provider_id, model, cached)
+        if value is not None:
+            return bool(value)
+        if refresh:
+            # Фоновый поток имеет право обновить каталог и повторить поиск.
+            fetched = self._openrouter_vision_map(refresh=True)
+            value = resolve_vision(provider_id, model, fetched)
+            if value is not None:
+                return bool(value)
+        return None
 
     def _active_model_id(self: "_ChatEngine") -> str:
         """Возвращает идентификатор активной модели."""

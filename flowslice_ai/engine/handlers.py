@@ -472,8 +472,11 @@ class HandlersMixin:
         self._send_state()
         self._post({"type": "toast", "text": self._t("settings.saved"), "kind": "ok"})
         # Ключ мог появиться в текущей сессии: тянем модели, зрение и цены.
+        # При выключенном автообновлении фоновый синк не запускаем — только
+        # явные действия пользователя (кнопка «Обновить», выбор модели).
         if synced_provider:
-            self._start_provider_sync(synced_provider, full=False)
+            if self._config.get("auto_sync_providers") is not False:
+                self._start_provider_sync(synced_provider, full=False)
         else:
             self._schedule_vision_refresh()
 

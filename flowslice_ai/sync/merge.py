@@ -69,6 +69,16 @@ def _update_existing(mdef: dict[str, Any], model: FetchedModel) -> bool:
     return changed
 
 
+def update_model(mdef: dict[str, Any], model: FetchedModel) -> bool:
+    """Обновляет одну модель метаданными источника.
+
+    Публичная обёртка над :func:`_update_existing` для точечного обновления
+    модели (например, сразу после её ручного добавления). Возвращает True,
+    если в словаре модели что-то реально изменилось.
+    """
+    return _update_existing(mdef, model)
+
+
 def apply_models(
     provider_models: dict[str, dict[str, Any]],
     fetched: list[FetchedModel],

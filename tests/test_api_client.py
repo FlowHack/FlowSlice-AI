@@ -446,12 +446,20 @@ def test_fetch_provider_models_parses_and_caches(engine, monkeypatch) -> None:
     models, error = engine._fetch_provider_models("deepseek", force=True)
     assert error == ""
     assert models[0]["id"] == "deepseek-chat"
-    assert calls == ["https://api.deepseek.com/v1/models"]
+    # Кросс-карта зрения всегда обращается к публичному каталогу OpenRouter,
+    # после неё запрашивается список моделей самого провайдера.
+    assert calls == [
+        "https://openrouter.ai/api/v1/models",
+        "https://api.deepseek.com/v1/models",
+    ]
     # Второй вызов берёт результат из кэша и не трогает сеть.
     models_cached, error_cached = engine._fetch_provider_models("deepseek")
     assert models_cached == models
     assert error_cached == ""
-    assert calls == ["https://api.deepseek.com/v1/models"]
+    assert calls == [
+        "https://openrouter.ai/api/v1/models",
+        "https://api.deepseek.com/v1/models",
+    ]
 
 
 def test_fetch_provider_models_keeps_stale_on_error(engine, monkeypatch) -> None:

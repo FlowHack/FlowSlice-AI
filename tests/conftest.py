@@ -17,6 +17,16 @@ if str(_MOCKS) not in sys.path:
     sys.path.insert(0, str(_MOCKS))
 
 
+@pytest.fixture(autouse=True)
+def _reset_vision_cache():
+    """Сбрасывает общий кэш зрения OpenRouter между тестами."""
+    from flowslice_ai.sync.sources import reset_vision_cache
+
+    reset_vision_cache()
+    yield
+    reset_vision_cache()
+
+
 @pytest.fixture
 def engine(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     """Создаёт _ChatEngine с временным хранилищем чатов."""
