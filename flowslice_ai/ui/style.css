@@ -632,7 +632,7 @@ select option {
 .context-panel {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 6px 16px;
   border-top: 1px solid var(--orca-border);
   gap: 8px;
@@ -647,7 +647,7 @@ select option {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
+  flex: 0 0 auto;
 }
 .context-label {
   font-size: 12px;
