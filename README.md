@@ -487,7 +487,7 @@ flowslice_ai/
 └── ui/                  # HTML_PAGE, CONFIG_PAGE и ресурсы (css/html/js)
 ```
 
-- `flowslice_ai/version.py` — единый файл версии (меняется только здесь); текущая версия — `0.1.0`.
+- `flowslice_ai/version.py` — единый файл версии (меняется только здесь); текущая версия — `0.1.1`.
 - Сборка wheel: `python -m build --wheel` + `python tools/patch_wheel.py dist/*.whl`
   (имя `FlowSlice AI` и автор `FlowHack` в METADATA; в wheel попадают только модули пакета).
 - `stubs/orca/` — стабы API Orca для локального QA (pylint/pyright вне слайсера).
