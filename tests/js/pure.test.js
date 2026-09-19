@@ -92,6 +92,12 @@ check("поиск кириллица перестановка", pure.matchesMode
 check("поиск нет совпадений", pure.matchesModelQuery("Free Models Router", "gpt"), false);
 check("поиск пустой запрос", pure.matchesModelQuery("Free Models Router", "  "), true);
 
+// Метки времени: Python присылает секунды, JS — миллисекунды.
+check("toMillis секунды", pure.toMillis(1789809720), 1789809720000);
+check("toMillis миллисекунды", pure.toMillis(1789809720000), 1789809720000);
+check("toMillis ноль", pure.toMillis(0), 0);
+check("toMillis мусор", pure.toMillis("нет"), 0);
+
 if (failures > 0) {
   console.error(`Провалено проверок: ${failures}`);
   process.exit(1);

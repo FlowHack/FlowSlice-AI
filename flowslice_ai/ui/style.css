@@ -495,6 +495,12 @@ select option {
   color: var(--orca-accent);
   animation: blink 1s infinite;
 }
+/* Заглушка ассистента до первого токена: пустой пузырь с временем только
+   сбивает с толку, поэтому показываем лишь индикатор набора в поле ввода. */
+.msg-assistant.msg-pending .msg-bubble,
+.msg-assistant.msg-pending .msg-actions {
+  display: none;
+}
 @keyframes blink {
   50% {
     opacity: 0;

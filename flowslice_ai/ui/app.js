@@ -970,11 +970,23 @@
     return null;
   }
 
+  /* Единый разбор метки времени.
+     Python отдаёт секунды (time.time()), JS — миллисекунды (Date.now()).
+     Без нормализации new Date(секунды) уводит дату в 1970 год. */
+  function toMillis(ts) {
+    var n = Number(ts);
+    if (!isFinite(n) || n <= 0) {
+      return 0;
+    }
+    return n < 1e12 ? n * 1000 : n;
+  }
+
   function formatTime(ts) {
-    if (!ts) {
+    var ms = toMillis(ts);
+    if (!ms) {
       return "";
     }
-    var d = new Date(ts);
+    var d = new Date(ms);
     var h = d.getHours();
     var m = d.getMinutes();
     return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
@@ -1515,7 +1527,7 @@
         groups.pinned.push(chat);
         continue;
       }
-      var d = new Date(chat.updated || 0);
+      var d = new Date(toMillis(chat.updated));
       if (d >= startOfToday) {
         groups.today.push(chat);
       } else if (d >= startOfYesterday) {
@@ -1856,6 +1868,11 @@
     var wrap = el("div", "msg-wrap msg-" + msg.role);
     if (msg.error) {
       wrap.classList.add("msg-error");
+    }
+    // Пустой ответ ассистента во время генерации — это ещё не сообщение,
+    // а место под стрим: пузырь и время скрываем до первого токена.
+    if (msg.role === "assistant" && !msg.text && !msg.reasoning && state.status === "streaming") {
+      wrap.classList.add("msg-pending");
     }
     if (msg.role === "system") {
       wrap.appendChild(el("div", "msg-bubble", msg.text || ""));
@@ -3944,6 +3961,10 @@
     }
     streamText += msg.text || "";
     setMessageText(streamTextEl, streamText, true);
+    var streamWrap = streamTextEl.closest(".msg-wrap");
+    if (streamWrap) {
+      streamWrap.classList.remove("msg-pending");
+    }
     scrollToBottom(false);
   }
 
@@ -3968,6 +3989,10 @@
       streamThoughtEl = det.querySelector(".msg-reasoning-text");
     }
     streamThoughtEl.textContent = streamThought;
+    var thoughtWrap = streamThoughtEl.closest(".msg-wrap");
+    if (thoughtWrap) {
+      thoughtWrap.classList.remove("msg-pending");
+    }
     scrollToBottom(false);
   }
 
@@ -4630,6 +4655,7 @@
     formatTokens: formatTokens,
     formatCost: formatCost,
     formatPrice: formatPrice,
+    toMillis: toMillis,
     codeBlockHtml: codeBlockHtml,
     renderMarkdown: renderMarkdown,
     matchesModelQuery: matchesModelQuery,
