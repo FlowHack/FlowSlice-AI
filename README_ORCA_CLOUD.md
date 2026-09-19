@@ -95,6 +95,10 @@ What the assistant can do:
 
 *Settings, General tab: theme, language, context compaction.*
 
+![Reasoning block streaming with a red live highlight](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_reasoning.png)
+
+*Reasoning block: open while streaming with a red live highlight, collapsed when the answer is done.*
+
 ---
 
 ## 🧩 Requirements
@@ -112,9 +116,10 @@ What the assistant can do:
 FlowSlice AI is distributed through **OrcaCloud**:
 
 1. Subscribe to **FlowSlice AI** on OrcaCloud.
-2. After subscribing, the plugin appears in Orca Slicer under **File → Plugins** — install and enable it.
-3. Open the **FlowSlice AI** tab in Orca Slicer.
-4. Restart Orca Slicer if the tab does not appear right away.
+2. After subscribing, the plugin appears in Orca Slicer under **File → Plugins** — install it.
+3. Enable the **FlowSlice AI** toggle in the plugins list.
+4. Open the **FlowSlice AI** tab in Orca Slicer.
+5. Restart Orca Slicer if the tab does not appear right away.
 
 > Installation is done entirely from the interface.
 
