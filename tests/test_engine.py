@@ -1329,3 +1329,49 @@ def test_append_assistant_records_model(engine) -> None:
     assert msg["model_name"] == "DeepSeek V4 Pro"
 
 
+def test_context_command_shows_humanized_labels(engine, monkeypatch) -> None:
+    """/context показывает параметры как «Метка (id)», а не внутренними ключами."""
+    engine._config["language"] = "ru"
+    presets = {
+        "print": {
+            "name": "Профиль",
+            "params": {"brim_type": "no_brim", "unknown_key_xyz": "1"},
+        }
+    }
+    monkeypatch.setattr(
+        engine, "_collect_context", lambda flags, modes=None: {"presets": presets}
+    )
+    engine._active_chat()["context_flags"] = {"print": True}
+    system_parts: list[str] = []
+    monkeypatch.setattr(engine, "_append_system", system_parts.append)
+
+    engine._cmd_context()
+
+    dump = "\n".join(system_parts)
+    assert '"Тип каймы (brim_type)"' in dump
+    # Неизвестный ключ остаётся без метки, а не теряется.
+    assert '"unknown_key_xyz"' in dump
+    # Исходный ключ как отдельное поле JSON больше не выводится.
+    assert '"brim_type":' not in dump
+
+
+def test_printer_command_shows_humanized_labels(engine, monkeypatch) -> None:
+    """/printer перечисляет параметры человекочитаемыми метками."""
+    engine._config["language"] = "ru"
+    data = {
+        "filament": {
+            "name": "НИТ PETG",
+            "params": {"filament_flow_ratio": "0.97"},
+        }
+    }
+    monkeypatch.setattr(engine, "_collect_preset_data", lambda modes: data)
+    system_parts: list[str] = []
+    monkeypatch.setattr(engine, "_append_system", system_parts.append)
+
+    engine._cmd_printer()
+
+    text = "\n".join(system_parts)
+    assert "Коэффициент потока (filament_flow_ratio)" in text
+
+
+

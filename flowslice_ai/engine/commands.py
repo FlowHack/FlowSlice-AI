@@ -19,6 +19,14 @@ if TYPE_CHECKING:
 
 from flowslice_ai.config import COMMANDS, DEFAULT_CONFIG
 from flowslice_ai.constants import MAX_CONTEXT_CHARS
+from flowslice_ai.setting_labels import humanize_params, humanize_presets
+
+
+def _labels_lang(config: Any) -> str:
+    """Возвращает язык ответа для меток параметров; по умолчанию английский."""
+    if isinstance(config, dict):
+        return str(config.get("language", "en"))
+    return "en"
 
 
 def _usage_int(value: Any) -> int:
@@ -121,7 +129,7 @@ class CommandsMixin:
             name = section.get("name")
             if name:
                 lines.append("  " + self._t("cmd.printer.profile", name=str(name)))
-            for field, value in params.items():
+            for field, value in humanize_params(params, _labels_lang(self._config)).items():
                 lines.append("  " + str(field) + ": " + str(value))
         self._append_system("\n".join(lines))
 
@@ -151,7 +159,13 @@ class CommandsMixin:
             )
         lines.append(self._t("cmd.context.data"))
         if any(flags.get(key) for key in ("filament", "printer", "print", "model")):
-            lines.append(json.dumps(ctx, ensure_ascii=False, indent=2))
+            dump = ctx
+            presets = ctx.get("presets")
+            if isinstance(presets, dict):
+                # Те же человекочитаемые метки, что видит модель в запросе.
+                dump = dict(ctx)
+                dump["presets"] = humanize_presets(presets, _labels_lang(self._config))
+            lines.append(json.dumps(dump, ensure_ascii=False, indent=2))
         else:
             lines.append("  " + self._t("cmd.context.disabled"))
         lines.append(self._t("cmd.context.history"))
