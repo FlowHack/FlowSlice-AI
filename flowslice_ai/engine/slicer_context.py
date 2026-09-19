@@ -27,6 +27,7 @@ from flowslice_ai.constants import (
     MAX_CONTEXT_CHARS,
     NO_VISION_HINT,
     PARAMETER_NAMING_HINT,
+    PRESET_DATA_NOTE,
     SLICER_DATA_HINT,
     SYSTEM_PROMPT,
 )
@@ -723,7 +724,7 @@ class SlicerContextMixin:
                     self._t(
                         "prompt.print_profiles",
                         data=json.dumps(presets, ensure_ascii=False, indent=2),
-                        data_note=self._t("prompt.data_note"),
+                        data_note=PRESET_DATA_NOTE,
                     )
                 )
         if has_files:

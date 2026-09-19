@@ -506,7 +506,7 @@ def test_system_prompt_has_parameter_and_language_rules(engine) -> None:
     engine._config["language"] = "ru"
     prompt_ru = engine._build_system_prompt({})
     assert "senior 3D-printing engineer" in prompt_ru
-    assert "Отвечай строго на русском языке." in prompt_ru
+    assert "КРИТИЧНО К СОБЛЮДЕНИЮ: Отвечай строго на русском языке." in prompt_ru
     # Шум окружения (версия Python) в промпт больше не попадает.
     assert "Python 3" not in prompt_ru
     # Без данных слайсера условные блоки не добавляются: не тратим токены.
@@ -517,6 +517,7 @@ def test_system_prompt_has_parameter_and_language_rules(engine) -> None:
     engine._config["language"] = "en"
     prompt_en = engine._build_system_prompt({})
     assert "Answer strictly in English." in prompt_en
+    assert "CRITICALLY IMPORTANT: Answer strictly in English." in prompt_en
 
 
 def test_system_prompt_blocks_are_conditional(engine) -> None:
@@ -543,8 +544,9 @@ def test_system_prompt_warns_about_internal_keys_after_data(engine) -> None:
     prompt = engine._build_system_prompt(ctx)
     assert "Тип каймы (brim_type)" in prompt
     assert '"brim_type": "no_brim"' not in prompt
-    assert "«Название в интерфейсе" in prompt
-    assert prompt.index("brim_type") < prompt.index("ВАЖНО: выше каждый параметр")
+    assert "«Название в интерфейсе" not in prompt
+    assert "CRITICAL: above each parameter" in prompt
+    assert prompt.index("brim_type") < prompt.index("CRITICAL: above each parameter")
 
 
 def test_chat_message_accepts_inline_attachments(engine, monkeypatch) -> None:

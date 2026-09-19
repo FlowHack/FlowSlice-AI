@@ -119,15 +119,9 @@ I18N_PY: dict[str, dict[str, str]] = {
         "cmd.reset.done": "Settings reset to defaults.",
         "cmd.reset_chats.done": "Chat history cleared.",
         "prompt.notes": "User notes (important information, take it into account in your answers):\n{notes}",
-        "prompt.language": "Answer strictly in English.",
+        "prompt.language": "CRITICALLY IMPORTANT: Answer strictly in English.",
         "prompt.model_data": "Model data from the plate:\n{data}",
         "prompt.print_profiles": "Print profiles:\n{data}\n{data_note}",
-        "prompt.data_note": (
-            "IMPORTANT: above each parameter is written as \"Interface label "
-            "(internal_key)\". In your answer call every parameter by its interface "
-            "label (the internal key may stay in parentheses) and briefly explain "
-            "what that parameter controls."
-        ),
         "prompt.file": "\n\n<document>\n<source>{name}</source>\n<document_content>\n{text}",
         "prompt.file_truncated": "\n[The file was too long: only its beginning is shown.]",
         "prompt.file_footer": "\n</document_content>\n</document>",
@@ -254,15 +248,9 @@ I18N_PY: dict[str, dict[str, str]] = {
         "cmd.reset.done": "Настройки сброшены к заводским.",
         "cmd.reset_chats.done": "История чатов очищена.",
         "prompt.notes": "Заметки пользователя (важная информация, учитывай её при ответах):\n{notes}",
-        "prompt.language": "Отвечай строго на русском языке.",
+        "prompt.language": "КРИТИЧНО К СОБЛЮДЕНИЮ: Отвечай строго на русском языке.",
         "prompt.model_data": "Данные модели со стола:\n{data}",
         "prompt.print_profiles": "Профили печати:\n{data}\n{data_note}",
-        "prompt.data_note": (
-            "ВАЖНО: выше каждый параметр записан как «Название в интерфейсе "
-            "(внутренний ключ)». В ответе называй параметр его названием из "
-            "интерфейса (ключ можно оставить в скобках) и кратко поясняй, за что "
-            "этот параметр отвечает."
-        ),
         "prompt.file": "\n\n<document>\n<source>{name}</source>\n<document_content>\n{text}",
         "prompt.file_truncated": "\n[Файл слишком длинный: показано только его начало.]",
         "prompt.file_footer": "\n</document_content>\n</document>",
@@ -389,15 +377,9 @@ I18N_PY: dict[str, dict[str, str]] = {
         "cmd.reset.done": "Podešavanja su resetovana na podrazumevana.",
         "cmd.reset_chats.done": "Istorija ćaskanja je obrisana.",
         "prompt.notes": "Korisničke beleške (važne informacije, uzmi ih u obzir u odgovorima):\n{notes}",
-        "prompt.language": "Odgovaraj isključivo na srpskom jeziku.",
+        "prompt.language": "KRITIČNO ZA POŠTOVANJE: Odgovaraj isključivo na srpskom jeziku.",
         "prompt.model_data": "Podaci o modelu sa stola:\n{data}",
         "prompt.print_profiles": "Profili štampe:\n{data}\n{data_note}",
-        "prompt.data_note": (
-            "VAŽNO: iznad je svaki parametar zapisan kao \"Naziv u interfejsu "
-            "(interni ključ)\". U odgovoru navedi parametar njegovim nazivom iz "
-            "interfejsa (ključ može ostati u zagradi) i ukratko objasni čemu taj "
-            "parametar služi."
-        ),
         "prompt.file": "\n\n<document>\n<source>{name}</source>\n<document_content>\n{text}",
         "prompt.file_truncated": "\n[Datoteka je predugačka: prikazan je samo početak.]",
         "prompt.file_footer": "\n</document_content>\n</document>",

@@ -50,6 +50,14 @@ PARAMETER_NAMING_HINT = (
     "explanation."
 )
 
+# Напоминание после данных пресетов. Инструкция, поэтому на английском — как и
+# весь системный промпт; данные профилей при этом остаются на языке плагина.
+PRESET_DATA_NOTE = (
+    "CRITICAL: above each parameter is written as \"Interface label "
+    "(internal_key)\". In your answer call every parameter by its interface "
+    "label (the key may stay in parentheses) and briefly explain what it controls."
+)
+
 # Правила работы с данными слайсера нужны, только когда эти данные реально
 # переданы (модель/профили); иначе это противоречивая инструкция «ниже».
 SLICER_DATA_HINT = (
