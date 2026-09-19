@@ -143,7 +143,7 @@
 
 ### Способ 1. Через OrcaCloud (рекомендуется)
 
-1. Откройте [страницу FlowSlice AI в OrcaCloud](https://cloud.orcaslicer.com/app/plugins/plugin-hub/3453f12e-d2d7-4ba6-ac05-6233918d990d).
+1. Откройте [страницу FlowSlice AI в OrcaCloud](https://cloud.orcaslicer.com/p/3dfa96ca82dd).
 2. Оформите подписку на **FlowSlice AI**.
 3. После подписки плагин появится в Orca Slicer в разделе **File → Plugins** — установите его.
 4. Включите переключатель **FlowSlice AI** в списке плагинов.

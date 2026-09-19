@@ -69,7 +69,7 @@ Ask about a failed print or paste a photo — every answer is tied to your real 
 
 FlowSlice AI is distributed through **OrcaCloud**:
 
-1. Open the [FlowSlice AI page](https://cloud.orcaslicer.com/app/plugins/plugin-hub/3453f12e-d2d7-4ba6-ac05-6233918d990d) on OrcaCloud and subscribe.
+1. Open the [FlowSlice AI page](https://cloud.orcaslicer.com/p/3dfa96ca82dd) on OrcaCloud and subscribe.
 2. In Orca Slicer open **File → Plugins**, install the plugin and enable the **FlowSlice AI** toggle.
 3. Open the **FlowSlice AI** tab; restart Orca Slicer if it does not appear.
 
