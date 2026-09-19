@@ -83,9 +83,9 @@ What the assistant can do:
 
 ## 📸 Screenshots
 
-![Main screen: chat with print-defect analysis](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_chat.png)
+![Main screen](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_chat.png)
 
-*Main screen: chat with print-defect analysis.*
+*Main screen.*
 
 ![Settings, Models tab: providers, favorites, prices and vision](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_models.png)
 
@@ -95,9 +95,9 @@ What the assistant can do:
 
 *Settings, General tab: theme, language, context compaction.*
 
-![Reasoning block streaming with a red live highlight](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_reasoning.png)
+![Chat in action](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_reasoning.png)
 
-*Reasoning block: open while streaming with a red live highlight, collapsed when the answer is done.*
+*Chat in action.*
 
 ---
 

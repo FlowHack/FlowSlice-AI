@@ -115,8 +115,8 @@
 ## 📸 Скриншоты
 
 <p align="center">
-  <img src="assets/screenshot_chat.png" width="720" alt="Главный экран: чат с анализом печати">
-  <br><sub>Главный экран: чат с разбором дефектов печати</sub>
+  <img src="assets/screenshot_chat.png" width="720" alt="Главный экран">
+  <br><sub>Главный экран</sub>
 </p>
 
 <p align="center">
@@ -130,8 +130,8 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_reasoning.png" width="720" alt="Блок размышлений модели во время генерации">
-  <br><sub>Блок размышлений: раскрыт во время стрима, красная подсветка, сворачивается после ответа</sub>
+  <img src="assets/screenshot_reasoning.png" width="720" alt="Пример работы чата">
+  <br><sub>Пример работы чата</sub>
 </p>
 
 ---
