@@ -270,6 +270,13 @@ select option {
   border-color: var(--orca-accent);
   color: var(--orca-accent);
 }
+/* Монохромные SVG-иконки внутри кнопок наследуют цвет текста. */
+.icon-btn .icon-svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
 /* Кнопка поддержки: красная с белым сердечком. Специфичность выше базовой. */
 .icon-btn.donate-btn {
   background: #d9534f;
@@ -1089,10 +1096,20 @@ select option {
 }
 /* Кнопка экспорта — по центру строки композера, между чипом и метриками. */
 .composer-export {
-  position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   flex-shrink: 0;
+}
+/* Якорь для выпадающего меню экспорта (кнопка + меню в одном контейнере). */
+.export-wrap {
+  position: relative;
+  display: inline-flex;
+}
+/* Кнопка поддержки в строке композера: компактнее, чем в шапке. */
+.composer-export .donate-btn {
+  padding: 3px 9px;
+  font-size: 13px;
 }
 .export-btn {
   font-size: 12px;

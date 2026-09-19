@@ -4351,7 +4351,7 @@
       });
     }
     document.addEventListener("click", function (e) {
-      var wrap = document.querySelector(".composer-export");
+      var wrap = document.querySelector(".export-wrap");
       if (wrap && !wrap.contains(e.target)) {
         closeExportMenu();
       }
