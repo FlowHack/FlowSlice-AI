@@ -4668,6 +4668,13 @@
     if (text.indexOf(q) !== -1) {
       return true;
     }
+    // Версии и идентификаторы: сравниваем ещё и без разделителей, иначе
+    // запрос «qwen 3.7» или «qwen/qwen3.7-flash» разваливается на «3» и «7».
+    var textNorm = text.replace(/[^0-9a-zа-яё]+/gi, "");
+    var queryNorm = q.replace(/[^0-9a-zа-яё]+/gi, "");
+    if (queryNorm && textNorm.indexOf(queryNorm) !== -1) {
+      return true;
+    }
     var words = text.split(/[^0-9a-zа-яё]+/i).filter(Boolean);
     // Слова запроса режем так же, как слова названия: иначе поиск по полному
     // идентификатору вида qwen/qwen3.8-27b:free давал бы пустой результат.

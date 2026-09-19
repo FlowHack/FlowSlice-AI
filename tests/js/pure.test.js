@@ -97,6 +97,16 @@ check(
   true
 );
 check("поиск по id с автором", pure.matchesModelQuery("Qwen3.8 27B", "qwen/qwen3.8-27b"), true);
+check(
+  "поиск версии через пробел",
+  pure.matchesModelQuery("Qwen: Qwen3.7 Flash", "qwen 3.7"),
+  true
+);
+check(
+  "поиск версии по полному id",
+  pure.matchesModelQuery("Qwen: Qwen3.7 Flash", "qwen/qwen3.7-flash"),
+  true
+);
 
 // Раскрытие блока размышлений: только у последнего assistant-сообщения во время стрима.
 const streamMsgs = [
