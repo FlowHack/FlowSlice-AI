@@ -187,92 +187,22 @@ jobs:
         run: gh release delete "v${{ steps.version.outputs.version }}" --yes --cleanup-tag 2>/dev/null || true
 
       - name: Создание релиза
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: false
-          body_path: RELEASE_NOTES.md
-          tag_name: v${{ steps.version.outputs.version }}
-          name: FlowSlice AI v${{ steps.version.outputs.version }}
-          files: release-files/*
-
-  publish-orcacloud:
-    name: Публикация в OrcaCloud
-    needs: create-release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Загрузка артефакта
-        uses: actions/download-artifact@v4
-        with:
-          name: wheel
-          path: release-files/
-
-      - name: Публикация версии в OrcaCloud
+        # gh release create: с GITHUB_TOKEN событие release: published НЕ порождает
+        # новый workflow-run (ограничение GitHub), поэтому автопубликация в OrcaCloud
+        # из publish-orcacloud.yml сработает только при наличии secrets.RELEASE_TOKEN
+        # (PAT с правами repo). Без него релиз создаётся, а публикация выполняется
+        # вручную: пересоздать релиз или workflow_dispatch в publish-orcacloud.yml.
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
         run: |
-          set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          changelog="$(head -c 4000 RELEASE_NOTES_ORCA_SLICER.md)"
-          metadata="$(jq -cn --arg version "$version" --arg changelog "$changelog" \
-            '{version: $version} + (if $changelog == "" then {} else {changelog: $changelog} end)')"
-          args=(-F "metadata=$metadata")
-          shopt -s nullglob
-          for file in release-files/*.whl; do
-            args+=(-F "files=@$file")
-          done
-          if [ "${#args[@]}" -le 1 ]; then
-            echo "Не найдено ни одного .whl для публикации в OrcaCloud" >&2
-            exit 1
+          TAG="v${{ steps.version.outputs.version }}"
+          if [[ -f RELEASE_NOTES.md ]]; then
+            gh release create "$TAG" \
+              --title "FlowSlice AI $TAG" \
+              --notes-file RELEASE_NOTES.md \
+              release-files/*
+          else
+            gh release create "$TAG" \
+              --title "FlowSlice AI $TAG" \
+              release-files/*
           fi
-          oidc_token="$(curl -sS -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=orcacloud" | jq -r '.value')"
-          if [ -z "$oidc_token" ] || [ "$oidc_token" = "null" ]; then
-            echo "Не удалось получить OIDC-токен GitHub (проверьте permissions: id-token: write)" >&2
-            exit 1
-          fi
-          echo "::group::OIDC claims GitHub (диагностика публикации)"
-          OIDC_TOKEN="$oidc_token" python3 - <<'PY'
-          import base64
-          import json
-          import os
-
-          payload = os.environ["OIDC_TOKEN"].split(".")[1]
-          payload += "=" * (-len(payload) % 4)
-          claims = json.loads(base64.urlsafe_b64decode(payload))
-          keys = (
-              "iss",
-              "aud",
-              "sub",
-              "repository",
-              "repository_id",
-              "repository_owner",
-              "ref",
-              "event_name",
-              "workflow_ref",
-              "job_workflow_ref",
-              "run_id",
-              "sha",
-          )
-          for key in keys:
-              if key in claims:
-                  print(f"{key}: {claims[key]}")
-          PY
-          echo "::endgroup::"
-          status="$(curl -sS -o orcacloud-response.json -w '%{http_code}' \
-            -H "Authorization: Bearer ${oidc_token}" \
-            "${args[@]}" \
-            https://api.orcaslicer.com/api/v1/plugin-publish/releases)"
-          cat orcacloud-response.json
-          echo
-          case "$status" in
-            200|201) ;;
-            *)
-              echo "OrcaCloud вернул HTTP $status — версия $version не опубликована" >&2
-              exit 1
-              ;;
-          esac
-          echo "Версия $version опубликована в OrcaCloud"
