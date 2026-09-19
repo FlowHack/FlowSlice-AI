@@ -1957,7 +1957,7 @@
       var j = start + 2;
       var out = '<div class="md-table-wrap"><table class="md-table"><thead><tr>';
       for (var c = 0; c < headers.length; c++) {
-        out += "<th" + mdAlignAttr(aligns[c]) + ">" + mdInline(headers[c]) + "</th>";
+        out += "<th>" + mdInline(headers[c]) + "</th>";
       }
       out += "</tr></thead><tbody>";
       while (j < lines.length && lines[j].trim() !== "" && lines[j].indexOf("|") !== -1) {
