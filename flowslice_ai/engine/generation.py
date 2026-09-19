@@ -317,7 +317,21 @@ class GenerationMixin:
             # Возможности модели неизвестны: изображение отправляем, но на
             # всякий случай добавляем подсказку — вдруг модель его не видит.
             no_vision = True
-        system = self._build_system_prompt(ctx, has_images=bool(images), no_vision=no_vision)
+        last_user = self._last_user_msg(chat)
+        last_files = self._collect_files(last_user) if last_user is not None else []
+        history: list[dict[str, Any]] = []
+        if flags.get("history"):
+            history = self._history_messages(chat, MAX_CONTEXT_CHARS)
+        # Вложения могут прийти и в истории, поэтому ищем <document> в обоих местах.
+        has_files = bool(last_files) or any(
+            "<document>" in self._message_text(m) for m in history
+        )
+        system = self._build_system_prompt(
+            ctx,
+            has_images=bool(images),
+            no_vision=no_vision,
+            has_files=has_files,
+        )
         summary = str(chat.get("summary", "") or "").strip()
         if summary:
             header = self._t("compact.summary_header")
@@ -325,13 +339,10 @@ class GenerationMixin:
         if len(system) > MAX_CONTEXT_CHARS:
             system = system[:MAX_CONTEXT_CHARS]
         messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-        if flags.get("history"):
-            messages.extend(self._history_messages(chat, MAX_CONTEXT_CHARS))
+        messages.extend(history)
         user_content = user_text
-        last_user = self._last_user_msg(chat)
-        if last_user is not None:
-            for file_info in self._collect_files(last_user):
-                user_content += self._render_file(file_info)
+        for file_info in last_files:
+            user_content += self._render_file(file_info)
         scheme = self._active_scheme()
         if images and scheme == "anthropic":
             # Нативный Messages API: изображения как base64-блоки.

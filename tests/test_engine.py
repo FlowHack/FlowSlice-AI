@@ -449,14 +449,34 @@ def test_system_prompt_has_parameter_and_language_rules(engine) -> None:
     engine._config["language"] = "ru"
     prompt_ru = engine._build_system_prompt({})
     assert "senior 3D-printing engineer" in prompt_ru
-    assert "NEVER use the internal key alone as the parameter name" in prompt_ru
-    assert "Interface label " in prompt_ru
     assert "Отвечай строго на русском языке." in prompt_ru
     # Шум окружения (версия Python) в промпт больше не попадает.
     assert "Python 3" not in prompt_ru
+    # Без данных слайсера условные блоки не добавляются: не тратим токены.
+    assert "NEVER use the internal key alone as the parameter name" not in prompt_ru
+    assert "Interface label " not in prompt_ru
+    assert "<document>" not in prompt_ru
+    assert "When slicer data is provided below" not in prompt_ru
     engine._config["language"] = "en"
     prompt_en = engine._build_system_prompt({})
     assert "Answer strictly in English." in prompt_en
+
+
+def test_system_prompt_blocks_are_conditional(engine) -> None:
+    """Модульные блоки промпта добавляются только при наличии данных."""
+    engine._config["language"] = "en"
+    base = engine._build_system_prompt({})
+    assert "When slicer data is provided below" not in base
+    assert "inside <document> tags" not in base
+
+    with_model = engine._build_system_prompt({"model": {"name": "M"}})
+    assert "When slicer data is provided below" in with_model
+    # Модель без профилей — внутренних ключей в промпте нет, правило не нужно.
+    assert "Interface label " not in with_model
+
+    with_files = engine._build_system_prompt({}, has_files=True)
+    assert "inside <document> tags" in with_files
+    assert "When slicer data is provided below" not in with_files
 
 
 def test_system_prompt_warns_about_internal_keys_after_data(engine) -> None:
@@ -492,6 +512,8 @@ def test_chat_message_accepts_inline_attachments(engine, monkeypatch) -> None:
     content = messages[-1]["content"]
     text = content if isinstance(content, str) else content[0]["text"]
     assert "СЕКРЕТ_ФАЙЛА" in text
+    # Есть вложение — в системном промпте появляется пояснение формата <document>.
+    assert "inside <document> tags" in messages[0]["content"]
     assert "<source>a.txt</source>" in text
     assert "<document_content>" in text
 

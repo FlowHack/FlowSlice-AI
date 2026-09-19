@@ -22,9 +22,12 @@ except ImportError:
     orca = None  # type: ignore[assignment]
 
 from flowslice_ai.constants import (
+    FILE_ATTACHMENT_HINT,
     IMAGE_ANALYSIS_HINT,
     MAX_CONTEXT_CHARS,
     NO_VISION_HINT,
+    PARAMETER_NAMING_HINT,
+    SLICER_DATA_HINT,
     SYSTEM_PROMPT,
 )
 from flowslice_ai.logging import _LOGGER
@@ -665,14 +668,18 @@ class SlicerContextMixin:
         include_data: bool = True,
         has_images: bool = False,
         no_vision: bool = False,
+        has_files: bool = False,
     ) -> str:
         """Собирает системный промпт с данными контекста слайсера.
 
-        При include_data=False возвращается только персона, язык, заметки и
-        данные — без JSON-данных слайсера (используется командой /context,
-        которая выводит данные отдельным блоком). При has_images=True
-        добавляются правила анализа изображений дефектов печати, при
-        no_vision=True — требование честно сообщить об отсутствии зрения.
+        Промпт модульный: блоки добавляются только по необходимости, чтобы не
+        тратить токены на неактуальные инструкции. При include_data=False
+        возвращается только персона, язык, заметки и данные — без JSON-данных
+        слайсера (используется командой /context, которая выводит данные
+        отдельным блоком). При has_images=True добавляются правила анализа
+        изображений дефектов печати, при no_vision=True — требование честно
+        сообщить об отсутствии зрения. При has_files=True — пояснение формата
+        <document>, при наличии профилей — правила именования параметров.
         """
         parts = [SYSTEM_PROMPT]
         # Язык ответа задаётся отдельно: базовый промпт всегда на английском.
@@ -684,15 +691,19 @@ class SlicerContextMixin:
         notes = str(self._config.get("notes", "")).strip()
         if notes:
             parts.append(self._t("prompt.notes", notes=notes))
+        has_model = bool(ctx.get("model"))
+        has_presets = bool(ctx.get("presets"))
         if include_data:
-            if ctx.get("model"):
+            if has_model or has_presets:
+                parts.append(SLICER_DATA_HINT)
+            if has_model:
                 parts.append(
                     self._t(
                         "prompt.model_data",
                         data=json.dumps(ctx["model"], ensure_ascii=False, indent=2),
                     )
                 )
-            if ctx.get("presets"):
+            if has_presets:
                 lang = (
                     self._config.get("language", "en")
                     if isinstance(self._config, dict)
@@ -700,6 +711,7 @@ class SlicerContextMixin:
                 )
                 # Ключи пресетов заменяются на «Метка в интерфейсе (внутренний id)»,
                 # чтобы модель называла параметры человекочитаемо.
+                parts.append(PARAMETER_NAMING_HINT)
                 presets = humanize_presets(ctx["presets"], str(lang))
                 parts.append(
                     self._t(
@@ -708,6 +720,8 @@ class SlicerContextMixin:
                         data_note=self._t("prompt.data_note"),
                     )
                 )
+        if has_files:
+            parts.append(FILE_ATTACHMENT_HINT)
         return "\n\n".join(parts)
 
     @staticmethod
