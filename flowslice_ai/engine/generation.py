@@ -137,6 +137,20 @@ class GenerationMixin:
                 full_text = self._t("gen.empty_reply")
             out_tokens = len(full_text) // 4
             cost = self._estimate_cost(in_tokens, out_tokens)
+            # Если провайдер прислал точный usage (OpenRouter) — берём его.
+            usage = self._last_usage
+            if isinstance(usage, dict):
+                real_in = usage.get("prompt_tokens")
+                real_out = usage.get("completion_tokens")
+                if isinstance(real_in, int) and real_in > 0:
+                    in_tokens = real_in
+                if isinstance(real_out, int) and real_out >= 0:
+                    out_tokens = real_out
+                real_cost = usage.get("cost")
+                if isinstance(real_cost, (int, float)):
+                    cost = float(real_cost)
+                else:
+                    cost = self._estimate_cost(in_tokens, out_tokens)
             msg = self._find_msg(chat, msg_id)
             if msg is not None:
                 msg["text"] = full_text

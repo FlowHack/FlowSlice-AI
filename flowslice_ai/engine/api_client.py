@@ -841,6 +841,7 @@ class ApiClientMixin:
     ) -> tuple[str, str]:
         """Выполняет запрос к API и возвращает (текст ответа, размышления)."""
         self._sync_config()
+        self._last_usage = None
         provider_id, base_url, api_key, model, scheme = self._active_api_credentials()
         base_url = self._validated_base_url(base_url)
         if not api_key:
@@ -880,6 +881,9 @@ class ApiClientMixin:
         # Reasoning-модели (GPT-5/o-серия) не принимают temperature.
         if not reasoning:
             payload["temperature"] = temperature
+        # OpenRouter умеет присылать точный usage последним чанком потока.
+        if provider_id == "openrouter":
+            payload["stream_options"] = {"include_usage": True}
         if reasoning:
             if provider_id == "openrouter":
                 payload["reasoning"] = {"effort": "high"}
@@ -1142,6 +1146,10 @@ class ApiClientMixin:
                 detail = error.get("message") if isinstance(error, dict) else error
                 raise ApiError(str(detail) if detail else self._t("gen.empty_reply"))
             choices = chunk.get("choices")
+            # Провайдер присылает usage отдельным чанком без choices.
+            usage = chunk.get("usage")
+            if isinstance(usage, dict):
+                self._last_usage = usage
             if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
                 continue
             choice = choices[0]
@@ -1152,7 +1160,8 @@ class ApiClientMixin:
             if not isinstance(delta_obj, dict):
                 delta_obj = {}
             delta = delta_obj.get("content") or ""
-            reasoning_delta = delta_obj.get("reasoning_content") or ""
+            # OpenRouter отдаёт размышления в поле reasoning, DeepSeek — в reasoning_content.
+            reasoning_delta = delta_obj.get("reasoning_content") or delta_obj.get("reasoning") or ""
             if reasoning_delta:
                 thought += reasoning_delta
             if delta:

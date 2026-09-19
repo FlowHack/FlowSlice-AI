@@ -710,6 +710,21 @@ def test_read_sse_empty_stream_returns_empty(engine) -> None:
     assert engine._read_sse(iter([b"data: [DONE]\n"]), 1) == ("", "")
 
 
+def test_read_sse_reads_openrouter_reasoning_and_usage(engine) -> None:
+    """OpenRouter шлёт размышления в поле reasoning, а usage — отдельным чанком."""
+    engine._gen = True
+    lines = [
+        b'data: {"choices":[{"delta":{"reasoning":"\xd0\xb4\xd1\x83\xd0\xbc\xd0\xb0\xd1\x8e"},"finish_reason":null}]}\n',
+        b'data: {"choices":[{"delta":{"content":"\xd0\xbe\xd1\x82\xd0\xb2\xd0\xb5\xd1\x82"},"finish_reason":"stop"}]}\n',
+        b'data: {"choices":[],"usage":{"prompt_tokens":90,"completion_tokens":43}}\n',
+        b"data: [DONE]\n",
+    ]
+    text, thought = engine._read_sse(iter(lines), 1)
+    assert text == "ответ"
+    assert thought == "думаю"
+    assert engine._last_usage == {"prompt_tokens": 90, "completion_tokens": 43}
+
+
 def test_update_model_from_api_marks_provider_price(engine) -> None:
     """Скопированная из API цена помечается источником provider."""
     info = {"name": "Test", "vision": True, "price_in": 0.5, "price_out": 1.5}

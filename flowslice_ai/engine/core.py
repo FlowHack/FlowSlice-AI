@@ -55,6 +55,8 @@ class CoreMixin:
         self._next_id = 1
         self._msg_counter = 1
         self._gen = False
+        # Точный usage последнего ответа (если провайдер его прислал в потоке).
+        self._last_usage: dict[str, Any] | None = None
         self._compacting = False
         # Событие отмены: прерывает паузы между повторами запроса без опроса.
         self._cancel_event = threading.Event()
