@@ -449,13 +449,23 @@ def test_system_prompt_has_parameter_and_language_rules(engine) -> None:
     engine._config["language"] = "ru"
     prompt_ru = engine._build_system_prompt({})
     assert "senior 3D-printing engineer" in prompt_ru
-    assert "human-readable label" in prompt_ru
+    assert "NEVER write an internal key as the name of a parameter" in prompt_ru
+    assert "OrcaSlicer interface label" in prompt_ru
     assert "Отвечай строго на русском языке." in prompt_ru
     # Шум окружения (версия Python) в промпт больше не попадает.
     assert "Python 3" not in prompt_ru
     engine._config["language"] = "en"
     prompt_en = engine._build_system_prompt({})
     assert "Answer strictly in English." in prompt_en
+
+
+def test_system_prompt_warns_about_internal_keys_after_data(engine) -> None:
+    """Напоминание о внутренних ключах идёт сразу после JSON пресетов."""
+    engine._config["language"] = "ru"
+    ctx = {"presets": {"print": {"name": "P", "params": {"brim_type": "no_brim"}}}}
+    prompt = engine._build_system_prompt(ctx)
+    assert "внутренние ключи конфигурации OrcaSlicer" in prompt
+    assert prompt.index('"brim_type"') < prompt.index("ВАЖНО: названия выше")
 
 
 def test_chat_message_accepts_inline_attachments(engine, monkeypatch) -> None:

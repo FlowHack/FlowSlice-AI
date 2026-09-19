@@ -696,6 +696,7 @@ class SlicerContextMixin:
                     self._t(
                         "prompt.print_profiles",
                         data=json.dumps(ctx["presets"], ensure_ascii=False, indent=2),
+                        data_note=self._t("prompt.data_note"),
                     )
                 )
         return "\n\n".join(parts)

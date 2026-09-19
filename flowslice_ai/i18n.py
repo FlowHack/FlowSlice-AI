@@ -118,7 +118,13 @@ I18N_PY: dict[str, dict[str, str]] = {
         "prompt.notes": "User notes (important information, take it into account in your answers):\n{notes}",
         "prompt.language": "Answer strictly in English.",
         "prompt.model_data": "Model data from the plate:\n{data}",
-        "prompt.print_profiles": "Print profiles:\n{data}",
+        "prompt.print_profiles": "Print profiles:\n{data}\n{data_note}",
+        "prompt.data_note": (
+            "IMPORTANT: the names above are internal OrcaSlicer configuration keys, "
+            "not parameter names. In your answer call every parameter by its "
+            "OrcaSlicer interface label in the answer language (the key may follow "
+            "in parentheses) and briefly explain what that parameter controls."
+        ),
         "prompt.file": "\n\n<document>\n<source>{name}</source>\n<document_content>\n{text}",
         "prompt.file_truncated": "\n[The file was too long: only its beginning is shown.]",
         "prompt.file_footer": "\n</document_content>\n</document>",
@@ -244,7 +250,13 @@ I18N_PY: dict[str, dict[str, str]] = {
         "prompt.notes": "Заметки пользователя (важная информация, учитывай её при ответах):\n{notes}",
         "prompt.language": "Отвечай строго на русском языке.",
         "prompt.model_data": "Данные модели со стола:\n{data}",
-        "prompt.print_profiles": "Профили печати:\n{data}",
+        "prompt.print_profiles": "Профили печати:\n{data}\n{data_note}",
+        "prompt.data_note": (
+            "ВАЖНО: названия выше — внутренние ключи конфигурации OrcaSlicer, а не "
+            "названия параметров. В ответе называй каждый параметр его названием из "
+            "интерфейса OrcaSlicer на языке ответа (ключ можно указать в скобках) и "
+            "кратко поясняй, за что этот параметр отвечает."
+        ),
         "prompt.file": "\n\n<document>\n<source>{name}</source>\n<document_content>\n{text}",
         "prompt.file_truncated": "\n[Файл слишком длинный: показано только его начало.]",
         "prompt.file_footer": "\n</document_content>\n</document>",
@@ -370,7 +382,13 @@ I18N_PY: dict[str, dict[str, str]] = {
         "prompt.notes": "Korisničke beleške (važne informacije, uzmi ih u obzir u odgovorima):\n{notes}",
         "prompt.language": "Odgovaraj isključivo na srpskom jeziku.",
         "prompt.model_data": "Podaci o modelu sa stola:\n{data}",
-        "prompt.print_profiles": "Profili štampe:\n{data}",
+        "prompt.print_profiles": "Profili štampe:\n{data}\n{data_note}",
+        "prompt.data_note": (
+            "VAŽNO: nazivi iznad su interni ključevi konfiguracije OrcaSlicer-a, a ne "
+            "nazivi parametara. U odgovoru navedi svaki parametar njegovim nazivom iz "
+            "interfejsa OrcaSlicer-a na jeziku odgovora (ključ možeš navesti u "
+            "zagradi) i ukratko objasni čemu taj parametar služi."
+        ),
         "prompt.file": "\n\n<document>\n<source>{name}</source>\n<document_content>\n{text}",
         "prompt.file_truncated": "\n[Datoteka je predugačka: prikazan je samo početak.]",
         "prompt.file_footer": "\n</document_content>\n</document>",
