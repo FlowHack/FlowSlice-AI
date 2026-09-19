@@ -148,6 +148,26 @@ def test_worker_stores_reasoning(engine, monkeypatch) -> None:
     assert sent_chat["msgs"][-1]["text"] == "ответ"
 
 
+def test_worker_marks_cancelled_generation(engine, monkeypatch) -> None:
+    """Прерванная пользователем генерация не выдаётся за пустой ответ."""
+    engine._create_chat()
+    chat = engine._active_chat()
+    assert chat is not None
+    posts: list[dict] = []
+    monkeypatch.setattr(engine, "_post", posts.append)
+    monkeypatch.setattr(engine, "_build_messages", lambda chat, text: [])
+    monkeypatch.setattr(engine, "_call_api", lambda messages, chat_id: ("", ""))
+    engine._cancel_event.set()
+
+    engine._worker(chat["id"], "вопрос", -1)
+
+    saved = chat["msgs"][-1]
+    assert saved["text"] == engine._t("gen.stopped")
+    assert saved["text"] != engine._t("gen.empty_reply")
+    reply = [m for m in posts if m.get("type") == "reply"]
+    assert reply and reply[0]["text"] == engine._t("gen.stopped")
+
+
 def test_collect_context_images_keeps_all_current(engine) -> None:
     """Все изображения текущего сообщения отправляются, история — ограниченно."""
     chat = {

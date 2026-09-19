@@ -141,6 +141,12 @@ class GenerationMixin:
             messages = self._build_messages(chat, user_text)
             in_tokens = self._estimate_messages_tokens(messages)
             full_text, reasoning = self._call_api(messages, chat_id)
+            if self._cancel_event.is_set():
+                # Пользователь нажал «Стоп»: не выдаём пустой ответ модели,
+                # а честно помечаем генерацию прерванной.
+                _LOGGER.info("Генерация прервана пользователем (запрос %s)", user_msg_id)
+                self._finish_stopped(chat, chat_id, msg_id)
+                return
             if not full_text.strip():
                 full_text = self._t("gen.empty_reply")
             out_tokens = len(full_text) // 4
@@ -186,7 +192,7 @@ class GenerationMixin:
             )
             self._record_usage(user_text, full_text)
         except FlowSliceError as exc:
-            if not self._gen:
+            if self._cancel_event.is_set() or not self._gen:
                 # Пользователь нажал «Стоп» во время ожидания повтора:
                 # это не ошибка, поэтому не помечаем ответ как сбойный.
                 _LOGGER.info(
@@ -306,15 +312,22 @@ class GenerationMixin:
         return images[:MAX_IMAGES_IN_REQUEST]
 
     def _build_messages(
-        self: "_ChatEngine", chat: dict[str, Any], user_text: str
+        self: "_ChatEngine",
+        chat: dict[str, Any],
+        user_text: str,
+        refresh_vision: bool = True,
     ) -> list[dict[str, Any]]:
-        """Собирает список сообщений для запроса к модели."""
+        """Собирает список сообщений для запроса к модели.
+
+        При refresh_vision=False сведения о зрении модели берутся только из
+        кэша (без сети) — это нужно команде /context, работающей в UI-потоке.
+        """
         flags = chat.get("context_flags", {})
         modes = chat.get("context_modes", {})
         ctx = self._collect_context(flags, modes)
         # Изображения собираем заранее: от их наличия зависит системный промпт.
         images = self._collect_context_images(chat)
-        vision = self._model_supports_images(refresh=True)
+        vision = self._model_supports_images(refresh=refresh_vision)
         no_vision = False
         if vision is False:
             # Модель без зрения: картинку не отправляем, но просим честно
@@ -377,6 +390,18 @@ class GenerationMixin:
         else:
             messages.append({"role": "user", "content": user_content})
         return messages
+
+    def _preview_messages(self: "_ChatEngine") -> list[dict[str, Any]]:
+        """Собирает точный список сообщений, который уйдёт модели.
+
+        Берётся последнее сообщение пользователя из активного чата, поэтому
+        результат совпадает с реальным запросом на генерацию. Сеть не
+        запрашивается: сведения о зрении берутся из кэша.
+        """
+        chat = self._active_chat()
+        last_user = self._last_user_msg(chat)
+        user_text = str(last_user.get("text", "")) if last_user else ""
+        return self._build_messages(chat, user_text, refresh_vision=False)
 
     @staticmethod
     def _image_media_type(data_uri: str) -> str:

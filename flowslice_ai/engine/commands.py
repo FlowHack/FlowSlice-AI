@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from flowslice_ai.engine import _ChatEngine
 
 from flowslice_ai.config import COMMANDS, DEFAULT_CONFIG
-from flowslice_ai.constants import MAX_CONTEXT_CHARS
-from flowslice_ai.setting_labels import humanize_params, humanize_presets
+from flowslice_ai.logging import _LOGGER
+from flowslice_ai.setting_labels import humanize_params
 
 
 def _labels_lang(config: Any) -> str:
@@ -144,11 +144,35 @@ class CommandsMixin:
         """Выводит полный дамп контекста слайсера."""
         chat = self._active_chat()
         flags = chat.get("context_flags", {})
-        modes = chat.get("context_modes", {})
-        ctx = self._collect_context(flags, modes)
         lines = [self._t("cmd.context.title")]
+        try:
+            # Тот же список сообщений, что уходит в запрос на генерацию.
+            messages = self._preview_messages()
+        except Exception as exc:  # pylint: disable=broad-except
+            _LOGGER.warning(
+                "Не удалось собрать контекст для /context: %s", exc, exc_info=True
+            )
+            messages = []
+        system_text = ""
+        rest: list[dict[str, Any]] = []
+        for message in messages:
+            if not system_text and message.get("role") == "system":
+                system_text = self._preview_content_text(message.get("content"))
+            else:
+                rest.append(message)
         lines.append(self._t("cmd.context.system_prompt"))
-        lines.append(self._build_system_prompt(ctx, include_data=False))
+        lines.append(system_text or "  " + self._t("cmd.context.empty"))
+        lines.append(self._t("cmd.context.messages"))
+        if rest:
+            for message in rest:
+                lines.append(
+                    "  ["
+                    + str(message.get("role", ""))
+                    + "] "
+                    + self._preview_content_text(message.get("content"))
+                )
+        else:
+            lines.append("  " + self._t("cmd.context.empty"))
         lines.append(self._t("cmd.context.checkboxes"))
         for key, value in flags.items():
             lines.append(
@@ -157,33 +181,52 @@ class CommandsMixin:
                 + ": "
                 + self._t("cmd.context.on" if value else "cmd.context.off")
             )
-        lines.append(self._t("cmd.context.data"))
-        if any(flags.get(key) for key in ("filament", "printer", "print", "model")):
-            dump = ctx
-            presets = ctx.get("presets")
-            if isinstance(presets, dict):
-                # Те же человекочитаемые метки, что видит модель в запросе.
-                dump = dict(ctx)
-                dump["presets"] = humanize_presets(presets, _labels_lang(self._config))
-            lines.append(json.dumps(dump, ensure_ascii=False, indent=2))
-        else:
-            lines.append("  " + self._t("cmd.context.disabled"))
-        lines.append(self._t("cmd.context.history"))
-        if not flags.get("history"):
-            lines.append("  " + self._t("cmd.context.disabled"))
-        else:
-            history = self._history_messages(
-                chat, MAX_CONTEXT_CHARS, include_last_user=True
-            )
-            if history:
-                for item in history:
-                    lines.append("  [" + item["role"] + "] " + item["content"][:200])
-            else:
-                lines.append("  " + self._t("cmd.context.empty"))
         lines.append(
-            self._t("cmd.context.tokens", v=str(self._estimate_context_tokens(flags, modes)))
+            self._t("cmd.context.tokens", v=str(self._estimate_messages_tokens(messages)))
         )
         self._append_system("\n".join(lines))
+
+    @staticmethod
+    def _preview_image_placeholder(data: str, mime: str = "image") -> str:
+        """Кратко описывает изображение вместо многомегабайтного base64."""
+        size_kb = len(data) * 3 // 4096
+        return f"<{mime}, ~{size_kb} КБ base64>"
+
+    def _preview_content_text(self: "_ChatEngine", content: Any) -> str:
+        """Преобразует содержимое сообщения в читаемый текст для /context."""
+        if isinstance(content, str):
+            return content
+        if not isinstance(content, list):
+            return json.dumps(content, ensure_ascii=False)
+        parts: list[str] = []
+        for block in content:
+            if not isinstance(block, dict):
+                parts.append(str(block))
+                continue
+            block_type = block.get("type")
+            if block_type == "text":
+                parts.append(str(block.get("text", "")))
+            elif block_type == "image_url":
+                image_url = block.get("image_url")
+                url = (
+                    image_url.get("url", "")
+                    if isinstance(image_url, dict)
+                    else str(image_url)
+                )
+                base64_part = url.split(",", 1)[1] if "," in url else url
+                parts.append(self._preview_image_placeholder(base64_part))
+            elif block_type == "image":
+                source = block.get("source")
+                data = str(source.get("data", "")) if isinstance(source, dict) else ""
+                mime = (
+                    str(source.get("media_type", "image"))
+                    if isinstance(source, dict)
+                    else "image"
+                )
+                parts.append(self._preview_image_placeholder(data, mime))
+            else:
+                parts.append(json.dumps(block, ensure_ascii=False))
+        return "\n".join(part for part in parts if part)
 
     def _confirm_command(self: "_ChatEngine", cmd: str) -> bool:
         """Реализует двухшаговое подтверждение деструктивной команды."""

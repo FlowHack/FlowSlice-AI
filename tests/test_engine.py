@@ -1353,6 +1353,9 @@ def test_context_command_shows_humanized_labels(engine, monkeypatch) -> None:
     assert '"unknown_key_xyz"' in dump
     # Исходный ключ как отдельное поле JSON больше не выводится.
     assert '"brim_type":' not in dump
+    # Токены считаются по реальному списку сообщений, который уйдёт модели.
+    expected = engine._estimate_messages_tokens(engine._preview_messages())
+    assert f"Оценка токенов контекста: {expected}" in dump
 
 
 def test_printer_command_shows_humanized_labels(engine, monkeypatch) -> None:
