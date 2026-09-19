@@ -811,6 +811,14 @@
      границы модалок (overflow) и они прижимаются к краям окна. */
   var helpTipEl = null;
   var helpTipHost = null;
+  var helpTipTimer = null;
+
+  function clearHelpTipTimer() {
+    if (helpTipTimer) {
+      clearTimeout(helpTipTimer);
+      helpTipTimer = null;
+    }
+  }
 
   function hideHelpTip() {
     helpTipHost = null;
@@ -859,6 +867,19 @@
       if (!host || host === helpTipHost) {
         return;
       }
+      clearHelpTipTimer();
+      // Задержка для длинных подписей: подсказка появляется, только если
+      // курсор задержался на элементе (data-tooltip-delay, мс).
+      var delay = parseInt(host.getAttribute("data-tooltip-delay") || "0", 10);
+      if (delay > 0) {
+        helpTipTimer = setTimeout(function () {
+          helpTipTimer = null;
+          if (host.isConnected) {
+            showHelpTip(host);
+          }
+        }, delay);
+        return;
+      }
       showHelpTip(host);
     });
     document.addEventListener("mouseout", function (e) {
@@ -870,10 +891,17 @@
       if (to && host.contains(to)) {
         return;
       }
+      clearHelpTipTimer();
       hideHelpTip();
     });
-    window.addEventListener("scroll", hideHelpTip, true);
-    window.addEventListener("resize", hideHelpTip);
+    window.addEventListener("scroll", function () {
+      clearHelpTipTimer();
+      hideHelpTip();
+    }, true);
+    window.addEventListener("resize", function () {
+      clearHelpTipTimer();
+      hideHelpTip();
+    });
   }
 
   var streamTextEl = null; // элемент текста текущего стримингового сообщения
@@ -1408,7 +1436,13 @@
         var row = el("div", "mp-item" + (isActive ? " active" : ""));
         row.setAttribute("data-provider", provider.id);
         row.setAttribute("data-model", item.id);
-        row.appendChild(el("span", "mp-item-name", item.name || item.id));
+        var itemName = item.name || item.id;
+        var nameEl = el("span", "mp-item-name", itemName);
+        // Длинные названия обрезаются многоточием: по задержке курсора
+        // показываем полное название во всплывающей подсказке.
+        nameEl.setAttribute("data-tooltip", itemName);
+        nameEl.setAttribute("data-tooltip-delay", "600");
+        row.appendChild(nameEl);
         var eye = visionEye(item.model);
         if (eye) {
           row.appendChild(eye);
