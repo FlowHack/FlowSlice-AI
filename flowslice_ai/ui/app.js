@@ -4669,7 +4669,9 @@
       return true;
     }
     var words = text.split(/[^0-9a-zа-яё]+/i).filter(Boolean);
-    var tokens = q.split(/\s+/).filter(Boolean);
+    // Слова запроса режем так же, как слова названия: иначе поиск по полному
+    // идентификатору вида qwen/qwen3.8-27b:free давал бы пустой результат.
+    var tokens = q.split(/[^0-9a-zа-яё]+/i).filter(Boolean);
     for (var i = 0; i < tokens.length; i++) {
       var found = false;
       for (var j = 0; j < words.length; j++) {

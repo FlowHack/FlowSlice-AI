@@ -91,6 +91,12 @@ check("поиск префикс", pure.matchesModelQuery("Free Models Router", 
 check("поиск кириллица перестановка", pure.matchesModelQuery("Модель Быстрая", "быстрая модель"), true);
 check("поиск нет совпадений", pure.matchesModelQuery("Free Models Router", "gpt"), false);
 check("поиск пустой запрос", pure.matchesModelQuery("Free Models Router", "  "), true);
+check(
+  "поиск по полному id",
+  pure.matchesModelQuery("Qwen: Qwen3.8 27B (free)", "qwen/qwen3.8-27b:free"),
+  true
+);
+check("поиск по id с автором", pure.matchesModelQuery("Qwen3.8 27B", "qwen/qwen3.8-27b"), true);
 
 // Раскрытие блока размышлений: только у последнего assistant-сообщения во время стрима.
 const streamMsgs = [
