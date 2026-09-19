@@ -25,7 +25,7 @@ CHATS
   • Multi-chat with local history, search and pinning, up to 200 messages per chat.
   • The selected model is remembered per chat and restored on restart, with a footnote showing the model that produced each answer.
   • Automatic history compaction at 80 percent of the 128,000-token context window.
-  • The context command shows the actual message list sent to the model and the real token count of the request.
+  • The context command shows the actual message list sent to the model and an estimated token count of the request.
 
 
 PROVIDERS AND MODELS
@@ -34,7 +34,7 @@ PROVIDERS AND MODELS
   • Model catalog sync: a refresh-from-provider button and auto-refresh, with prices and image-support flags; manual tuning is preserved.
   • Model search does not depend on word order.
   • Per-model temperature, max tokens and reasoning mode.
-    Defaults: temperature 0.3, max tokens 8192, and at least 16384 when reasoning is enabled.
+    Defaults: temperature 0.3, max tokens 8192, and an inherited minimum of 16384 when reasoning is enabled (the per-model max tokens value itself is not increased).
 
 
 INTERFACE

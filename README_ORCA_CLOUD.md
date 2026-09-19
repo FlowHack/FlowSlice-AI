@@ -36,9 +36,10 @@ What the assistant can do:
 ### 💬 Chat
 - Streaming responses (SSE) — text appears as it is generated
 - Reasoning blocks for reasoning models: expandable, open while streaming and auto-collapsed when the answer is done (chevron, red live highlight). Supported for OpenRouter (`delta.reasoning`), DeepSeek and Anthropic
-- Stop generation; a stopped reply is marked "interrupted by the user" instead of staying empty
-- Regenerate and edit & resend
-- Answer variants
+- Stop generation; an empty reply is marked as interrupted by the user, while already received text is kept as is
+- Regenerate the last reply
+- Edit and resend any of your messages (edit & resend)
+- Answer variants with switching between them
 
 ### 🗂 Multi-chat
 - Unlimited conversations
@@ -64,20 +65,20 @@ What the assistant can do:
 - 11 built-in providers out of the box
 - Your own OpenAI/Anthropic-compatible providers
 - Favorite models: a pinned "Favorites" group and a ♥ button; the choice is kept across restarts
-- Model catalog sync: "Refresh from provider" button and auto-refresh
+- Model catalog sync: "Refresh models" button and auto-refresh
 - Model search independent of word order (finds full ids with `/` and `:` and versions like `3.7`)
-- Per-model tuning: temperature, max tokens, reasoning mode
-- Default model and per-model notes
-- Exact usage and cost: `stream_options.include_usage` for all providers with automatic fallback on HTTP 400; real prompt/completion tokens and cost from OpenRouter, exact token counts from Anthropic, otherwise an estimate. Cost is shown only when both input and output prices are known
+- Per-model tuning: temperature, max tokens, reasoning mode, image support
+- Default model (a star in the model list)
+- Tokens come from provider usage when it is reported (OpenRouter together with the real `cost`, Anthropic with exact token counts), otherwise they are estimated; automatic fallback on HTTP 400. Cost is shown only when both input and output prices are known
 - Usage statistics (📊)
 
 </td>
 </tr>
 </table>
 
-- **Attachments:** photos (up to 4 MB on the client, compressed to 1024 px) and text files (up to 100,000 characters each, 400,000 in total).
+- **Attachments:** photos (up to 4 MB on the client, compressed to 1024 px; 20 MB base64 total per request) and text files (up to 100,000 characters each, 400,000 in total).
 - **Localization:** English / Russian / Serbian (English by default).
-- **Themes:** auto (native Orca) / pure white / pure black, signature red accent `#d9534f`.
+- **Themes:** auto (native Orca) / light / dark (pure white `#ffffff` and black `#000000`), signature red accent `#d9534f`.
 
 ---
 
@@ -158,11 +159,13 @@ Type a message and press **Enter**. For example:
 - "Recommend nozzle and bed temperature for my filament."
 
 ### Step 5. Manage context
-The chat panel has **Model**, **Filament**, **Printer**, **Print settings** and **History** checkboxes.
+The chat panel has **Filament**, **Printer**, **Print settings**, **Model on the plate** and **Chat history** checkboxes.
 Tick what the assistant should take into account. Each profile has a dropdown next to it:
 
 - **changed** — send only the parameters you changed (saves tokens);
 - **all** — send the full profile.
+
+The model has its own modes: **brief**, **full** and **deep** (**deep** requires numpy).
 
 Press **Enter** to send and **Shift+Enter** for a new line.
 
@@ -202,17 +205,18 @@ Settings open via the gear in the chat window and are split into four tabs.
 
 | Tab | What you can configure |
 | --- | --- |
-| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode, input/output price. The **Refresh from provider** button and the trash icon sit next to it. |
-| **Custom** | Your own OpenAI/Anthropic-compatible providers and models: base URL, API scheme, key, model ID and name. |
-| **General** | Notes for the context, default temperature / max tokens / reasoning mode; provider auto-refresh (`auto_sync_providers`); reset models. |
-| **Appearance** | Theme (auto / white / black), font size and style, interface language. |
+| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode, image support. The **Refresh models** and **Delete selected model** buttons sit next to it. |
+| **Custom** | Your own OpenAI/Anthropic-compatible providers and models: base URL, API scheme, key, model ID and name, plus per-model temperature / max tokens / reasoning mode / vision / prices. |
+| **General** | Context compaction (`compact_enabled`, threshold %, window size, number of photos kept from history); notes for the context, default temperature / max tokens / reasoning mode; provider auto-refresh (`auto_sync_providers`); reset models. |
+| **Appearance** | Theme (auto / light / dark), font size 10–20 and style (system / mono / serif), interface language. |
 
 - Model values can be tuned individually; if a field is left empty, the general defaults apply
-  (`temperature = 0.3`, `max_tokens = 8192`, reasoning off by default). When reasoning is enabled,
-  the token limit is never lower than `16384` so the model has room to think.
-- Prices for input and output tokens are used to show the cost of a reply; the cost appears only when
-  both prices are known. Tokens and cost come from the provider when available and are estimated
-  otherwise.
+  (`temperature = 0.3`, `max_tokens = 8192`, reasoning off by default). When reasoning is enabled, the
+  inherited token limit is never lower than `16384` so the model has room to think; a per-model
+  `max_tokens` you set yourself is not raised.
+- Prices for input and output tokens apply to custom models and are used to show the cost of a reply;
+  the cost appears only when both prices are known. Tokens and cost come from the provider when
+  available and are estimated otherwise.
 - The **Reset** button affects only the current tab.
 - The **General** tab has **Reset models** and **Reset custom models**.
 - Changes apply only after clicking **Save**.
@@ -221,18 +225,20 @@ Settings open via the gear in the chat window and are split into four tabs.
 
 ## 🔄 Model catalog sync
 
-- Every provider has a **Refresh from provider** button. It loads the provider's full model list into
+- Every provider has a **Refresh models** button. It loads the provider's full model list into
   a session cache — the config does not grow. Names, prices and the image-support flag are refreshed.
-- The **Auto-refresh providers** checkbox (`auto_sync_providers`) is on by default and runs on plugin
-  start and after an API key is saved.
+- The **Auto-refresh providers** checkbox (`auto_sync_providers`) is on by default. Auto-sync starts
+  lazily (when the provider list is built in the UI) and after an API key is saved; it walks providers
+  that have a key plus OpenRouter and NordRouter, which are always checked. New models are not added —
+  only existing ones are updated.
 - Model search does not depend on word order: full ids with `/` and `:` and versions like `3.7` are
   found without separators.
 - **Favorite models** are collected in a pinned **Favorites** group at the top of the model list and
   toggled with the ♥ button. The selection is stored in the config and survives restarts.
 - **Prices** come from the specific provider: OpenRouter uses its own pricing catalog, NordRouter uses
-  its public price list.
-- **Image support** is derived from the OpenRouter catalog with the provider prefix (for every
-  provider except OpenRouter itself); other provider catalogs are used where they expose it.
+  its public price list; for the other providers prices are set manually.
+- **Image support** comes from the provider's own catalog first (Google, Anthropic, Mistral, xAI),
+  with the OpenRouter catalog as a fallback.
 - When a model is added or imported, its metadata is requested from the provider immediately.
 - Manual values and `temperature` / `max_tokens` / `reasoning` are never overwritten by auto-sync.
 
@@ -244,18 +250,19 @@ The context panel in the chat decides what the assistant learns about your proje
 
 | Checkbox | What it sends |
 | --- | --- |
-| **Model** | Dimensions, volume, surface area, triangle count, position on the plate, mesh integrity (manifold), number of instances. |
+| **Model on the plate** | Dimensions, volume, surface area, triangle count, position on the plate, mesh integrity (manifold), number of instances. The model has **brief**, **full** and **deep** modes; surface area and advanced metrics require numpy. |
 | **Filament** | Filament profile: material, temperatures, flow, cooling and notes. |
 | **Printer** | Printer profile: kinematics, nozzle, bed, limits and start/end G-code. |
 | **Print settings** | Process profile: layers, perimeters, infill, speeds, supports. |
-| **History** | Previous messages of the current chat. |
+| **Chat history** | Previous messages of the current chat. |
 
 For profiles, two export modes are available: **changed** (only the parameters changed relative to the
 base preset) and **all** (the full profile). Selected checkboxes and modes are remembered per chat.
 
 Parameter keys are enriched with interface labels before they are sent, so the model writes
 "Brim type (brim_type)" instead of the internal key. The dictionary covers 823 OrcaSlicer settings;
-753 of them have Russian translations.
+753 of them have Russian translations. For Serbian, parameter labels are taken from the English table
+as a fallback.
 
 ---
 
@@ -266,8 +273,10 @@ Parameter keys are enriched with interface labels before they are sent, so the m
   6 MB base64. If the selected model does not support images, the plugin tells you and does not send
   the file.
 - **Text files:** the file contents (up to 100,000 characters per file, 400,000 in total) are added to
-  the message as plain text, so they work with any model.
-- **Count:** up to 10 attachments per message, including up to 10 images per request.
+  the message as plain text, so they work with any model. When the history is saved, long text
+  attachments are truncated.
+- **Count:** up to 10 attachments per message, including up to 10 images per request (20 MB base64 in
+  total).
 
 > To analyze photos, choose an image-capable model, e.g. via OpenRouter (`Auto`, `Free` or a specific
 > vision model).
@@ -278,6 +287,8 @@ Parameter keys are enriched with interface labels before they are sent, so the m
 | --- | --- |
 | Attachments per message | up to 10 |
 | Images per request | up to 10 |
+| Total images per request | up to 20 MB base64 |
+| Photos kept from history | up to 2 |
 | Single image | 1024 px, JPEG; client 4 MB, server 6 MB base64 |
 | Text attachment | 100,000 characters; 400,000 in total |
 | Messages per chat | up to 200 |
@@ -292,7 +303,7 @@ Type a command in the chat input and press **Enter**.
 
 | Command | Description |
 | --- | --- |
-| `/context` | Show the actual message list that will be sent to the model (full system prompt, history, images summarized) and the real token count of that request |
+| `/context` | Show the actual message list that will be sent to the model (full system prompt, history, images summarized) and an estimated token count of that request |
 | `/compact` | Compress the chat history into a short summary (manually) |
 | `/clear` | Clear the current chat |
 | `/model` | Show the model-on-the-plate report |
@@ -397,6 +408,6 @@ Anthropic-compatible), key and model ID.
 <details>
 <summary><b>What if the model list is out of date?</b></summary>
 
-Click **Refresh from provider** next to the provider, or enable **Auto-refresh providers** on the
+Click **Refresh models** next to the provider, or enable **Auto-refresh providers** on the
 **General** tab — the catalog, prices and image-support flag will update automatically.
 </details>
