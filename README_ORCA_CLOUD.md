@@ -87,13 +87,13 @@ What the assistant can do:
 
 *Main screen.*
 
-![Settings, Models tab: providers, favorites, prices and vision](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_models.png)
+![Settings, Models tab: providers, API keys and per-model parameters](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_models.png)
 
-*Settings, Models tab: providers, favorites, prices and vision.*
+*Settings, Models tab: providers, API keys and per-model parameters (temperature, tokens, reasoning, vision).*
 
-![Settings, General tab: theme, language, context compaction](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_general.png)
+![Settings, General tab: context notes, default model parameters, compaction](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_general.png)
 
-*Settings, General tab: theme, language, context compaction.*
+*Settings, General tab: context notes, default model parameters, context compaction, provider auto-refresh and data reset.*
 
 ![Chat in action](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/screenshot_reasoning.png)
 
