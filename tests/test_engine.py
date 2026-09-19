@@ -260,6 +260,33 @@ def test_collect_preset_data_changed_filters_inherited(engine, monkeypatch) -> N
     assert changed["printer"]["params"] == {"nozzle_diameter": "0.6"}
 
 
+def test_collect_preset_data_skips_disabled_sections(engine, monkeypatch) -> None:
+    """Выключенные в flags разделы пресетов не попадают в контекст."""
+    bundle = _preset_bundle(
+        {"printer_model": "MyPrinter", "nozzle_diameter": "0.4"},
+        {"inherits": "Base @P", "printable_height": "390"},
+    )
+    monkeypatch.setattr(
+        "flowslice_ai.engine.slicer_context.orca",
+        types.SimpleNamespace(
+            host=types.SimpleNamespace(preset_bundle=lambda: bundle)
+        ),
+    )
+
+    data = engine._collect_preset_data(
+        {"printer": "changed"}, {"printer": True, "filament": False, "print": False}
+    )
+    assert "printer" in data
+    assert "filament" not in data
+    assert "print" not in data
+    # Без flags поведение прежнее — все разделы на месте.
+    assert set(engine._collect_preset_data({"printer": "changed"})) == {
+        "printer",
+        "filament",
+        "print",
+    }
+
+
 def test_model_supports_images_static(engine) -> None:
     """_model_supports_images() читает статический флаг vision у модели."""
     engine._config["active_provider"] = "deepseek"
@@ -1397,7 +1424,7 @@ def test_printer_command_shows_humanized_labels(engine, monkeypatch) -> None:
             "params": {"filament_flow_ratio": "0.97"},
         }
     }
-    monkeypatch.setattr(engine, "_collect_preset_data", lambda modes: data)
+    monkeypatch.setattr(engine, "_collect_preset_data", lambda modes, flags=None: data)
     system_parts: list[str] = []
     monkeypatch.setattr(engine, "_append_system", system_parts.append)
 

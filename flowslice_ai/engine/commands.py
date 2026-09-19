@@ -112,7 +112,9 @@ class CommandsMixin:
     def _cmd_printer(self: "_ChatEngine") -> None:
         """Формирует сводку профилей печати."""
         chat = self._active_chat()
-        data = self._collect_preset_data(chat.get("context_modes", {}))
+        data = self._collect_preset_data(
+            chat.get("context_modes", {}), chat.get("context_flags", {})
+        )
         lines = [self._t("cmd.printer.title")]
         sections = (
             ("printer", self._t("cmd.printer.section_printer")),

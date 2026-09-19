@@ -643,6 +643,17 @@ select option {
   gap: 10px;
   flex-wrap: wrap;
 }
+.context-panel-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.context-label {
+  font-size: 12px;
+  color: var(--orca-muted);
+  white-space: nowrap;
+}
 .ctx-check {
   display: flex;
   align-items: center;

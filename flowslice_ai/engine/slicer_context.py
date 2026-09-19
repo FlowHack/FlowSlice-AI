@@ -87,7 +87,7 @@ class SlicerContextMixin:
             model_mode = raw_mode if raw_mode in ("brief", "full", "deep") else "full"
             ctx["model"] = self._collect_model_data(model_mode)
         if flags.get("filament") or flags.get("printer") or flags.get("print"):
-            ctx["presets"] = self._collect_preset_data(modes)
+            ctx["presets"] = self._collect_preset_data(modes, flags)
         return ctx
 
     def _collect_model_data(self: "_ChatEngine", mode: str = "full") -> dict[str, Any]:
@@ -405,14 +405,17 @@ class SlicerContextMixin:
         return str(value)[:500]
 
     def _collect_preset_data(
-        self: "_ChatEngine", modes: dict[str, Any] | None = None
+        self: "_ChatEngine",
+        modes: dict[str, Any] | None = None,
+        flags: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Собирает данные активных пресетов печати через preset_bundle.
 
         Для каждого раздела строится цепочка наследования (inherits) от корня
         к выбранному пресету. Режим выбирается отдельно для каждого раздела
         через modes: "all" — все параметры, "changed" — только изменённые
-        (по умолчанию). Поле "changed" в вывод не попадает.
+        (по умолчанию). Поле "changed" в вывод не попадает. Разделы, выключенные
+        в flags ("filament"/"printer"/"print"), в результат не попадают.
         """
         empty: dict[str, Any] = {
             "printer": {"name": "", "params": {}},
@@ -427,8 +430,11 @@ class SlicerContextMixin:
                 return empty
             has_full_value = callable(getattr(bundle, "full_config_value", None))
             mode_map = modes if isinstance(modes, dict) else {}
+            flag_map = flags if isinstance(flags, dict) else {}
             out: dict[str, Any] = {}
             for key, (collection_attr, fields) in PRESET_SECTIONS.items():
+                if flag_map and not flag_map.get(key, True):
+                    continue
                 mode = "all" if mode_map.get(key) == "all" else "changed"
                 out[key] = self._collect_preset_section(
                     bundle, collection_attr, fields, has_full_value, mode
