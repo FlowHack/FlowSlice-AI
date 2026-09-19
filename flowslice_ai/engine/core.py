@@ -819,6 +819,9 @@ class CoreMixin:
                 "context_modes": chat.get("context_modes", {}),
                 "context_tokens": self._ctx_tokens,
                 "history_tokens": history_tokens,
+                "history_enabled": bool(
+                    chat.get("context_flags", {}).get("history", True)
+                ),
                 "compact_enabled": bool(self._config.get("compact_enabled", True)),
                 "compact_threshold_tokens": self._compact_threshold_tokens(),
                 "context_window": self._compact_window_tokens(),

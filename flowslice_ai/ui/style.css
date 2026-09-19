@@ -713,6 +713,16 @@ select option {
   max-width: 100%;
   cursor: default;
 }
+/* В шапке «?» стоит первым — внешний отступ слева не нужен. */
+.compact-progress .help-icon {
+  margin-left: 0;
+}
+/* История чата выключена: вместо прогресса короткая поясняющая надпись. */
+.compact-off {
+  font-size: 11px;
+  color: var(--orca-muted);
+  white-space: nowrap;
+}
 .compact-progress-track {
   flex: 1 1 auto;
   height: 4px;
@@ -1848,23 +1858,35 @@ details.field summary:hover {
   opacity: 1;
 }
 /* Тултип стоимости модели: заголовок и строки «вход/выход». */
-.price-tip {
+.price-tip,
+.info-tip {
   min-width: 180px;
 }
-.price-tip-title {
+.price-tip-title,
+.info-tip-title {
   color: var(--orca-muted);
   font-size: 10px;
   margin-bottom: 4px;
 }
-.price-tip-row {
+.price-tip-row,
+.info-tip-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
 }
-.price-tip-row b {
+.price-tip-row b,
+.info-tip-row b {
   color: var(--orca-fg);
   font-weight: 600;
   font-family: var(--orca-mono, monospace);
+}
+/* Поясняющий абзац в тултипе (например, что такое автосжатие). */
+.info-tip-text {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.info-tip-row {
+  color: var(--orca-muted);
 }
 
 /* ===== Кнопки управления моделями пользовательского провайдера ===== */

@@ -119,9 +119,12 @@
       "ctx.tokens": "Context tokens: {n}",
       "ctx.request_tokens": "Request tokens: {n}",
       "ctx.request_tokens_title": "Estimated tokens of the current message: text plus attachments.",
-      "ctx.compact_progress": "{percent}% to compaction",
+      "ctx.compact_progress": "{percent}%",
       "ctx.compact_progress_title": "Chat history: {used} of {limit} tokens. Auto-compaction at {threshold}% of the context window.",
       "ctx.compact_progress_title_off": "Chat history: {used} of {limit} tokens. Auto-compaction is disabled.",
+      "ctx.compact_history_off": "Chat history is off — nothing to compact",
+      "ctx.compact_help_title": "Context auto-compaction",
+      "ctx.compact_help_body": "When the chat history approaches the model context limit, older messages are replaced by a short summary. Recent messages stay intact. The percentage shows how full the history is up to the auto-compaction threshold.",
       "ctx.mode_changed": "changed",
       "ctx.mode_all": "all",
       "ctx.mode_title": "Preset export: only changed parameters or the full profile",
@@ -360,9 +363,12 @@
       "ctx.tokens": "Токенов контекста: {n}",
       "ctx.request_tokens": "Токенов запроса: {n}",
       "ctx.request_tokens_title": "Оценка токенов текущего сообщения: текст и вложения.",
-      "ctx.compact_progress": "{percent}% до сжатия",
+      "ctx.compact_progress": "{percent}%",
       "ctx.compact_progress_title": "История чата: {used} из {limit} токенов. Автосжатие при {threshold}% окна контекста.",
       "ctx.compact_progress_title_off": "История чата: {used} из {limit} токенов. Автосжатие выключено.",
+      "ctx.compact_history_off": "История чата отключена — сжатие не требуется",
+      "ctx.compact_help_title": "Автосжатие контекста",
+      "ctx.compact_help_body": "Когда история чата приближается к лимиту контекста модели, ранние сообщения заменяются краткой сводкой. Последние сообщения остаются нетронутыми. Процент показывает заполнение истории до порога автосжатия.",
       "ctx.mode_changed": "изм.",
       "ctx.mode_all": "все",
       "ctx.mode_title": "Выгрузка пресета: только изменённые параметры или полный профиль",
@@ -601,9 +607,12 @@
       "ctx.tokens": "Tokeni konteksta: {n}",
       "ctx.request_tokens": "Tokeni zahteva: {n}",
       "ctx.request_tokens_title": "Procena tokena trenutne poruke: tekst i prilozi.",
-      "ctx.compact_progress": "{percent}% do sažimanja",
+      "ctx.compact_progress": "{percent}%",
       "ctx.compact_progress_title": "Istorija razgovora: {used} od {limit} tokena. Automatsko sažimanje pri {threshold}% prozora konteksta.",
       "ctx.compact_progress_title_off": "Istorija razgovora: {used} od {limit} tokena. Automatsko sažimanje je isključeno.",
+      "ctx.compact_history_off": "Istorija razgovora je isključena — sažimanje nije potrebno",
+      "ctx.compact_help_title": "Automatsko sažimanje konteksta",
+      "ctx.compact_help_body": "Kada se istorija razgovora približi limitu konteksta modela, starije poruke se zamenjuju kratkim sažetkom. Poslednje poruke ostaju netaknute. Procenat pokazuje ispunjenost istorije do praga automatskog sažimanja.",
       "ctx.mode_changed": "izm.",
       "ctx.mode_all": "sve",
       "ctx.mode_title": "Izvoz profila: samo izmenjeni parametri ili pun profil",
@@ -2301,11 +2310,22 @@
   /* ===== Заполнение истории до автосжатия ===== */
   function updateCompactProgress() {
     var progress = byId("compactProgress");
+    var off = byId("compactOff");
     var bar = byId("compactProgressBar");
     var text = byId("compactProgressText");
-    if (!progress || !bar || !text) {
+    var track = byId("compactProgressTrack");
+    var help = byId("compactProgressHelp");
+    if (!progress || !off || !bar || !text || !track || !help) {
       return;
     }
+    // История чата выключена — сжимать нечего, показываем пояснение.
+    if (state.history_enabled === false) {
+      progress.style.display = "none";
+      off.style.display = "";
+      return;
+    }
+    progress.style.display = "";
+    off.style.display = "none";
     var historyTokens = Number(state.history_tokens) || 0;
     var windowTokens = Number(state.context_window) || 0;
     var thresholdTokens = Number(state.compact_threshold_tokens) || 0;
@@ -2320,20 +2340,29 @@
     } else if (percent >= 70) {
       progress.classList.add("warn");
     }
-    // Порог в процентах окна: подсказка с точными числами.
-    if (state.compact_enabled === false) {
-      progress.title = t("ctx.compact_progress_title_off", {
+    // Прогресс с точными числами: только для полосы и подписи.
+    var progressTitle = state.compact_enabled === false
+      ? t("ctx.compact_progress_title_off", {
         used: formatTokens(historyTokens),
         limit: formatTokens(limitTokens)
+      })
+      : t("ctx.compact_progress_title", {
+        used: formatTokens(historyTokens),
+        limit: formatTokens(limitTokens),
+        threshold: contextFillPercent(thresholdTokens, windowTokens)
       });
-      return;
-    }
-    var thresholdPercent = contextFillPercent(thresholdTokens, windowTokens);
-    progress.title = t("ctx.compact_progress_title", {
-      used: formatTokens(historyTokens),
-      limit: formatTokens(limitTokens),
-      threshold: thresholdPercent
-    });
+    track.title = progressTitle;
+    text.title = progressTitle;
+    // «?»: что такое автосжатие плюс текущий прогресс.
+    help.setAttribute("data-tooltip", t("ctx.compact_help_title"));
+    help.setAttribute(
+      "data-tooltip-html",
+      '<div class="info-tip">' +
+        '<div class="info-tip-title">' + t("ctx.compact_help_title") + "</div>" +
+        '<div class="info-tip-text">' + t("ctx.compact_help_body") + "</div>" +
+        '<div class="info-tip-row">' + progressTitle + "</div>" +
+      "</div>"
+    );
   }
 
   /* ===== Индикатор «печатает…» ===== */

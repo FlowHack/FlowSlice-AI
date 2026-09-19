@@ -52,11 +52,13 @@
       </div>
       <div class="header-center">
         <div class="compact-progress" id="compactProgress">
-          <span class="compact-progress-track">
+          <span class="help-icon" id="compactProgressHelp" data-i18n-tooltip="ctx.compact_help_title">?</span>
+          <span class="compact-progress-track" id="compactProgressTrack">
             <span class="compact-progress-bar" id="compactProgressBar"></span>
           </span>
           <span class="compact-progress-text" id="compactProgressText"></span>
         </div>
+        <div class="compact-off" id="compactOff" style="display:none" data-i18n="ctx.compact_history_off">История чата отключена — сжатие не требуется</div>
       </div>
       <div class="header-right">
         <span class="model-status" id="modelStatus"></span>
