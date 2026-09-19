@@ -270,6 +270,17 @@ select option {
   border-color: var(--orca-accent);
   color: var(--orca-accent);
 }
+/* Кнопка поддержки: красная с белым сердечком. Специфичность выше базовой. */
+.icon-btn.donate-btn {
+  background: #d9534f;
+  border-color: #d9534f;
+  color: #fff;
+}
+.icon-btn.donate-btn:hover {
+  background: #c9302c;
+  border-color: #c9302c;
+  color: #fff;
+}
 
 /* ===== Область сообщений ===== */
 .messages {
@@ -619,6 +630,7 @@ select option {
   align-items: flex-end;
   gap: 2px;
   text-align: right;
+  flex-shrink: 0;
 }
 .request-tokens {
   color: var(--orca-accent);
@@ -919,6 +931,13 @@ select option {
   color: var(--orca-accent);
   opacity: 0.75;
 }
+/* Компактная кнопка синхронизации моделей провайдера. */
+.ghost-btn.sync-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .usage-row {
   display: flex;
   align-items: center;
@@ -1068,12 +1087,12 @@ select option {
   gap: 8px;
   margin-top: 8px;
 }
-/* Кнопка экспорта по центру под полем ввода. */
+/* Кнопка экспорта — по центру строки композера, между чипом и метриками. */
 .composer-export {
   position: relative;
-  display: flex;
-  justify-content: center;
-  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 .export-btn {
   font-size: 12px;
@@ -1113,6 +1132,7 @@ select option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   max-width: 100%;
   border: 1px solid var(--orca-border);
   background: var(--orca-input);
@@ -1697,6 +1717,25 @@ details.field summary:hover {
 }
 .help-tip.show {
   opacity: 1;
+}
+/* Тултип стоимости модели: заголовок и строки «вход/выход». */
+.price-tip {
+  min-width: 180px;
+}
+.price-tip-title {
+  color: var(--orca-muted);
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+.price-tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.price-tip-row b {
+  color: var(--orca-fg);
+  font-weight: 600;
+  font-family: var(--orca-mono, monospace);
 }
 
 /* ===== Кнопки управления моделями пользовательского провайдера ===== */

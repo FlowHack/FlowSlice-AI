@@ -53,7 +53,7 @@
       <div class="header-right">
         <span class="model-status" id="modelStatus"></span>
         <button type="button" id="usageBtn" class="icon-btn" title="Статистика" data-i18n-title="common.stats">📊</button>
-        <button type="button" id="donateBtn" class="icon-btn" title="Поддержать проект" data-i18n-title="common.donate">♥</button>
+        <button type="button" id="donateBtn" class="icon-btn donate-btn" title="Поддержать проект" data-i18n-title="common.donate">♥</button>
         <button type="button" id="settingsBtn" class="icon-btn" title="Настройки" data-i18n-title="common.settings">⚙</button>
         <button type="button" id="newChatBtn" class="icon-btn" title="Новый чат" data-i18n-title="common.new_chat">+</button>
       </div>
@@ -93,17 +93,17 @@
           <span class="chip-vision" id="modelChipVision"></span>
           <span class="chip-caret">▾</span>
         </button>
+        <div class="composer-export">
+          <button type="button" id="exportBtn" class="ghost-btn export-btn" data-i18n="export.chat">Экспорт</button>
+          <div class="export-menu" id="exportMenu" style="display:none">
+            <button type="button" class="export-opt" data-fmt="md" data-i18n="export.fmt_md">Markdown</button>
+            <button type="button" class="export-opt" data-fmt="txt" data-i18n="export.fmt_txt">Обычный текст</button>
+            <button type="button" class="export-opt" data-fmt="json" data-i18n="export.fmt_json">JSON</button>
+          </div>
+        </div>
         <div class="composer-metrics">
           <div class="context-tokens" id="contextTokens">≈ 0 токенов</div>
           <div class="context-tokens request-tokens" id="requestTokens" data-i18n-title="ctx.request_tokens_title">≈ 0 токенов</div>
-        </div>
-      </div>
-      <div class="composer-export">
-        <button type="button" id="exportBtn" class="ghost-btn export-btn" data-i18n="export.chat">Экспорт</button>
-        <div class="export-menu" id="exportMenu" style="display:none">
-          <button type="button" class="export-opt" data-fmt="md" data-i18n="export.fmt_md">Markdown</button>
-          <button type="button" class="export-opt" data-fmt="txt" data-i18n="export.fmt_txt">Обычный текст</button>
-          <button type="button" class="export-opt" data-fmt="json" data-i18n="export.fmt_json">JSON</button>
         </div>
       </div>
     </div>
@@ -120,7 +120,7 @@
     <div class="settings-tabs">
       <button type="button" class="settings-tab active" data-tab="models" data-i18n="settings.tab.models">Модели</button>
       <button type="button" class="settings-tab" data-tab="custom" data-i18n="settings.tab.custom">Персональные</button>
-      <button type="button" class="settings-tab" data-tab="general" data-i18n="settings.tab.general">Общие значения</button>
+      <button type="button" class="settings-tab" data-tab="general" data-i18n="settings.tab.general">Общие</button>
       <button type="button" class="settings-tab" data-tab="appearance" data-i18n="settings.tab.appearance">Оформление</button>
     </div>
     <div class="settings-scroll">
@@ -129,7 +129,7 @@
           <label><span data-i18n="settings.provider">Провайдер</span> <span class="help-icon" data-i18n-tooltip="settings.help_provider" data-i18n-title="settings.help_provider">?</span></label>
           <div class="model-row">
             <div class="dd-wrap" id="setProviderDD"></div>
-            <button type="button" id="setSyncProviderBtn" class="ghost-btn" data-i18n="settings.syncProvider" data-i18n-title="settings.syncProviderHint" title="Обновить от провайдера">Обновить от провайдера</button>
+            <button type="button" id="setSyncProviderBtn" class="ghost-btn sync-btn" data-i18n="settings.syncProvider" data-i18n-title="settings.syncProviderHint" title="Подгрузить все модели провайдера и обновить цены, поддержку изображений и названия (ваши ручные настройки не затрагиваются)">Обновить модели</button>
           </div>
         </div>
         <div class="field">
@@ -193,13 +193,6 @@
             <div class="dd-wrap" id="setVisionDD"></div>
             <span class="dd-default-badge" id="setVisionSource" style="display:none"></span>
           </div>
-          <div class="per-model-controls field-gap">
-            <label for="setPriceIn" style="margin:0;white-space:nowrap"><span data-i18n="settings.price_in">Цена входа</span> <span class="help-icon" data-i18n-tooltip="settings.price_hint" data-i18n-title="settings.price_hint">?</span></label>
-            <input type="number" id="setPriceIn" class="price-input" min="0" step="0.01" placeholder="0.00">
-            <label for="setPriceOut" style="margin:0;white-space:nowrap"><span data-i18n="settings.price_out">Цена выхода</span></label>
-            <input type="number" id="setPriceOut" class="price-input" min="0" step="0.01" placeholder="0.00">
-            <span class="dd-default-badge" id="setPriceSource" style="display:none"></span>
-          </div>
         </div>
         <div class="field" id="modelActionsBlock">
           <hr class="settings-divider" id="modelActionsHr">
@@ -258,7 +251,7 @@
             <label><span data-i18n="settings.provider">Провайдер</span> <span class="help-icon" data-i18n-tooltip="settings.help_provider" data-i18n-title="settings.help_provider">?</span></label>
             <div class="model-row">
               <div class="dd-wrap" id="ctProviderDD"></div>
-              <button type="button" id="ctSyncProviderBtn" class="ghost-btn" data-i18n="settings.syncProvider" data-i18n-title="settings.syncProviderHint" title="Обновить от провайдера">Обновить от провайдера</button>
+              <button type="button" id="ctSyncProviderBtn" class="ghost-btn sync-btn" data-i18n="settings.syncProvider" data-i18n-title="settings.syncProviderHint" title="Подгрузить все модели провайдера и обновить цены, поддержку изображений и названия (ваши ручные настройки не затрагиваются)">Обновить модели</button>
             </div>
           </div>
           <div class="field">

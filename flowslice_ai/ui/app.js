@@ -182,7 +182,7 @@
       "settings.help_provider": "API provider used to send requests to models",
       "settings.help_model": "Active model for new messages",
       "settings.refresh_models": "Refresh model list from provider",
-      "settings.syncProvider": "Refresh from provider",
+      "settings.syncProvider": "Refresh models",
       "settings.syncProviderHint": "Fetch all provider models and refresh prices, image support and names (your manual settings are preserved)",
       "settings.syncing": "Refreshing...",
       "settings.help_url": "API server address of the provider",
@@ -364,7 +364,7 @@
       "settings.title": "Настройки",
       "settings.tab.models": "Модели",
       "settings.tab.custom": "Персональные",
-      "settings.tab.general": "Общие значения",
+      "settings.tab.general": "Общие",
       "settings.tab.appearance": "Оформление",
       "settings.provider": "Провайдер",
       "settings.api_key": "API-ключ",
@@ -414,7 +414,7 @@
       "settings.help_provider": "Провайдер API, через который отправляются запросы к моделям",
       "settings.help_model": "Активная модель для новых сообщений",
       "settings.refresh_models": "Обновить список моделей у провайдера",
-      "settings.syncProvider": "Обновить от провайдера",
+      "settings.syncProvider": "Обновить модели",
       "settings.syncProviderHint": "Подгрузить все модели провайдера и обновить цены, поддержку изображений и названия (ваши ручные настройки не затрагиваются)",
       "settings.syncing": "Обновление…",
       "settings.help_url": "Адрес API-сервера провайдера",
@@ -504,7 +504,7 @@
       "key.invalid": "Ключ недействителен",
       "export.user": "Пользователь",
       "export.title": "Чат",
-      "export.chat": "Экспорт чата",
+      "export.chat": "Экспорт",
       "export.system": "Система",
       "export.failed": "Не удалось подготовить экспорт.",
       "export.fmt_md": "Markdown",
@@ -596,7 +596,7 @@
       "settings.title": "Podešavanja",
       "settings.tab.models": "Modeli",
       "settings.tab.custom": "Lični",
-      "settings.tab.general": "Opšte vrednosti",
+      "settings.tab.general": "Opšte",
       "settings.tab.appearance": "Izgled",
       "settings.provider": "Provajder",
       "settings.api_key": "API ključ",
@@ -646,7 +646,7 @@
       "settings.help_provider": "API provajder kroz koji se šalju zahtevi ka modelima",
       "settings.help_model": "Aktivni model za nove poruke",
       "settings.refresh_models": "Osveži listu modela od provajdera",
-      "settings.syncProvider": "Osveži od provajdera",
+      "settings.syncProvider": "Osveži modele",
       "settings.syncProviderHint": "Preuzmi sve modele provajdera i osveži cene, podršku za slike i nazive (vaše ručne izmene se čuvaju)",
       "settings.syncing": "Osvežavanje…",
       "settings.help_url": "Adresa API servera provajdera",
@@ -736,7 +736,7 @@
       "key.invalid": "API ključ nije važeći",
       "export.user": "Korisnik",
       "export.title": "Ćaskanje",
-      "export.chat": "Izvezi razgovor",
+      "export.chat": "Izvezi",
       "export.system": "Sistem",
       "export.failed": "Izrada izvoza nije uspela.",
       "export.fmt_md": "Markdown",
@@ -828,7 +828,13 @@
       helpTipEl = el("div", "help-tip");
       document.body.appendChild(helpTipEl);
     }
-    helpTipEl.textContent = text;
+    // HTML-подсказка приоритетнее plain-текста (data-tooltip нужен делегированию).
+    var html = icon.getAttribute("data-tooltip-html");
+    if (html) {
+      helpTipEl.innerHTML = html;
+    } else {
+      helpTipEl.textContent = text;
+    }
     // Размеры считываем до показа: opacity на layout не влияет.
     var rect = icon.getBoundingClientRect();
     var tipWidth = helpTipEl.offsetWidth;
@@ -1074,7 +1080,7 @@
     return null;
   }
 
-  function requestApiModels(providerId, force) {
+  function requestApiModels(providerId, force, silent) {
     if (!providerId) {
       return;
     }
@@ -1085,6 +1091,8 @@
     if (!state.apiModels[providerId]) {
       state.apiModels[providerId] = { models: [], error: "" };
     }
+    // silent: фоновые автоподгрузки не показывают ошибку (например, «нужен ключ»).
+    state.apiModels[providerId].silent = !!silent;
     state.apiModels[providerId].loading = true;
     post({ type: "refresh_models", provider: providerId, force: !!force });
   }
@@ -1113,6 +1121,11 @@
       btn.classList.add("is-loading");
       btn.textContent = t("settings.syncing");
     }
+    // Ручной полный синк: ошибку показываем (silent снимаем).
+    if (!state.apiModels[providerId]) {
+      state.apiModels[providerId] = { models: [], error: "" };
+    }
+    state.apiModels[providerId].silent = false;
     post({ type: "sync_provider", provider: providerId, full: true });
   }
 
@@ -1145,7 +1158,7 @@
     });
   }
 
-  function requestModelsForProviders(force) {
+  function requestModelsForProviders(force, silent) {
     var providers = state.providers || [];
     for (var i = 0; i < providers.length; i++) {
       var provider = providers[i];
@@ -1153,7 +1166,7 @@
       if (!provider.has_key && provider.id !== "openrouter") {
         continue;
       }
-      requestApiModels(provider.id, force);
+      requestApiModels(provider.id, force, silent);
     }
   }
 
@@ -1178,7 +1191,8 @@
     return result;
   }
 
-  /* Компактная подпись цены: только когда провайдер отдал числа. */
+  /* Иконка «?» со стоимостью модели: показывается, только когда провайдер
+     отдал числа. Тултип собирается и как plain-текст (fallback), и как HTML. */
   function priceLabel(model) {
     if (!model || model.price_in === null || model.price_in === undefined) {
       return null;
@@ -1189,12 +1203,18 @@
     if (!isFinite(inPrice) || !isFinite(outPrice)) {
       return null;
     }
-    if (inPrice === 0 && outPrice === 0) {
-      return el("span", "mp-price mp-free", t("mp.free"));
-    }
-    var span = el("span", "mp-price", "$" + formatPrice(inPrice) + " / $" + formatPrice(outPrice));
-    span.title = t("mp.price_title");
-    return span;
+    var isFree = inPrice === 0 && outPrice === 0;
+    var inText = isFree ? t("mp.free") : "$" + formatPrice(inPrice);
+    var outText = isFree ? t("mp.free") : "$" + formatPrice(outPrice);
+    var icon = el("span", "help-icon mp-price-help", "?");
+    icon.setAttribute("data-tooltip", t("mp.price_title") + ": " + inText + " / " + outText);
+    icon.setAttribute("data-tooltip-html",
+      '<div class="price-tip">' +
+        '<div class="price-tip-title">' + escapeHtml(t("mp.price_title")) + "</div>" +
+        '<div class="price-tip-row"><span>' + escapeHtml(t("settings.price_in")) + "</span><b>" + escapeHtml(inText) + "</b></div>" +
+        '<div class="price-tip-row"><span>' + escapeHtml(t("settings.price_out")) + "</span><b>" + escapeHtml(outText) + "</b></div>" +
+      "</div>");
+    return icon;
   }
 
   function formatPrice(value) {
@@ -1207,22 +1227,9 @@
     return value.toFixed(2);
   }
 
-  /* Подпись модели для дропдауна настроек: имя плюс цена, если она известна. */
+  /* Подпись модели для дропдауна настроек: только имя (цена — в подсказке «?»). */
   function modelOptionLabel(model) {
-    var label = model.name || model.id;
-    if (!model || model.price_in === null || model.price_in === undefined) {
-      return label;
-    }
-    var inPrice = Number(model.price_in);
-    var outPrice = model.price_out === null || model.price_out === undefined
-      ? inPrice : Number(model.price_out);
-    if (!isFinite(inPrice) || !isFinite(outPrice)) {
-      return label;
-    }
-    if (inPrice === 0 && outPrice === 0) {
-      return label + "  · " + t("mp.free");
-    }
-    return label + "  · $" + formatPrice(inPrice) + "/$" + formatPrice(outPrice);
+    return model.name || model.id;
   }
 
   function settingsModelOptions(provider) {
@@ -1329,7 +1336,8 @@
 
   function openModelPicker() {
     byId("mpSearch").value = "";
-    requestModelsForProviders(false);
+    // Фоновая автоподгрузка: ошибки не всплывают тостами.
+    requestModelsForProviders(false, true);
     renderModelPicker();
     byId("modelPickerModal").style.display = "flex";
     byId("mpSearch").focus();
@@ -1340,7 +1348,8 @@
   }
 
   function refreshModelPicker() {
-    requestModelsForProviders(true);
+    // Ручное обновление: ошибки показываем.
+    requestModelsForProviders(true, false);
     renderModelPicker();
   }
 
@@ -3241,7 +3250,7 @@
     updateCustomMode(provider, models, true);
     // Список моделей дополняем подгруженными по API (без дублей).
     setModelDD.setOptions(settingsModelOptions(provider));
-    requestApiModels(provider.id, false);
+    requestApiModels(provider.id, false, true);
     var s = state.settings || {};
     var matched = false;
     for (var i = 0; i < models.length; i++) {
@@ -3331,14 +3340,6 @@
     return value;
   }
 
-  function onPriceEdit() {
-    // Цена правится вручную — помечаем модель как изменённую.
-    perModelDirty = true;
-    var badge = byId("setPriceSource");
-    badge.textContent = t("settings.price_manual");
-    badge.style.display = "inline-block";
-  }
-
   function onCtPriceEdit() {
     ctModelDirty = true;
     var badge = byId("ctPriceSource");
@@ -3353,9 +3354,7 @@
         temperature: parseFloat(byId("setTemperature").value),
         max_tokens: parseInt(byId("setMaxTokens").value, 10) || 4096,
         reasoning: byId("setReasoning").checked,
-        vision: setVisionDD.getSelected(),
-        price_in: parsePriceField("setPriceIn"),
-        price_out: parsePriceField("setPriceOut")
+        vision: setVisionDD.getSelected()
       };
     }
     var provider = setProviderDD.getSelected();
@@ -3411,21 +3410,6 @@
       visionSource.style.display = "inline-block";
     } else {
       visionSource.style.display = "none";
-    }
-    // Цена модели за 1 млн токенов: из подгруженного списка или задана вручную.
-    var priceIn = draft ? draft.price_in : model.price_in;
-    var priceOut = draft ? draft.price_out : model.price_out;
-    byId("setPriceIn").value = (priceIn === null || priceIn === undefined) ? "" : String(priceIn);
-    byId("setPriceOut").value = (priceOut === null || priceOut === undefined) ? "" : String(priceOut);
-    var priceSource = byId("setPriceSource");
-    if (model.price_source === "provider") {
-      priceSource.textContent = t("settings.price_from_provider");
-      priceSource.style.display = "inline-block";
-    } else if (model.price_source === "manual") {
-      priceSource.textContent = t("settings.price_manual");
-      priceSource.style.display = "inline-block";
-    } else {
-      priceSource.style.display = "none";
     }
     // Дополнительные поля пользовательской модели (URL/ключ/название/схема).
     var prov = providerById(provider);
@@ -3725,10 +3709,6 @@
       if (draft.vision !== undefined && draft.vision !== modelVisionChoice(drafted)) {
         modelPayload.vision = visionPayload(draft.vision);
       }
-      if (drafted && (draft.price_in !== drafted.price_in || draft.price_out !== drafted.price_out)) {
-        modelPayload.price_in = draft.price_in;
-        modelPayload.price_out = draft.price_out;
-      }
       post(modelPayload);
     }
     // Текущая модель, если изменена вручную.
@@ -3745,14 +3725,6 @@
       };
       if (setVisionDD.getSelected() !== modelVisionChoice(currentModel)) {
         currentPayload.vision = visionPayload(setVisionDD.getSelected());
-      }
-      if (currentModel) {
-        var curPriceIn = parsePriceField("setPriceIn");
-        var curPriceOut = parsePriceField("setPriceOut");
-        if (curPriceIn !== currentModel.price_in || curPriceOut !== currentModel.price_out) {
-          currentPayload.price_in = curPriceIn;
-          currentPayload.price_out = curPriceOut;
-        }
       }
       post(currentPayload);
     }
@@ -4191,13 +4163,17 @@
         }
         break;
       case "api_models":
+        // Прежний режим тишины сохраняем: фоновые запросы не показывают тост.
+        var prevApiModels = state.apiModels[msg.provider];
+        var wasSilent = !!(prevApiModels && prevApiModels.silent);
         state.apiModels[msg.provider] = {
           models: msg.models || [],
           error: msg.error || "",
-          loading: false
+          loading: false,
+          silent: wasSilent
         };
-        // Ошибку показываем только когда показать нечего: иначе работает кэш.
-        if (msg.error && (msg.models || []).length === 0) {
+        // Ошибку показываем только в ручном режиме и только когда показать нечего.
+        if (msg.error && (msg.models || []).length === 0 && !wasSilent) {
           showToast(msg.error, "err");
         }
         if (byId("modelPickerModal").style.display !== "none") {
@@ -4348,8 +4324,6 @@
       perModelDirty = true;
       byId("setReasoningBadge").style.display = "none";
     });
-    byId("setPriceIn").addEventListener("input", onPriceEdit);
-    byId("setPriceOut").addEventListener("input", onPriceEdit);
     byId("resetTemperature").addEventListener("click", function () {
       resetPerModelField("temperature");
     });
@@ -4488,7 +4462,8 @@
     byId("setModelsRefresh").addEventListener("click", function () {
       var pid = setProviderDD.getSelected();
       if (pid) {
-        requestApiModels(pid, true);
+        // Ручное обновление списка: ошибки показываем.
+        requestApiModels(pid, true, false);
       }
     });
     byId("setSyncProviderBtn").addEventListener("click", function () {
