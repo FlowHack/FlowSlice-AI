@@ -1248,3 +1248,84 @@ def test_openrouter_vision_without_refresh_uses_cache(engine, monkeypatch) -> No
     assert engine._openrouter_vision_map(refresh=False) == {"some/model": True}
 
 
+def test_toggle_favorite_adds_and_removes(engine, monkeypatch) -> None:
+    """toggle_favorite добавляет модель, повторный вызов убирает её."""
+    posts = []
+    monkeypatch.setattr(engine, "_post", posts.append)
+    engine._handle_toggle_favorite({"provider": "deepseek", "model": "deepseek-chat"})
+    assert engine._config["favorites"] == ["deepseek::deepseek-chat"]
+    assert posts[-1]["kind"] == "ok"
+    assert posts[-1]["text"] == engine._t("favorite.added", name="deepseek-chat")
+    engine._handle_toggle_favorite({"provider": "deepseek", "model": "deepseek-chat"})
+    assert engine._config["favorites"] == []
+    assert posts[-1]["text"] == engine._t("favorite.removed", name="deepseek-chat")
+    # Дубли в старом списке схлопываются при следующем переключении.
+    engine._config["favorites"] = [
+        "deepseek::deepseek-chat",
+        "deepseek::deepseek-chat",
+    ]
+    engine._handle_toggle_favorite(
+        {"provider": "deepseek", "model": "deepseek-reasoner"}
+    )
+    assert engine._config["favorites"] == [
+        "deepseek::deepseek-chat",
+        "deepseek::deepseek-reasoner",
+    ]
+
+
+def test_favorites_normalized_on_config_load(engine) -> None:
+    """_normalize_config() чистит избранное: мусор и дубли отсеиваются."""
+    data = {
+        "favorites": [
+            "deepseek::deepseek-chat",
+            "  deepseek :: deepseek-reasoner  ",
+            "deepseek::deepseek-chat",
+            "bad",
+            "::model",
+            "provider::",
+            42,
+            None,
+        ]
+    }
+    result = engine._normalize_config(data)
+    assert result["favorites"] == [
+        "deepseek::deepseek-chat",
+        "deepseek::deepseek-reasoner",
+    ]
+
+
+def test_pick_chat_restores_chat_model(engine) -> None:
+    """Переключение чата восстанавливает сохранённую за ним модель."""
+    first = engine._active_chat()
+    first["model"] = "deepseek::deepseek-chat"
+    second = engine._create_chat()
+    second["model"] = "deepseek::deepseek-reasoner"
+    engine._config["active_model"] = "deepseek-chat"
+    engine._handle_pick_chat({"id": first["id"]})
+    assert engine._config["active_model"] == "deepseek-chat"
+    engine._handle_pick_chat({"id": second["id"]})
+    assert engine._config["active_model"] == "deepseek-reasoner"
+
+
+def test_new_chat_uses_default_model(engine) -> None:
+    """Новый чат получает в поле model валидную модель по умолчанию."""
+    engine._config["default_model"] = "deepseek::deepseek-reasoner"
+    chat = engine._create_chat()
+    assert chat["model"] == "deepseek::deepseek-reasoner"
+    # Невалидная ссылка не должна попадать в чат.
+    engine._config["default_model"] = "broken"
+    chat2 = engine._create_chat()
+    assert chat2["model"] == ""
+
+
+def test_append_assistant_records_model(engine) -> None:
+    """_append_assistant() фиксирует модель, сгенерировавшую ответ."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-reasoner"
+    engine._append_assistant("Ответ")
+    msg = engine._active_chat()["msgs"][-1]
+    assert msg["provider"] == "deepseek"
+    assert msg["model"] == "deepseek-reasoner"
+    assert msg["model_name"] == "DeepSeek V4 Pro"
+
+

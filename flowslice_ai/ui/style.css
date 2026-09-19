@@ -422,6 +422,11 @@ select option {
 .msg-meta {
   opacity: 0.85;
 }
+.msg-model {
+  margin-left: 6px;
+  color: var(--orca-muted);
+  font-size: 11px;
+}
 .compact-note {
   align-self: center;
   margin: 6px 0;
@@ -1363,6 +1368,21 @@ select option {
 }
 .mp-star.active {
   color: var(--orca-accent);
+}
+.mp-fav {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--orca-muted);
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.mp-fav:hover {
+  color: #d9534f;
+}
+.mp-fav.active {
+  color: #d9534f;
 }
 .mp-empty {
   padding: 14px 10px;

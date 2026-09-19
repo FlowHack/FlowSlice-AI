@@ -309,6 +309,34 @@ class CoreMixin:
         merged["font_size"] = font_size
         usage = merged.get("usage")
         merged["usage"] = dict(usage) if isinstance(usage, dict) else {}
+        # Избранные модели: список ссылок "provider::model" без мусора и дублей.
+        merged["favorites"] = self._normalize_favorites(merged.get("favorites"))
+
+    @staticmethod
+    def _normalize_favorites(raw: Any) -> list[str]:
+        """Приводит список избранного к ссылкам "provider::model" без дублей.
+
+        Мусор (не строки, пустые значения, отсутствие разделителя "::")
+        отбрасывается; порядок первого появления сохраняется.
+        """
+        if not isinstance(raw, list):
+            return []
+        result: list[str] = []
+        seen: set[str] = set()
+        for item in raw:
+            if not isinstance(item, str):
+                continue
+            provider, sep, model = item.partition("::")
+            provider = provider.strip()
+            model = model.strip()
+            if not sep or not provider or not model:
+                continue
+            ref = provider + "::" + model
+            if ref in seen:
+                continue
+            seen.add(ref)
+            result.append(ref)
+        return result
 
     def _migrate_legacy_config(self: "_ChatEngine", data: dict) -> dict:
         """Преобразует старую схему конфигурации в новую."""
@@ -442,6 +470,8 @@ class CoreMixin:
         self._ctx_tokens = self._estimate_context_tokens(
             active_chat.get("context_flags", {}), active_chat.get("context_modes", {})
         )
+        # При старте плагина восстанавливаем модель активного чата.
+        self._apply_chat_model(active_chat)
 
     @staticmethod
     def _strip_legacy_markers(text: str) -> str:
@@ -601,18 +631,17 @@ class CoreMixin:
         self._active = chat["id"]
         self._ctx_tokens = self._estimate_context_tokens(flags, modes)
         # Новый чат стартует на модели по умолчанию (конфиг уже нормализован).
-        default_model = str(self._config.get("default_model", ""))
-        if "::" in default_model:
-            d_provider, d_model = default_model.split("::", 1)
-            providers = self._config.get("providers", {})
-            if d_provider in providers and d_model in providers[d_provider].get("models", {}):
-                if (
-                    self._config.get("active_provider") != d_provider
-                    or self._config.get("active_model") != d_model
-                ):
-                    self._config["active_provider"] = d_provider
-                    self._config["active_model"] = d_model
-                    self._persist_config()
+        default_ref = self._default_model_ref()
+        chat["model"] = default_ref
+        if default_ref:
+            d_provider, d_model = default_ref.split("::", 1)
+            if (
+                self._config.get("active_provider") != d_provider
+                or self._config.get("active_model") != d_model
+            ):
+                self._config["active_provider"] = d_provider
+                self._config["active_model"] = d_model
+                self._persist_config()
         self._save_chats()
         return chat
 
@@ -629,6 +658,62 @@ class CoreMixin:
         if chat is None:
             chat = self._create_chat()
         return chat
+
+    def _default_model_ref(self: "_ChatEngine") -> str:
+        """Возвращает валидную ссылку «provider::model» модели по умолчанию."""
+        default_ref = str(self._config.get("default_model", ""))
+        provider, sep, model = default_ref.partition("::")
+        if not sep or not provider or not model:
+            return ""
+        providers = self._config.get("providers", {})
+        prov = providers.get(provider)
+        if isinstance(prov, dict) and model in prov.get("models", {}):
+            return provider + "::" + model
+        return ""
+
+    def _remember_chat_model(self: "_ChatEngine", provider: str, model: str) -> None:
+        """Запоминает модель за активным чатом и сохраняет историю."""
+        if not provider or not model:
+            return
+        chat = self._active_chat()
+        chat["model"] = provider + "::" + model
+        chat["updated"] = time.time()
+        self._save_chats()
+
+    def _apply_chat_model(self: "_ChatEngine", chat: dict[str, Any]) -> bool:
+        """Применяет модель, сохранённую за чатом.
+
+        Возвращает True, если модель валидна и активная модель обновлена.
+        """
+        ref = str(chat.get("model", "")) if isinstance(chat, dict) else ""
+        provider, sep, model = ref.partition("::")
+        if not sep or not provider or not model:
+            return False
+        providers = self._config.get("providers", {})
+        prov = providers.get(provider)
+        if not isinstance(prov, dict) or model not in prov.get("models", {}):
+            return False
+        if (
+            self._config.get("active_provider") != provider
+            or self._config.get("active_model") != model
+        ):
+            self._config["active_provider"] = provider
+            self._config["active_model"] = model
+            self._persist_config()
+        return True
+
+    def _active_model_info(self: "_ChatEngine") -> tuple[str, str, str]:
+        """Возвращает (провайдер, id модели, человекочитаемое имя)."""
+        prov_id = str(self._config.get("active_provider", ""))
+        model_id = str(self._config.get("active_model", ""))
+        model_name = model_id
+        providers = self._config.get("providers", {})
+        prov = providers.get(prov_id)
+        if isinstance(prov, dict):
+            entry = prov.get("models", {}).get(model_id)
+            if isinstance(entry, dict) and entry.get("name"):
+                model_name = str(entry["name"])
+        return prov_id, model_id, model_name
 
     def _next_msg_id(self: "_ChatEngine") -> int:
         """Возвращает следующий идентификатор сообщения и инкрементирует счётчик."""
@@ -649,12 +734,16 @@ class CoreMixin:
     def _append_assistant(self: "_ChatEngine", text: str) -> None:
         """Добавляет сообщение ассистента в активный чат и обновляет UI."""
         chat = self._active_chat()
+        prov_id, model_id, model_name = self._active_model_info()
         chat["msgs"].append(
             {
                 "id": self._next_msg_id(),
                 "role": "assistant",
                 "text": text,
                 "ts": time.time(),
+                "provider": prov_id,
+                "model": model_id,
+                "model_name": model_name,
             }
         )
         chat["updated"] = time.time()

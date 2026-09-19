@@ -105,11 +105,19 @@ class GenerationMixin:
             self._gen = False
             return
         msg_id = self._next_msg_id()
+        # Снимок модели текущего запроса: ответ должен ссылаться на неё,
+        # даже если пользователь переключит модель во время генерации.
+        prov_id, model_id, model_name = self._active_model_info()
+        if model_id:
+            chat["model"] = prov_id + "::" + model_id
         assistant_msg: dict[str, Any] = {
             "id": msg_id,
             "role": "assistant",
             "text": "",
             "ts": time.time(),
+            "provider": prov_id,
+            "model": model_id,
+            "model_name": model_name,
         }
         pending = self._pending_variants.pop(chat_id, None)
         if pending:

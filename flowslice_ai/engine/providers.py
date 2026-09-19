@@ -54,6 +54,7 @@ class ProvidersMixin:
         self._config["active_model"] = model
         self._config = self._normalize_config(self._config)
         self._persist_config()
+        self._remember_chat_model(provider, model)
         self._send_state()
         self._post({"type": "toast", "text": self._t("model.selected", name=model), "kind": "ok"})
 
@@ -81,6 +82,53 @@ class ProvidersMixin:
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("model.default_set", name=model), "kind": "ok"}
+        )
+
+    def _handle_toggle_favorite(self: "_ChatEngine", message: dict) -> None:
+        """Добавляет модель в избранное или убирает её оттуда."""
+        provider = str(message.get("provider", "")).strip()
+        model = str(message.get("model", "")).strip()
+        providers = self._config.get("providers", {})
+        if provider not in providers:
+            self._post(
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
+            )
+            return
+        if model not in providers[provider].get("models", {}):
+            # Модель могла быть выбрана из подгруженного списка провайдера.
+            info = self._api_model_by_id(provider, model)
+            if not self._ensure_model_from_api(provider, model, info):
+                self._post(
+                    {"type": "toast", "text": self._t("model.not_found"), "kind": "err"}
+                )
+                return
+        ref = provider + "::" + model
+        raw = self._config.get("favorites")
+        favorites = (
+            [item for item in raw if isinstance(item, str)]
+            if isinstance(raw, list)
+            else []
+        )
+        if ref in favorites:
+            favorites = [item for item in favorites if item != ref]
+            toast_key = "favorite.removed"
+        else:
+            favorites.append(ref)
+            toast_key = "favorite.added"
+        # Дедуп с сохранением порядка первого появления.
+        seen: set[str] = set()
+        unique: list[str] = []
+        for item in favorites:
+            if item in seen:
+                continue
+            seen.add(item)
+            unique.append(item)
+        self._config["favorites"] = unique
+        self._config = self._normalize_config(self._config)
+        self._persist_config()
+        self._send_state()
+        self._post(
+            {"type": "toast", "text": self._t(toast_key, name=model), "kind": "ok"}
         )
 
     def _api_model_by_id(
@@ -152,6 +200,7 @@ class ProvidersMixin:
         self._config["active_model"] = model_id
         self._config = self._normalize_config(self._config)
         self._persist_config()
+        self._remember_chat_model(provider, model_id)
         self._send_state()
         self._post(
             {"type": "toast", "text": self._t("model.selected", name=model_id), "kind": "ok"}

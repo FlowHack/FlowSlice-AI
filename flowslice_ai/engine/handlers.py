@@ -98,6 +98,8 @@ class HandlersMixin:
             self._handle_set_api_model(message)
         elif msg_type == "import_api_model":
             self._handle_import_api_model(message)
+        elif msg_type == "toggle_favorite":
+            self._handle_toggle_favorite(message)
         elif msg_type == "refresh_models":
             self._handle_refresh_models(message)
         elif msg_type == "sync_provider":
@@ -242,6 +244,18 @@ class HandlersMixin:
         if self._chat_by_id(chat_id) is not None:
             self._active = chat_id
             chat = self._active_chat()
+            # Восстанавливаем модель, сохранённую за чатом, либо дефолтную.
+            if not self._apply_chat_model(chat):
+                default_ref = self._default_model_ref()
+                if default_ref:
+                    d_provider, d_model = default_ref.split("::", 1)
+                    if (
+                        self._config.get("active_provider") != d_provider
+                        or self._config.get("active_model") != d_model
+                    ):
+                        self._config["active_provider"] = d_provider
+                        self._config["active_model"] = d_model
+                        self._persist_config()
             self._ctx_tokens = self._estimate_context_tokens(
                 chat.get("context_flags", {}), chat.get("context_modes", {})
             )

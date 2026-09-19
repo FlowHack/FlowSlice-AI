@@ -126,6 +126,31 @@ check("toMillis миллисекунды", pure.toMillis(1789809720000), 1789809
 check("toMillis ноль", pure.toMillis(0), 0);
 check("toMillis мусор", pure.toMillis("нет"), 0);
 
+// Ссылки на модели для избранного: "provider::model".
+check("favoriteRef", pure.favoriteRef("deepseek", "deepseek-chat"), "deepseek::deepseek-chat");
+check("favoriteRef числа", pure.favoriteRef(1, 2), "1::2");
+
+check(
+  "parseModelRef обычная",
+  JSON.stringify(pure.parseModelRef("deepseek::deepseek-chat")),
+  JSON.stringify({ provider: "deepseek", model: "deepseek-chat" })
+);
+check(
+  "parseModelRef первый разделитель",
+  JSON.stringify(pure.parseModelRef("a::b::c")),
+  JSON.stringify({ provider: "a", model: "b::c" })
+);
+check(
+  "parseModelRef обрезка пробелов",
+  JSON.stringify(pure.parseModelRef("  deepseek :: deepseek-chat  ")),
+  JSON.stringify({ provider: "deepseek", model: "deepseek-chat" })
+);
+check("parseModelRef без разделителя", pure.parseModelRef("deepseek-chat"), null);
+check("parseModelRef пустой провайдер", pure.parseModelRef("::model"), null);
+check("parseModelRef пустая модель", pure.parseModelRef("provider::"), null);
+check("parseModelRef не строка", pure.parseModelRef(null), null);
+check("parseModelRef число", pure.parseModelRef(42), null);
+
 if (failures > 0) {
   console.error(`Провалено проверок: ${failures}`);
   process.exit(1);
