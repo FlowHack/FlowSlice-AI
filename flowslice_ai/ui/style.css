@@ -708,7 +708,7 @@ select option {
 .compact-progress {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   width: clamp(160px, 32vw, 320px);
   max-width: 100%;
   cursor: default;
@@ -740,11 +740,11 @@ select option {
 }
 .compact-progress-text {
   flex: 0 0 auto;
-  min-width: 32px;
+  min-width: 24px;
   font-size: 11px;
   line-height: 1;
   color: var(--orca-muted);
-  text-align: right;
+  text-align: left;
 }
 .compact-progress.warn .compact-progress-bar {
   background: #e08a2e;
