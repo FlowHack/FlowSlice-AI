@@ -234,6 +234,34 @@ jobs:
             echo "Не удалось получить OIDC-токен GitHub (проверьте permissions: id-token: write)" >&2
             exit 1
           fi
+          echo "::group::OIDC claims GitHub (диагностика публикации)"
+          OIDC_TOKEN="$oidc_token" python3 - <<'PY'
+          import base64
+          import json
+          import os
+
+          payload = os.environ["OIDC_TOKEN"].split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(payload))
+          keys = (
+              "iss",
+              "aud",
+              "sub",
+              "repository",
+              "repository_id",
+              "repository_owner",
+              "ref",
+              "event_name",
+              "workflow_ref",
+              "job_workflow_ref",
+              "run_id",
+              "sha",
+          )
+          for key in keys:
+              if key in claims:
+                  print(f"{key}: {claims[key]}")
+          PY
+          echo "::endgroup::"
           status="$(curl -sS -o orcacloud-response.json -w '%{http_code}' \
             -H "Authorization: Bearer ${oidc_token}" \
             "${args[@]}" \
