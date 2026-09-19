@@ -18,6 +18,7 @@ It sees your model, profiles and print history, and helps with mechanics, Klippe
 - [Commands](#-commands)
 - [Privacy & data](#-privacy--data)
 - [FAQ](#-faq)
+- [Links](#-links)
 
 ---
 
@@ -376,3 +377,11 @@ The donation details are static addresses hard-coded in the plugin; copying them
 | Where is the chat history stored? | In `data_dir()/flowslice_ai/chats.json` inside the Orca Slicer data directory. |
 | Can I use my own server? | Yes. On the **Custom** tab, add your own provider: specify the base URL, API scheme (OpenAI- or Anthropic-compatible), key and model ID. |
 | What if the model list is out of date? | Click **Refresh models** next to the provider, or enable **Auto-refresh providers** on the **General** tab — the catalog, prices and image-support flag will update automatically. |
+
+---
+
+## 🔗 Links
+
+- Author: [@FlowHack](https://github.com/FlowHack)
+- Source code: [FlowHack/flowslice-ai](https://github.com/FlowHack/flowslice-ai)
+- Questions and bug reports: [Issues](https://github.com/FlowHack/flowslice-ai/issues)

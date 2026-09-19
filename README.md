@@ -33,6 +33,7 @@
 - [Приватность и данные](#-приватность-и-данные)
 - [Частые вопросы](#-частые-вопросы)
 - [Разработка](#-разработка)
+- [Обратная связь](#-обратная-связь)
 - [Лицензия](#-лицензия)
 
 ---
@@ -501,6 +502,16 @@ PYTHONPATH=stubs pylint flowslice_ai --fail-under=9.0
 PYTHONPATH=stubs pyright flowslice_ai   # 0 errors
 pytest tests/
 ```
+
+---
+
+## 🐞 Обратная связь
+
+Автор — [@FlowHack](https://github.com/FlowHack). Исходный код — в репозитории
+[FlowHack/flowslice-ai](https://github.com/FlowHack/flowslice-ai).
+
+Вопросы, сообщения об ошибках и предложения задавайте в
+[Issues](https://github.com/FlowHack/flowslice-ai/issues) на GitHub.
 
 ---
 
