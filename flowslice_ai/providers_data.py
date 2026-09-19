@@ -390,8 +390,10 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
     },
 }
 
-# Поддержка изображений по умолчанию: True — модель принимает изображения,
-# False — не принимает, None — неизвестно (тогда уходят обе подсказки).
+# Поддержка изображений по умолчанию: True/False ставится только там, где это
+# достоверно известно для всех моделей провайдера (подтверждено каталогами
+# OpenRouter/провайдера). Если данные смешанные или неизвестны — None: значение
+# уточняется синхронизацией (кросс-карта OpenRouter и API провайдера).
 # Ключ — (id провайдера, id модели); "*" задаёт значение для всех моделей.
 _VISION_BY_MODEL: dict[tuple[str, str], bool | None] = {
     ("deepseek", "*"): False,
@@ -399,10 +401,10 @@ _VISION_BY_MODEL: dict[tuple[str, str], bool | None] = {
     ("google", "*"): True,
     ("anthropic", "*"): True,
     ("openai", "*"): True,
-    ("groq", "*"): False,
+    ("groq", "*"): None,
     ("glm", "*"): None,
-    ("cerebras", "*"): False,
-    ("mistral", "*"): True,
+    ("cerebras", "*"): None,
+    ("mistral", "*"): None,
     ("xai", "*"): None,
     ("nordrouter", "*"): None,
 }

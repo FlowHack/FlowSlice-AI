@@ -760,7 +760,8 @@ class ApiClientMixin:
         try:
             return max(0.0, float(raw))
         except (TypeError, ValueError):
-            pass
+            # Не число: возможно, провайдер прислал HTTP-дату — разбираем ниже.
+            _LOGGER.debug("Retry-After не является числом: %r", raw)
         # Некоторые провайдеры присылают Retry-After как HTTP-дату.
         try:
             parsed = parsedate_to_datetime(raw)

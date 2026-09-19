@@ -596,3 +596,16 @@ def test_resolve_vision_no_cross_provider_false_positive() -> None:
     catalog = {"openai/gpt-5.4": True}
     assert resolve_vision("groq", "gpt-5.4", catalog) is None
     assert resolve_vision("openai", "absent", catalog) is None
+
+
+def test_builtin_vision_defaults_unknown_is_none() -> None:
+    """Неизвестное зрение встроенных моделей — None, известное — True/False."""
+    from flowslice_ai.providers_data import DEFAULT_PROVIDERS
+
+    groq_models = DEFAULT_PROVIDERS["groq"]["models"].values()
+    assert all(model["vision"] is None for model in groq_models)
+    assert all(
+        model["vision"] is None for model in DEFAULT_PROVIDERS["cerebras"]["models"].values()
+    )
+    assert DEFAULT_PROVIDERS["deepseek"]["models"]["deepseek-chat"]["vision"] is False
+    assert DEFAULT_PROVIDERS["google"]["models"]["gemini-2.5-flash"]["vision"] is True

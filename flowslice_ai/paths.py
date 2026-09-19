@@ -20,8 +20,8 @@ def atomic_write_text(path: pathlib.Path, text: str, encoding: str = "utf-8") ->
         # Убираем временный файл, чтобы не мусорить в каталоге данных.
         try:
             tmp.unlink()
-        except OSError:
-            pass
+        except OSError as exc:
+            _LOGGER.warning("Не удалось удалить временный файл %s: %s", tmp, exc)
         raise
 
 

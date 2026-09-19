@@ -47,20 +47,22 @@ What the assistant can do:
 - Chat history search
 - Pin important chats
 - History saved between sessions
+- Up to 200 messages per chat
 
 </td>
 <td width="50%" valign="top">
 
 ### 🧠 Slicer context
-- Model on the plate: dimensions, volume, position, mesh integrity (manifold), instances
+- Model on the plate: dimensions, volume, surface area, triangles, position, mesh integrity (manifold), instances
 - Printer, filament and print profiles
 - Full parameter dump or only changed vs. the base preset
 - Profile notes and start/end G-code
 - Context checkboxes right in the chat panel, remembered per chat
 
 ### 🔌 Providers & models
-- 10 built-in providers out of the box
+- 11 built-in providers out of the box
 - Your own OpenAI/Anthropic-compatible providers
+- Model catalog sync: "Refresh from provider" button and auto-refresh
 - Per-model tuning: temperature, max tokens, reasoning mode
 - Default model and per-model notes
 - Usage statistics (📊)
@@ -69,9 +71,9 @@ What the assistant can do:
 </tr>
 </table>
 
-- **Attachments:** photos (up to 4 MB, compressed to 1024 px) and text files (up to 100,000 characters).
+- **Attachments:** photos (up to 4 MB on the client, compressed to 1024 px) and text files (up to 100,000 characters each, 400,000 in total).
 - **Localization:** English / Russian / Serbian (English by default).
-- **Themes:** auto (native Orca) / pure white / pure black, signature red accent.
+- **Themes:** auto (native Orca) / pure white / pure black, signature red accent `#d9534f`.
 
 ---
 
@@ -131,8 +133,8 @@ Type a message and press **Enter**. For example:
 - "Recommend nozzle and bed temperature for my filament."
 
 ### Step 5. Manage context
-The chat panel has **Filament**, **Printer**, **Print settings** and **History** checkboxes. Tick
-what the assistant should take into account. Each profile has a dropdown next to it:
+The chat panel has **Model**, **Filament**, **Printer**, **Print settings** and **History** checkboxes.
+Tick what the assistant should take into account. Each profile has a dropdown next to it:
 
 - **changed** — send only the parameters you changed (saves tokens);
 - **all** — send the full profile.
@@ -162,6 +164,7 @@ All keys are created in the providers' personal dashboards. The **API key** fiel
 | **Cerebras** | https://cloud.cerebras.ai/ | fast inference |
 | **Mistral** | https://console.mistral.ai/api-keys | Mistral models |
 | **xAI** | https://console.x.ai/ | Grok models |
+| **NordRouter** | https://nordrouter.com/ | OpenAI-compatible aggregator, public price list |
 
 > 🔒 The key is stored locally in the Orca Slicer plugin settings and is sent only to the server of
 > the provider you selected. The plugin never forwards it to third parties.
@@ -174,15 +177,31 @@ Settings open via the gear in the chat window and are split into four tabs.
 
 | Tab | What you can configure |
 | --- | --- |
-| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode. The **Add model** button and the trash icon sit next to it. |
+| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode. The **Refresh from provider** button and the trash icon sit next to it. |
 | **Custom** | Your own OpenAI/Anthropic-compatible providers and models: base URL, API scheme, key, model ID and name. |
-| **General** | Notes for the context, default temperature / max tokens / reasoning mode; reset models. |
+| **General** | Notes for the context, default temperature / max tokens / reasoning mode; provider auto-refresh (`auto_sync_providers`); reset models. |
 | **Appearance** | Theme (auto / white / black), font size and style, interface language. |
 
-- Model values can be tuned individually; if a field is left empty, the general defaults apply.
+- Model values can be tuned individually; if a field is left empty, the general defaults apply
+  (`temperature = 0.7`, `max_tokens = 4096`, reasoning off by default).
 - The **Reset** button affects only the current tab.
 - The **General** tab has **Reset models** and **Reset custom models**.
 - Changes apply only after clicking **Save**.
+
+---
+
+## 🔄 Model catalog sync
+
+- Every provider has a **Refresh from provider** button. It loads the provider's full model list into
+  a session cache — the config does not grow. Names, prices and the image-support flag are refreshed.
+- The **Auto-refresh providers** checkbox (`auto_sync_providers`) is on by default and runs on plugin
+  start and after an API key is saved.
+- **Prices** come from the specific provider: OpenRouter uses its own pricing catalog, NordRouter uses
+  its public price list.
+- **Image support** is derived from the OpenRouter catalog with the provider prefix (for every
+  provider except OpenRouter itself).
+- When a model is added or imported, its metadata is requested from the provider immediately.
+- Manual values and `temperature` / `max_tokens` / `reasoning` are never overwritten by auto-sync.
 
 ---
 
@@ -192,7 +211,7 @@ The context panel in the chat decides what the assistant learns about your proje
 
 | Checkbox | What it sends |
 | --- | --- |
-| **Model** | Dimensions, volume, position on the plate, mesh integrity (manifold), number of instances. |
+| **Model** | Dimensions, volume, surface area, triangle count, position on the plate, mesh integrity (manifold), number of instances. |
 | **Filament** | Filament profile: material, temperatures, flow, cooling and notes. |
 | **Printer** | Printer profile: kinematics, nozzle, bed, limits and start/end G-code. |
 | **Print settings** | Process profile: layers, perimeters, infill, speeds, supports. |
@@ -203,16 +222,30 @@ base preset) and **all** (the full profile). Selected checkboxes and modes are r
 
 ---
 
-## 📎 Attachments
+## 📎 Attachments and limits
 
-- **Photos:** attach a photo of a print defect or a part. The image is compressed to 1024 px and sent
-  only to models that support images. If the selected model does not, the plugin tells you and does not
-  send the file.
+- **Photos:** attach a photo of a print defect or a part. The image is compressed to 1024 px (JPEG)
+  and sent only to models that support images. The client limit is 4 MB per image, the server limit is
+  6 MB base64. If the selected model does not support images, the plugin tells you and does not send
+  the file.
 - **Text files:** the file contents (up to 100,000 characters per file, 400,000 in total) are added to
   the message as plain text, so they work with any model.
+- **Count:** up to 10 attachments per message, including up to 10 images per request.
 
 > To analyze photos, choose an image-capable model, e.g. via OpenRouter (`Auto`, `Free` or a specific
 > vision model).
+
+### Limits and auto-compaction
+
+| Parameter | Value |
+| --- | --- |
+| Attachments per message | up to 10 |
+| Images per request | up to 10 |
+| Single image | 1024 px, JPEG; client 4 MB, server 6 MB base64 |
+| Text attachment | 100,000 characters; 400,000 in total |
+| Messages per chat | up to 200 |
+| Context window | 128,000 tokens |
+| Auto-compaction | at 80% of the window (can be disabled in settings) |
 
 ---
 
@@ -223,13 +256,13 @@ Type a command in the chat input and press **Enter**.
 | Command | Description |
 | --- | --- |
 | `/context` | Show slicer context (model, profiles, checkboxes, history) |
-| `/clear` | Clear the current chat |
 | `/compact` | Compress the chat history into a short summary (manually) |
+| `/clear` | Clear the current chat |
 | `/model` | Show the model-on-the-plate report |
 | `/printer` | Show the print-profile summary |
 | `/stats` | Show usage statistics |
 | `/help` | List commands |
-| `/reset` | Reset plugin settings |
+| `/reset` | Reset plugin settings (`/reset chats` — clear chats) |
 
 **Hotkeys:** `Enter` — send, `Shift+Enter` — new line.
 
@@ -288,4 +321,11 @@ In `data_dir()/flowslice_ai/chats.json` inside the Orca Slicer data directory.
 
 Yes. On the **Custom** tab, add your own provider: specify the base URL, API scheme (OpenAI- or
 Anthropic-compatible), key and model ID.
+</details>
+
+<details>
+<summary><b>What if the model list is out of date?</b></summary>
+
+Click **Refresh from provider** next to the provider, or enable **Auto-refresh providers** on the
+**General** tab — the catalog, prices and image-support flag will update automatically.
 </details>
