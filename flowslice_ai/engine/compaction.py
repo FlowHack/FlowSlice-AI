@@ -75,35 +75,59 @@ class CompactionMixin:
             return None
         return start, end
 
-    def _compact_transcript(self: "_ChatEngine", chat: dict[str, Any]) -> str:
-        """Собирает текст сжимаемых сообщений в одну строку."""
+    def _compact_transcript(
+        self: "_ChatEngine", chat: dict[str, Any]
+    ) -> tuple[str, int]:
+        """Собирает выжимку сжимаемых сообщений и границу реального покрытия.
+
+        Возвращает пару (текст, covered_end). covered_end — индекс, до которого
+        сообщения действительно попали в текст: из-за предела
+        COMPACT_MAX_SOURCE_CHARS он может быть меньше конца диапазона.
+        Помечать сводкой сообщения, которых модель не видела, нельзя —
+        иначе они навсегда исчезнут из контекста.
+        """
         bounds = self._compact_range(chat)
         if bounds is None:
-            return ""
+            return "", 0
         start, end = bounds
         msgs = chat.get("msgs", [])
         parts: list[str] = []
         total = 0
-        for msg in msgs[start:end]:
+        covered_end = start
+        for index in range(start, end):
+            msg = msgs[index]
             if not isinstance(msg, dict):
+                # Служебное сообщение в контекст не попадает — его можно считать покрытым.
+                covered_end = index + 1
                 continue
             if msg.get("role") not in ("user", "assistant"):
+                covered_end = index + 1
                 continue
             if msg.get("error"):
+                covered_end = index + 1
                 continue
             text = str(msg.get("text", "") or "")
             if not text:
                 text = self._message_text(msg)
             text = text.strip()
             if not text:
+                covered_end = index + 1
                 continue
             prefix = "User" if msg.get("role") == "user" else "Assistant"
             line = f"{prefix}: {text}"
-            if total + len(line) > COMPACT_MAX_SOURCE_CHARS:
+            remaining = COMPACT_MAX_SOURCE_CHARS - total
+            if remaining <= 0:
+                break
+            if len(line) > remaining:
+                # Последнее сообщение влезает лишь частично: обрезаем и
+                # останавливаемся, но именно его считаем покрытым.
+                parts.append(line[:remaining].rstrip() + "…")
+                covered_end = index + 1
                 break
             parts.append(line)
-            total += len(line)
-        return "\n\n".join(parts)
+            total += len(line) + 2
+            covered_end = index + 1
+        return "\n\n".join(parts), covered_end
 
     def _compact_count(self: "_ChatEngine", chat: dict[str, Any]) -> int:
         """Возвращает число новых сообщений, доступных для сжатия."""
@@ -135,13 +159,14 @@ class CompactionMixin:
         bounds = self._compact_range(chat)
         if bounds is None:
             return False
+        start, _end = bounds
         new_count = self._compact_count(chat)
         if new_count < 1:
             return False
         if not force and new_count < COMPACT_MIN_NEW_MESSAGES:
             return False
-        transcript = self._compact_transcript(chat)
-        if not transcript:
+        transcript, covered_end = self._compact_transcript(chat)
+        if not transcript or covered_end <= start:
             return False
         previous = str(chat.get("summary", "") or "")
         user_content = transcript
@@ -166,12 +191,13 @@ class CompactionMixin:
         if not summary:
             _LOGGER.warning("Модель вернула пустую сводку истории чата")
             return False
-        start, end = bounds
         chat["summary"] = summary[: COMPACT_MAX_SOURCE_CHARS]
-        chat["summary_count"] = end
+        # Границы может урезать лимит выжимки: покрытыми считаются только
+        # сообщения, которые реально ушли модели-сводчику.
+        chat["summary_count"] = covered_end
         chat["summary_at"] = time.time()
         self._save_chats()
-        _LOGGER.info("История чата сжата: сообщений покрыто %s", end - start)
+        _LOGGER.info("История чата сжата: сообщений покрыто %s", covered_end - start)
         return True
 
     def _compact_worker(self: "_ChatEngine", chat_id: Any) -> None:

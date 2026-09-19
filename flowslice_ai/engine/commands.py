@@ -244,6 +244,11 @@ class CommandsMixin:
         chat = self._active_chat()
         chat["msgs"] = []
         chat["title"] = ""
+        # Сводка прошлой переписки больше не актуальна: без сброса она
+        # продолжала бы уходить модели в системном промпте.
+        chat["summary"] = ""
+        chat["summary_count"] = 0
+        chat.pop("summary_at", None)
         chat["updated"] = time.time()
         self._ctx_tokens = 0
         self._save_chats()

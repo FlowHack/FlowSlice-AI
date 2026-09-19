@@ -263,11 +263,64 @@ def test_compact_count_and_transcript(engine) -> None:
     ] + [{"id": i, "role": "user", "text": f"хвост {i}", "ts": 0} for i in range(5, 9)]
     chat["summary_count"] = 0
     assert engine._compact_count(chat) == 2
-    transcript = engine._compact_transcript(chat)
+    transcript, covered_end = engine._compact_transcript(chat)
     assert "User: вопрос один" in transcript
     assert "Assistant: ответ один" in transcript
     assert "служебное" not in transcript
     assert "сбой" not in transcript
+    assert covered_end == 4
+
+
+def test_compact_transcript_stops_at_char_limit(engine) -> None:
+    """Лимит выжимки не помечает покрытыми сообщения, которых не видел сводчик."""
+    chat = engine._active_chat()
+    chat["msgs"] = [
+        {"id": 1, "role": "user", "text": "я" * 70_000, "ts": 0},
+        {"id": 2, "role": "assistant", "text": "ответ", "ts": 0},
+    ] + [{"id": i, "role": "user", "text": f"хвост {i}", "ts": 0} for i in range(3, 7)]
+    chat["summary_count"] = 0
+
+    transcript, covered_end = engine._compact_transcript(chat)
+
+    # Первое сообщение влезло лишь частично и стало последним покрытым.
+    assert covered_end == 1
+    assert transcript.endswith("…")
+    assert "ответ" not in transcript
+
+
+def test_maybe_compact_coverage_respects_limit(engine, monkeypatch) -> None:
+    """summary_count двигается только до реально выжатых сообщений."""
+    monkeypatch.setattr(
+        engine, "_call_api_blocking", lambda messages, max_tokens=None: "сводка"
+    )
+    chat = engine._active_chat()
+    chat["msgs"] = [
+        {"id": 1, "role": "user", "text": "я" * 70_000, "ts": 0},
+        {"id": 2, "role": "assistant", "text": "ответ", "ts": 0},
+    ] + [{"id": i, "role": "user", "text": f"хвост {i}", "ts": 0} for i in range(3, 7)]
+    chat["summary_count"] = 0
+
+    assert engine._maybe_compact(chat, force=True) is True
+    assert chat["summary_count"] == 1
+    assert chat["summary"] == "сводка"
+
+
+def test_clear_resets_summary(engine, monkeypatch) -> None:
+    """Команда /clear сбрасывает сводку прошлой переписки."""
+    monkeypatch.setattr(engine, "_confirm_command", lambda cmd: True)
+    chat = engine._active_chat()
+    chat["msgs"] = [{"id": 1, "role": "user", "text": "старое", "ts": 0}]
+    chat["summary"] = "старая сводка"
+    chat["summary_count"] = 7
+    chat["summary_at"] = 1.0
+
+    engine._cmd_clear()
+
+    # В чате остаётся только служебная отметка о сбросе.
+    assert [m for m in chat["msgs"] if m["role"] != "system"] == []
+    assert chat["summary"] == ""
+    assert chat["summary_count"] == 0
+    assert "summary_at" not in chat
 
 
 def test_maybe_compact_success(engine, monkeypatch) -> None:
