@@ -9,7 +9,8 @@ name: Publish to OrcaCloud
 # Запуск:
 #   - release: published — релиз создан (вручную в UI GitHub или release.yml
 #     с secrets.RELEASE_TOKEN, см. release.yml). Версия = имя тега релиза,
-#     changelog = тело релиза.
+#     changelog = RELEASE_NOTES_ORCA_SLICER.md из коммита тега (fallback — тело
+#     релиза для старых тегов без этого файла).
 #   - workflow_dispatch — ручной повтор публикации для уже существующего тега
 #     (например, v0.1.1, выпущенного до ввода этой схемы). Обязателен input tag.
 
@@ -95,10 +96,15 @@ jobs:
           set -euo pipefail
           version="${{ steps.release.outputs.version }}"
 
-          if [[ "${{ github.event_name }}" == "release" ]]; then
+          if [[ -f RELEASE_NOTES_ORCA_SLICER.md ]]; then
+            # Приоритет: файл из коммита тега. GitHub-релиз при этом несёт
+            # RELEASE_NOTES.md (markdown), а текст для OrcaCloud — из этого файла.
+            cp RELEASE_NOTES_ORCA_SLICER.md changelog_full.txt
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            # Fallback: старые теги без RELEASE_NOTES_ORCA_SLICER.md.
             jq -r '.release.body // ""' "$GITHUB_EVENT_PATH" > changelog_full.txt
           else
-            cp RELEASE_NOTES_ORCA_SLICER.md changelog_full.txt 2>/dev/null || : > changelog_full.txt
+            : > changelog_full.txt
           fi
           head -c 4000 changelog_full.txt > changelog.txt
           metadata="$(jq -cn --arg version "$version" --rawfile changelog changelog.txt \
