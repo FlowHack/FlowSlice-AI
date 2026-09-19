@@ -39,6 +39,7 @@ body.theme-light {
   --orca-fg: #1a1a1a;
   --orca-muted: #6b6b6b;
   --orca-border: #d9d9d9;
+  --orca-table-border: #c4c4c4;
   --orca-input: #f5f5f5;
   --orca-accent: #d9534f;
   --orca-accent-fg: #ffffff;
@@ -52,6 +53,7 @@ body.theme-dark {
   --orca-fg: #e6e6e6;
   --orca-muted: #8a8a8a;
   --orca-border: #2a2a2a;
+  --orca-table-border: #3f3f3f;
   --orca-input: #141414;
   --orca-accent: #d9534f;
   --orca-accent-fg: #ffffff;
@@ -1978,20 +1980,20 @@ details.field summary:hover {
 }
 table.md-table {
   border-collapse: collapse;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   font-size: 13px;
   line-height: 1.45;
 }
 table.md-table th,
 table.md-table td {
-  border: 1px solid var(--orca-border);
-  padding: 5px 8px;
+  border: 1px solid var(--orca-table-border, var(--orca-border));
+  padding: 4px 8px;
   vertical-align: top;
 }
 table.md-table th {
   background: var(--orca-input);
   font-weight: 600;
-  white-space: nowrap;
 }
 table.md-table td {
   word-break: break-word;
