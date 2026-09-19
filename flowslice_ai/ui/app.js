@@ -33,6 +33,12 @@
     context_flags: {},
     context_modes: {},
     context_tokens: 0,
+    // Прогресс заполнения истории до автосжатия.
+    history_tokens: 0,
+    history_enabled: true,
+    compact_enabled: true,
+    compact_threshold_tokens: 0,
+    context_window: 0,
     status: "idle",
     // Способы поддержки проекта: [{ id, title, value, url }].
     donate: [],
@@ -4367,6 +4373,12 @@
         state.context_flags = msg.context_flags || {};
         state.context_modes = msg.context_modes || {};
         state.context_tokens = msg.context_tokens || 0;
+        // Прогресс автосжатия: без этих полей индикатор всегда показывал 0%.
+        state.history_tokens = Number(msg.history_tokens) || 0;
+        state.history_enabled = msg.history_enabled !== false;
+        state.compact_enabled = msg.compact_enabled !== false;
+        state.compact_threshold_tokens = Number(msg.compact_threshold_tokens) || 0;
+        state.context_window = Number(msg.context_window) || 0;
         // Поле donate может отсутствовать — работаем без ошибок.
         state.donate = Array.isArray(msg.donate) ? msg.donate : [];
         if (byId("donateModal").style.display === "flex") {
