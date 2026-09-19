@@ -461,6 +461,12 @@ select option {
 .msg-reasoning-live {
   border-color: #d9534f;
 }
+/* Пока модель думает, блок растёт свободно: чат следует за новыми строками.
+   Ограничение высоты включается после ответа, в свёрнутом виде. */
+.msg-reasoning-live .msg-reasoning-text {
+  max-height: none;
+  overflow: visible;
+}
 .msg-reasoning > summary {
   display: flex;
   align-items: center;
