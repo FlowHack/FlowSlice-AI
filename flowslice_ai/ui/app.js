@@ -5,7 +5,6 @@
   var CONTEXT_KEYS = ["filament", "printer", "print", "model", "history"];
   // Клиентские лимиты вложений (синхронизированы с лимитами бэкенда).
   var MAX_ATTACHMENTS = 10;
-  var MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
   var MAX_TEXT_CHARS = 100000;
   var MAX_TOTAL_TEXT_CHARS = 400000;
   // Сколько последних запросов хранить для навигации стрелками в поле ввода.
@@ -175,6 +174,13 @@
       "settings.help_context_window": "Context window size of the active model; used to estimate the compaction threshold",
       "settings.max_history_images": "Photos from history, count",
       "settings.help_max_history_images": "Maximum number of photos from previous messages that are attached to the context of the current request. Set 0 so the model sees only the [photo] marker. Photos re-attached in the current message are never duplicated.",
+      "settings.photo_title": "Photos",
+      "settings.image_max_side": "Max photo side, px",
+      "settings.help_image_max_side": "Photos are compressed to this size on the longest side before sending. 0 = send the original without compression (large files may be rejected by the model API).",
+      "settings.image_quality": "JPEG quality, %",
+      "settings.help_image_quality": "Lower quality reduces size, higher keeps more detail.",
+      "settings.max_attachment_mb": "Max file size, MB",
+      "settings.help_max_attachment_mb": "Files larger than this limit are rejected before reading.",
       "settings.global_badge": "global",
       "settings.reset_to_global": "Reset to global",
       "settings.add_model": "+ Add model",
@@ -423,6 +429,13 @@
       "settings.help_context_window": "Размер окна контекста активной модели; используется для оценки порога сжатия",
       "settings.max_history_images": "Фото из истории, шт.",
       "settings.help_max_history_images": "Максимальное количество фотографий из прошлых сообщений, которые будут прикреплены к контексту текущего запроса. Значение 0 — модель увидит только пометку [фото]. Повторно приложенные фотографии не дублируются.",
+      "settings.photo_title": "Фото",
+      "settings.image_max_side": "Макс. сторона фото, px",
+      "settings.help_image_max_side": "Фото сжимается до этого размера по большей стороне перед отправкой. 0 — отправить оригинал без сжатия (большие файлы может отклонить API модели).",
+      "settings.image_quality": "Качество JPEG, %",
+      "settings.help_image_quality": "Ниже качество — меньше размер, выше — больше деталей.",
+      "settings.max_attachment_mb": "Макс. размер файла, МБ",
+      "settings.help_max_attachment_mb": "Файлы больше этого лимита отклоняются до чтения.",
       "settings.global_badge": "общий",
       "settings.reset_to_global": "Сбросить к общему",
       "settings.add_model": "+ Добавить модель",
@@ -671,6 +684,13 @@
       "settings.help_context_window": "Veličina prozora konteksta aktivnog modela; koristi se za procenu praga sažimanja",
       "settings.max_history_images": "Fotografije iz istorije, kom.",
       "settings.help_max_history_images": "Maksimalan broj fotografija iz prethodnih poruka koje se prilažu kontekstu tekućeg zahteva. Vrednost 0 znači da model vidi samo oznaku [foto]. Ponovo priložene fotografije se ne dupliraju.",
+      "settings.photo_title": "Fotografije",
+      "settings.image_max_side": "Maks. stranica fotografije, px",
+      "settings.help_image_max_side": "Fotografija se kompresuje na ovu veličinu po dužoj stranici pre slanja. 0 — pošalji original bez kompresije (velike datoteke API modela može odbiti).",
+      "settings.image_quality": "JPEG kvalitet, %",
+      "settings.help_image_quality": "Niži kvalitet — manja veličina, viši — više detalja.",
+      "settings.max_attachment_mb": "Maks. veličina datoteke, MB",
+      "settings.help_max_attachment_mb": "Datoteke veće od ovog limita se odbijaju pre čitanja.",
       "settings.global_badge": "globalno",
       "settings.reset_to_global": "Resetuj na globalno",
       "settings.add_model": "+ Dodaj model",
@@ -2586,18 +2606,21 @@
 
   function handleFiles(fileList) {
     var files = Array.prototype.slice.call(fileList);
+    // Лимит файла настраивается на вкладке «Общие» (max_attachment_mb).
+    var maxAttachmentBytes = (Number(state.settings.max_attachment_mb) || 16) * 1024 * 1024;
     files.forEach(function (file) {
       if (attachments.length >= MAX_ATTACHMENTS) {
         showToast(t("attach.limit_count", { n: MAX_ATTACHMENTS }), "err");
         return;
       }
-      if (file.size && file.size > MAX_ATTACHMENT_BYTES) {
+      if (file.size && file.size > maxAttachmentBytes) {
         showToast(t("attach.limit_size", { name: file.name || "" }), "err");
         return;
       }
       var name = file.name || t("attach.default_name");
       if (file.type && file.type.indexOf("image/") === 0) {
-        // Фото: сжатие через canvas до 1024px по большей стороне
+        // Фото: сжатие через canvas до image_max_side по большей стороне.
+        // image_max_side = 0 — отправить оригинал без сжатия.
         var imgReader = new FileReader();
         imgReader.onerror = function () {
           showToast(t("attach.read_failed", { name: name }), "err");
@@ -2608,26 +2631,40 @@
             showToast(t("attach.image_failed", { name: name }), "err");
           };
           img.onload = function () {
-            var maxSide = 1024;
-            var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-            var w = Math.round(img.width * scale);
-            var h = Math.round(img.height * scale);
-            var canvas = document.createElement("canvas");
-            canvas.width = w;
-            canvas.height = h;
-            var ctx = canvas.getContext("2d");
-            if (!ctx) {
-              showToast(t("attach.image_failed", { name: name }), "err");
-              return;
+            var maxSide = Number(state.settings.image_max_side);
+            if (!isFinite(maxSide) || maxSide < 0) {
+              maxSide = 0;
             }
-            ctx.drawImage(img, 0, 0, w, h);
+            var quality = Number(state.settings.image_quality);
+            if (!isFinite(quality) || quality <= 0) {
+              quality = 85;
+            }
             var data = "";
-            try {
-              data = canvas.toDataURL("image/jpeg", 0.85);
-            } catch (err) {
-              console.error("Не удалось закодировать изображение:", err);
-              showToast(t("attach.image_failed", { name: name }), "err");
-              return;
+            var w = img.width;
+            var h = img.height;
+            if (maxSide > 0) {
+              var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+              w = Math.round(img.width * scale);
+              h = Math.round(img.height * scale);
+              var canvas = document.createElement("canvas");
+              canvas.width = w;
+              canvas.height = h;
+              var ctx = canvas.getContext("2d");
+              if (!ctx) {
+                showToast(t("attach.image_failed", { name: name }), "err");
+                return;
+              }
+              ctx.drawImage(img, 0, 0, w, h);
+              try {
+                data = canvas.toDataURL("image/jpeg", quality / 100);
+              } catch (err) {
+                console.error("Не удалось закодировать изображение:", err);
+                showToast(t("attach.image_failed", { name: name }), "err");
+                return;
+              }
+            } else {
+              // Без сжатия: используем оригинальный data URI из FileReader.
+              data = e.target.result;
             }
             attachments.push({
               kind: "image",
@@ -3831,6 +3868,15 @@
     byId("setMaxHistoryImages").value = String(
       s.max_history_images !== undefined ? s.max_history_images : 2
     );
+    byId("setImageMaxSide").value = String(
+      s.image_max_side !== undefined ? s.image_max_side : 1024
+    );
+    byId("setImageQuality").value = String(
+      s.image_quality !== undefined ? s.image_quality : 85
+    );
+    byId("setMaxAttachmentMb").value = String(
+      s.max_attachment_mb !== undefined ? s.max_attachment_mb : 16
+    );
     updateThemeSwitch();
     setFontStyleDD.setSelected(s.font_style || "system");
     setLanguageDD.setSelected(s.language || "en");
@@ -4067,6 +4113,27 @@
           return 0;
         }
         return n > 10 ? 10 : n;
+      })(),
+      image_max_side: (function () {
+        var n = parseInt(byId("setImageMaxSide").value, 10);
+        if (isNaN(n) || n < 0) {
+          return 0;
+        }
+        return n > 4096 ? 4096 : n;
+      })(),
+      image_quality: (function () {
+        var n = parseInt(byId("setImageQuality").value, 10);
+        if (isNaN(n) || n < 30) {
+          return 85;
+        }
+        return n > 100 ? 100 : n;
+      })(),
+      max_attachment_mb: (function () {
+        var n = parseInt(byId("setMaxAttachmentMb").value, 10);
+        if (isNaN(n) || n < 1) {
+          return 16;
+        }
+        return n > 64 ? 64 : n;
       })(),
       theme: themeBtn ? themeBtn.getAttribute("data-theme") : "auto",
       font_size: parseInt(byId("setFontSize").value, 10) || 14,

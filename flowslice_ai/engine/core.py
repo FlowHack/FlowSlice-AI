@@ -27,6 +27,9 @@ from flowslice_ai.config import (
 )
 from flowslice_ai.constants import (
     CONTEXT_OPTIONS,
+    DEFAULT_IMAGE_MAX_SIDE,
+    DEFAULT_IMAGE_QUALITY,
+    DEFAULT_MAX_ATTACHMENT_MB,
     DEFAULT_MAX_TOKENS,
     DONATION_OPTIONS,
     MAX_CHAT_MESSAGES,
@@ -286,6 +289,30 @@ class CoreMixin:
         if history_images < 0 or history_images > MAX_IMAGES_IN_REQUEST:
             history_images = MAX_IMAGES_IN_HISTORY
         merged["max_history_images"] = history_images
+        # Настройки фото: сторона сжатия (0 — без сжатия), качество JPEG, лимит файла.
+        try:
+            image_max_side = int(merged.get("image_max_side", DEFAULT_IMAGE_MAX_SIDE))
+        except (TypeError, ValueError):
+            image_max_side = DEFAULT_IMAGE_MAX_SIDE
+        if image_max_side != 0 and (image_max_side < 256 or image_max_side > 4096):
+            image_max_side = DEFAULT_IMAGE_MAX_SIDE
+        merged["image_max_side"] = image_max_side
+        try:
+            image_quality = int(merged.get("image_quality", DEFAULT_IMAGE_QUALITY))
+        except (TypeError, ValueError):
+            image_quality = DEFAULT_IMAGE_QUALITY
+        if image_quality < 30 or image_quality > 100:
+            image_quality = DEFAULT_IMAGE_QUALITY
+        merged["image_quality"] = image_quality
+        try:
+            max_attachment_mb = int(
+                merged.get("max_attachment_mb", DEFAULT_MAX_ATTACHMENT_MB)
+            )
+        except (TypeError, ValueError):
+            max_attachment_mb = DEFAULT_MAX_ATTACHMENT_MB
+        if max_attachment_mb < 1 or max_attachment_mb > 64:
+            max_attachment_mb = DEFAULT_MAX_ATTACHMENT_MB
+        merged["max_attachment_mb"] = max_attachment_mb
         # Расширенное мышление: bool.
         reasoning = merged.get("reasoning", False)
         if isinstance(reasoning, str):

@@ -52,6 +52,26 @@ def test_normalize_max_history_images_clamps(engine) -> None:
     assert engine._normalize_config({"max_history_images": "нет"})["max_history_images"] == 2
 
 
+def test_normalize_photo_settings(engine) -> None:
+    """Настройки фото: сторона сжатия, качество JPEG, лимит файла."""
+    result = engine._normalize_config(
+        {"image_max_side": 0, "image_quality": 90, "max_attachment_mb": 32}
+    )
+    assert result["image_max_side"] == 0
+    assert result["image_quality"] == 90
+    assert result["max_attachment_mb"] == 32
+
+
+def test_normalize_photo_settings_invalid(engine) -> None:
+    """Недопустимые значения настроек фото заменяются дефолтами."""
+    result = engine._normalize_config(
+        {"image_max_side": 99999, "image_quality": 5, "max_attachment_mb": 0}
+    )
+    assert result["image_max_side"] == 1024
+    assert result["image_quality"] == 85
+    assert result["max_attachment_mb"] == 16
+
+
 def test_normalize_string_bools(engine) -> None:
     """Строковые значения флагов приводятся к bool."""
     result = engine._normalize_config({"compact_enabled": "off", "reasoning": "on"})

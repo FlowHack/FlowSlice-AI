@@ -2,7 +2,13 @@
 import json
 from typing import Any
 
-from flowslice_ai.constants import DEFAULT_MAX_TOKENS, MAX_IMAGES_IN_HISTORY
+from flowslice_ai.constants import (
+    DEFAULT_MAX_ATTACHMENT_MB,
+    DEFAULT_IMAGE_MAX_SIDE,
+    DEFAULT_IMAGE_QUALITY,
+    DEFAULT_MAX_TOKENS,
+    MAX_IMAGES_IN_HISTORY,
+)
 from flowslice_ai.providers_data import DEFAULT_PROVIDERS
 
 # Версия схемы конфигурации: увеличивается при несовместимых миграциях.
@@ -28,6 +34,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "compact_threshold": 80,
     "context_window": 128000,
     "max_history_images": MAX_IMAGES_IN_HISTORY,
+    "image_max_side": DEFAULT_IMAGE_MAX_SIDE,
+    "image_quality": DEFAULT_IMAGE_QUALITY,
+    "max_attachment_mb": DEFAULT_MAX_ATTACHMENT_MB,
     "usage": {},
 }
 
@@ -46,6 +55,9 @@ SETTINGS_KEYS: tuple[str, ...] = (
     "compact_threshold",
     "context_window",
     "max_history_images",
+    "image_max_side",
+    "image_quality",
+    "max_attachment_mb",
     "theme",
     "font_size",
     "font_style",
@@ -77,6 +89,9 @@ RESET_SCOPES: dict[str, tuple[str, ...]] = {
         "compact_threshold",
         "context_window",
         "max_history_images",
+        "image_max_side",
+        "image_quality",
+        "max_attachment_mb",
     ),
     "appearance": ("theme", "font_size", "font_style", "language"),
 }
