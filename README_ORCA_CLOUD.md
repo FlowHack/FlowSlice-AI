@@ -109,56 +109,14 @@ FlowSlice AI is distributed through **OrcaCloud**:
 
 ## 🚀 Quick start for beginners
 
-Never used AI chats and APIs before? Follow the steps — it takes a couple of minutes.
+Never used AI chats and APIs before? It takes a couple of minutes.
 
-### Step 1. Open the plugin tab
-
-After installation, find the **FlowSlice AI** tab in Orca Slicer and open it.
-
-### Step 2. Get an API key
-
-Pick any provider from the table below, sign up and create an API key.
-It is free to start — almost all providers offer a trial quota.
-
-### Step 3. Add the key to the plugin
-
-1. Click the **Settings** button (gear) in the chat window.
-2. Open the **Models** tab.
-3. In the **Provider** dropdown, select the provider you got the key from.
-4. Paste the key into the **API key** field. The eye button reveals hidden text.
-5. Select a **Model** from the list.
-6. Click **Save**.
-
-> 🔰 **Beginner tip.** For your first run, **OpenRouter** is a convenient choice — one key gives
-> access to many models from different vendors. The `Auto`, `Auto (beta)` and `Free` routers pick a
-> suitable model for you.
-
-### Step 4. Ask your first question
-
-Type a message and press **Enter**. For example:
-
-- "Check my PETG print settings and tell me what to improve."
-- "Why does the first layer not stick well?"
-- "What is Pressure Advance and how do I tune it on Klipper?"
-- "Compare TPU and PETG for flexible parts."
-- "Recommend nozzle and bed temperature for my filament."
-
-### Step 5. Manage context
-
-The chat panel has **Filament**, **Printer**, **Print settings**, **Model on the plate** and **Chat history** checkboxes.
-Tick what the assistant should take into account. Each profile has a dropdown next to it:
-
-- **changed** — send only the parameters you changed (saves tokens);
-- **all** — send the full profile.
-
-The model has its own modes: **brief**, **full** and **deep**.
-
-Press **Enter** to send and **Shift+Enter** for a new line.
-
-### Step 6. You're done!
-
-Use the chat like a regular messenger. History is saved; you can create new chats, search them and pin
-the important ones.
+1. **Open the tab.** Find the **FlowSlice AI** tab in Orca Slicer and open it.
+2. **Get an API key.** Pick any provider from the table below and create a key — it is free to start. For a first run **OpenRouter** is convenient: one key gives access to many models, and the `Auto` and `Free` routers pick a model for you.
+3. **Add the key.** Open **Settings → Models**, select the provider, paste the key into **API key**, choose a **Model** and click **Save**.
+4. **Ask a question.** Type a message and press **Enter**, for example "Check my PETG print settings and tell me what to improve.".
+5. **Manage context.** Tick **Filament**, **Printer**, **Print settings**, **Model on the plate** or **Chat history**; per profile choose **changed** (only modified parameters, saves tokens) or **all**. The model has **brief**, **full** and **deep** modes; **Shift+Enter** adds a new line.
+6. **You're done!** Use the chat like a messenger: create new chats, search and pin them.
 
 ---
 
@@ -344,20 +302,6 @@ leaves your machine and what never does.
   catalog (`https://openrouter.ai/api/v1/models`). That request carries no keys and no user data.
 
 The donation details are static addresses hard-coded in the plugin; copying them sends nothing anywhere.
-
----
-
-## ❓ FAQ
-
-| Question | Answer |
-| --- | --- |
-| The plugin tab did not appear. | Make sure the plugin subscription is active on OrcaCloud and the plugin is enabled in the Orca Slicer plugin list. Restart Orca Slicer. Check that your Orca Slicer version supports Python plugins (2.x branch). |
-| "API key missing" or "invalid key" error. | Open **Settings → Models**, check that the key was pasted without extra spaces, and click the key check button. Make sure the provider account has funds on balance. |
-| The model does not accept photos. | The selected model does not support images. Choose a vision model (e.g. via OpenRouter) — the plugin will warn you automatically if a model cannot handle images. |
-| Responses are cut off or arrive slowly. | Check your internet connection and the provider limits. Try increasing **Max tokens** in the model settings or choose a faster provider (e.g. Groq or Cerebras). For reasoning models the inherited limit is raised to at least `16384` automatically; a per-model **Max tokens** value you set yourself is not increased. |
-| Where is the chat history stored? | In `data_dir()/flowslice_ai/chats.json` inside the Orca Slicer data directory. |
-| Can I use my own server? | Yes. On the **Custom** tab, add your own provider: specify the base URL, API scheme (OpenAI- or Anthropic-compatible), key and model ID. |
-| What if the model list is out of date? | Click **Refresh models** next to the provider, or enable **Auto-refresh providers** on the **General** tab — the catalog, prices and image-support flag will update automatically. |
 
 ---
 
