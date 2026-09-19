@@ -421,6 +421,24 @@ def test_send_state_includes_donation_options(engine, monkeypatch) -> None:
     assert values["btc"] == "15f1swAtj7T1yVaXGEGWyLrfxSmDn1NKiY"
 
 
+def test_send_state_includes_compaction_progress(engine, monkeypatch) -> None:
+    """Состояние содержит оценку токенов истории и порог автосжатия."""
+    posts = []
+    monkeypatch.setattr(engine, "_post", posts.append)
+    engine._config["compact_enabled"] = True
+    engine._config["compact_threshold"] = 80
+    engine._config["context_window"] = 128000
+    engine._send_state()
+    states = [p for p in posts if p.get("type") == "state"]
+    assert states, "state не отправлен"
+    snapshot = states[-1]
+    assert isinstance(snapshot["history_tokens"], int)
+    assert snapshot["history_tokens"] >= 0
+    assert snapshot["compact_enabled"] is True
+    assert snapshot["context_window"] == 128000
+    assert snapshot["compact_threshold_tokens"] == 128000 * 80 // 100
+
+
 def test_cmd_reset_chats_requires_confirmation(engine) -> None:
     """`/reset chats` очищает историю только после подтверждения."""
     before = len(engine._chats)

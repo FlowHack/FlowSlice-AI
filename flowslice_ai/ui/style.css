@@ -694,6 +694,51 @@ select option {
   color: var(--orca-accent);
 }
 
+/* Заполнение истории до автосжатия: тонкая полоса и процент.
+   Обычное состояние нейтральное; красный — только в опасной зоне. */
+.compact-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 124px;
+  cursor: default;
+}
+.compact-progress-track {
+  flex: 1 1 auto;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--orca-border);
+  overflow: hidden;
+}
+.compact-progress-bar {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: var(--orca-muted);
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+.compact-progress-text {
+  flex: 0 0 auto;
+  min-width: 32px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--orca-muted);
+  text-align: right;
+}
+.compact-progress.warn .compact-progress-bar {
+  background: #e08a2e;
+}
+.compact-progress.warn .compact-progress-text {
+  color: #e08a2e;
+}
+.compact-progress.danger .compact-progress-bar {
+  background: #d9534f;
+}
+.compact-progress.danger .compact-progress-text {
+  color: #d9534f;
+}
+
 /* ===== Композер (input) ===== */
 .composer {
   padding: 8px 16px 12px;

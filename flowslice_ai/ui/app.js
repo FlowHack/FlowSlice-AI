@@ -119,6 +119,9 @@
       "ctx.tokens": "Context tokens: {n}",
       "ctx.request_tokens": "Request tokens: {n}",
       "ctx.request_tokens_title": "Estimated tokens of the current message: text plus attachments.",
+      "ctx.compact_progress": "{percent}% to compaction",
+      "ctx.compact_progress_title": "Chat history: {used} of {limit} tokens. Auto-compaction at {threshold}% of the context window.",
+      "ctx.compact_progress_title_off": "Chat history: {used} of {limit} tokens. Auto-compaction is disabled.",
       "ctx.mode_changed": "changed",
       "ctx.mode_all": "all",
       "ctx.mode_title": "Preset export: only changed parameters or the full profile",
@@ -357,6 +360,9 @@
       "ctx.tokens": "Токенов контекста: {n}",
       "ctx.request_tokens": "Токенов запроса: {n}",
       "ctx.request_tokens_title": "Оценка токенов текущего сообщения: текст и вложения.",
+      "ctx.compact_progress": "{percent}% до сжатия",
+      "ctx.compact_progress_title": "История чата: {used} из {limit} токенов. Автосжатие при {threshold}% окна контекста.",
+      "ctx.compact_progress_title_off": "История чата: {used} из {limit} токенов. Автосжатие выключено.",
       "ctx.mode_changed": "изм.",
       "ctx.mode_all": "все",
       "ctx.mode_title": "Выгрузка пресета: только изменённые параметры или полный профиль",
@@ -595,6 +601,9 @@
       "ctx.tokens": "Tokeni konteksta: {n}",
       "ctx.request_tokens": "Tokeni zahteva: {n}",
       "ctx.request_tokens_title": "Procena tokena trenutne poruke: tekst i prilozi.",
+      "ctx.compact_progress": "{percent}% do sažimanja",
+      "ctx.compact_progress_title": "Istorija razgovora: {used} od {limit} tokena. Automatsko sažimanje pri {threshold}% prozora konteksta.",
+      "ctx.compact_progress_title_off": "Istorija razgovora: {used} od {limit} tokena. Automatsko sažimanje je isključeno.",
       "ctx.mode_changed": "izm.",
       "ctx.mode_all": "sve",
       "ctx.mode_title": "Izvoz profila: samo izmenjeni parametri ili pun profil",
@@ -1019,6 +1028,27 @@
       return (n / 1000).toFixed(1) + "K";
     }
     return String(n);
+  }
+
+  /* Процент заполнения истории до порога автосжатия: 0..100.
+     Устойчив к некорректным числам, отрицательным значениям и нулевому порогу. */
+  function contextFillPercent(historyTokens, limitTokens) {
+    var used = Number(historyTokens);
+    var limit = Number(limitTokens);
+    if (!isFinite(used) || used < 0) {
+      used = 0;
+    }
+    if (!isFinite(limit) || limit <= 0) {
+      return 0;
+    }
+    var percent = Math.round((used / limit) * 100);
+    if (!isFinite(percent) || percent < 0) {
+      return 0;
+    }
+    if (percent > 100) {
+      return 100;
+    }
+    return percent;
   }
 
   function formatCost(value) {
@@ -2265,6 +2295,45 @@
       }
     }
     byId("contextTokens").textContent = "≈ " + t("ctx.tokens", { n: state.context_tokens || 0 });
+    updateCompactProgress();
+  }
+
+  /* ===== Заполнение истории до автосжатия ===== */
+  function updateCompactProgress() {
+    var progress = byId("compactProgress");
+    var bar = byId("compactProgressBar");
+    var text = byId("compactProgressText");
+    if (!progress || !bar || !text) {
+      return;
+    }
+    var historyTokens = Number(state.history_tokens) || 0;
+    var windowTokens = Number(state.context_window) || 0;
+    var thresholdTokens = Number(state.compact_threshold_tokens) || 0;
+    // При выключенном автосжатии ориентир — полное окно контекста.
+    var limitTokens = state.compact_enabled === false ? windowTokens : thresholdTokens;
+    var percent = contextFillPercent(historyTokens, limitTokens);
+    bar.style.width = percent + "%";
+    text.textContent = t("ctx.compact_progress", { percent: percent });
+    progress.classList.remove("warn", "danger");
+    if (percent >= 90) {
+      progress.classList.add("danger");
+    } else if (percent >= 70) {
+      progress.classList.add("warn");
+    }
+    // Порог в процентах окна: подсказка с точными числами.
+    if (state.compact_enabled === false) {
+      progress.title = t("ctx.compact_progress_title_off", {
+        used: formatTokens(historyTokens),
+        limit: formatTokens(limitTokens)
+      });
+      return;
+    }
+    var thresholdPercent = contextFillPercent(thresholdTokens, windowTokens);
+    progress.title = t("ctx.compact_progress_title", {
+      used: formatTokens(historyTokens),
+      limit: formatTokens(limitTokens),
+      threshold: thresholdPercent
+    });
   }
 
   /* ===== Индикатор «печатает…» ===== */
@@ -4818,6 +4887,7 @@
     shouldOpenReasoning: shouldOpenReasoning,
     favoriteRef: favoriteRef,
     parseModelRef: parseModelRef,
+    contextFillPercent: contextFillPercent,
   };
 
   document.addEventListener("DOMContentLoaded", init);

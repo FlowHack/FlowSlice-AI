@@ -151,6 +151,16 @@ check("parseModelRef пустая модель", pure.parseModelRef("provider::"
 check("parseModelRef не строка", pure.parseModelRef(null), null);
 check("parseModelRef число", pure.parseModelRef(42), null);
 
+// Заполнение истории до автосжатия: процент 0..100, устойчив к мусору.
+check("contextFillPercent обычный", pure.contextFillPercent(50, 100), 50);
+check("contextFillPercent ноль истории", pure.contextFillPercent(0, 100), 0);
+check("contextFillPercent ноль порога", pure.contextFillPercent(50, 0), 0);
+check("contextFillPercent превышение", pure.contextFillPercent(250, 100), 100);
+check("contextFillPercent мусор", pure.contextFillPercent("нет", "нет"), 0);
+check("contextFillPercent отрицательные", pure.contextFillPercent(-10, 100), 0);
+check("contextFillPercent округление", pure.contextFillPercent(1, 3), 33);
+check("contextFillPercent undefined", pure.contextFillPercent(undefined, undefined), 0);
+
 if (failures > 0) {
   console.error(`Провалено проверок: ${failures}`);
   process.exit(1);

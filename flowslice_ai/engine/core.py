@@ -792,6 +792,18 @@ class CoreMixin:
         """
         chat = self._active_chat()
         chats = self._chats if include_images else self._flatten_chats()
+        # Оценка токенов отправляемой истории: сбой расчёта не должен ронять
+        # снимок состояния, поэтому ошибка логируется и подставляется 0.
+        history_tokens = 0
+        try:
+            if chat is not None:
+                history_tokens = self._chat_context_tokens(chat)
+        except Exception as exc:  # pylint: disable=broad-except
+            _LOGGER.warning(
+                "Не удалось оценить токены истории активного чата: %s",
+                exc,
+                exc_info=True,
+            )
         self._post(
             {
                 "type": "state",
@@ -806,6 +818,10 @@ class CoreMixin:
                 "context_flags": chat["context_flags"],
                 "context_modes": chat.get("context_modes", {}),
                 "context_tokens": self._ctx_tokens,
+                "history_tokens": history_tokens,
+                "compact_enabled": bool(self._config.get("compact_enabled", True)),
+                "compact_threshold_tokens": self._compact_threshold_tokens(),
+                "context_window": self._compact_window_tokens(),
                 "status": "streaming" if self._gen else "",
                 # Копии словарей: UI не должен иметь возможности изменить константу.
                 "donate": [dict(item) for item in DONATION_OPTIONS],
