@@ -1131,10 +1131,20 @@
     return probe.trim().length > 0;
   }
 
+  // Коэффициент масштаба текста: базовый размер интерфейса — 14 px.
+  function fontScale(size) {
+    var value = Number(size);
+    if (!isFinite(value) || value <= 0) {
+      return 1;
+    }
+    return value / 14;
+  }
+
   function applyFont(settings) {
     var size = (settings && settings.font_size) || 14;
     var style = (settings && settings.font_style) || "system";
-    document.body.style.fontSize = size + "px";
+    // Размер текста задаётся переменной: от неё зависят все размеры в style.css.
+    document.body.style.setProperty("--fs-scale", String(fontScale(size)));
     if (style === "mono") {
       document.body.style.fontFamily = "Consolas, monospace";
     } else if (style === "serif") {
@@ -5045,6 +5055,7 @@
     favoriteRef: favoriteRef,
     parseModelRef: parseModelRef,
     contextFillPercent: contextFillPercent,
+    fontScale: fontScale,
   };
 
   document.addEventListener("DOMContentLoaded", init);

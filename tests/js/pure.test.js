@@ -177,6 +177,14 @@ check("contextFillPercent отрицательные", pure.contextFillPercent(-
 check("contextFillPercent округление", pure.contextFillPercent(1, 3), 33);
 check("contextFillPercent undefined", pure.contextFillPercent(undefined, undefined), 0);
 
+check("fontScale базовый размер", pure.fontScale(14), 1);
+check("fontScale увеличение", pure.fontScale(20), 20 / 14);
+check("fontScale уменьшение", pure.fontScale(10), 10 / 14);
+check("fontScale строка", pure.fontScale("16"), 16 / 14);
+check("fontScale мусор", pure.fontScale("нет"), 1);
+check("fontScale ноль", pure.fontScale(0), 1);
+check("fontScale undefined", pure.fontScale(undefined), 1);
+
 if (failures > 0) {
   console.error(`Провалено проверок: ${failures}`);
   process.exit(1);

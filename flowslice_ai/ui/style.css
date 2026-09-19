@@ -34,7 +34,9 @@ body {
   background: var(--orca-bg);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 14px;
+  /* Масштаб текста задаётся настройкой «Размер шрифта» (см. applyFont в app.js). */
+  --fs-scale: 1;
+  font-size: calc(14px * var(--fs-scale));
   overflow: hidden;
 }
 /* Принудительная чисто белая тема */
@@ -106,7 +108,7 @@ select option {
   border-bottom: 1px solid var(--orca-border);
 }
 .sidebar-title {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -121,7 +123,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .sidebar-search:focus {
   outline: none;
@@ -140,7 +142,7 @@ select option {
   width: 100%;
 }
 .chat-group {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   color: var(--orca-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -164,7 +166,7 @@ select option {
   box-shadow: inset 2px 0 0 var(--orca-accent);
 }
 .chat-title {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -186,7 +188,7 @@ select option {
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   padding: 2px 3px;
   border-radius: 4px;
   color: var(--orca-muted);
@@ -197,7 +199,7 @@ select option {
 }
 .sidebar-empty {
   padding: 12px 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   text-align: center;
 }
@@ -222,7 +224,7 @@ select option {
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale));
   color: var(--orca-fg);
   background: var(--orca-bg);
   pointer-events: none;
@@ -251,7 +253,7 @@ select option {
 }
 .brand-name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: calc(15px * var(--fs-scale));
 }
 /* Центральная зона шапки: индикатор заполнения контекста. */
 .header-center {
@@ -268,7 +270,7 @@ select option {
   gap: 8px;
 }
 .model-status {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   margin-right: 4px;
 }
@@ -279,7 +281,7 @@ select option {
   border-radius: 6px;
   padding: 5px 9px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale));
   line-height: 1;
 }
 .icon-btn:hover {
@@ -332,7 +334,7 @@ select option {
 .msg-bubble {
   padding: 9px 12px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale));
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
@@ -356,7 +358,7 @@ select option {
   background: var(--orca-input);
   border: 1px dashed var(--orca-border);
   color: var(--orca-muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   font-family: Consolas, monospace;
   padding: 6px 10px;
   max-width: 100%;
@@ -381,12 +383,12 @@ select option {
   margin: 12px 0 6px;
   line-height: 1.3;
 }
-.msg-text.md h1 { font-size: 18px; }
-.msg-text.md h2 { font-size: 16px; }
-.msg-text.md h3 { font-size: 15px; }
+.msg-text.md h1 { font-size: calc(18px * var(--fs-scale)); }
+.msg-text.md h2 { font-size: calc(16px * var(--fs-scale)); }
+.msg-text.md h3 { font-size: calc(15px * var(--fs-scale)); }
 .msg-text.md h4,
 .msg-text.md h5,
-.msg-text.md h6 { font-size: 14px; }
+.msg-text.md h6 { font-size: calc(14px * var(--fs-scale)); }
 .msg-text.md ul,
 .msg-text.md ol {
   margin: 0 0 8px;
@@ -412,7 +414,7 @@ select option {
 }
 .msg-text.md code {
   font-family: Consolas, monospace;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--fs-scale));
   background: var(--orca-border);
   padding: 1px 4px;
   border-radius: 4px;
@@ -427,11 +429,11 @@ select option {
 .msg-text.md pre.md-code code {
   background: none;
   padding: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--fs-scale));
   white-space: pre;
 }
 .msg-time {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale));
   color: var(--orca-muted);
   margin-top: 3px;
 }
@@ -441,14 +443,14 @@ select option {
 .msg-model {
   margin-left: 6px;
   color: var(--orca-muted);
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
 }
 .compact-note {
   align-self: center;
   margin: 6px 0;
   padding: 3px 10px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   background: var(--orca-input);
   border: 1px solid var(--orca-border);
@@ -462,7 +464,7 @@ select option {
 }
 .msg-file {
   display: inline-block;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   background: var(--orca-input);
   border: 1px solid var(--orca-border);
@@ -493,7 +495,7 @@ select option {
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   user-select: none;
   list-style: none;
@@ -510,7 +512,7 @@ select option {
 }
 .msg-reasoning-chevron {
   display: inline-block;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale));
   line-height: 1;
   transition: transform 0.15s ease;
 }
@@ -519,7 +521,7 @@ select option {
 }
 .msg-reasoning-text {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   line-height: 1.5;
   color: var(--orca-muted);
   white-space: pre-wrap;
@@ -544,7 +546,7 @@ select option {
   color: var(--orca-muted);
   border-radius: 4px;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   cursor: pointer;
 }
 .msg-action:hover {
@@ -576,12 +578,12 @@ select option {
   max-width: 480px;
 }
 .welcome-title {
-  font-size: 22px;
+  font-size: calc(22px * var(--fs-scale));
   font-weight: 700;
 }
 .welcome-sub {
   color: var(--orca-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   margin: 8px 0 16px;
 }
 .welcome-cmds {
@@ -594,7 +596,7 @@ select option {
   border: 1px solid var(--orca-border);
   border-radius: 12px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   font-family: Consolas, monospace;
 }
@@ -606,7 +608,7 @@ select option {
   gap: 4px;
   padding: 0 16px 8px;
   color: var(--orca-muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
 }
 .typing .dot {
   width: 6px;
@@ -657,7 +659,7 @@ select option {
   flex: 0 0 auto;
 }
 .context-label {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   white-space: nowrap;
 }
@@ -665,7 +667,7 @@ select option {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   cursor: pointer;
 }
@@ -687,11 +689,11 @@ select option {
   width: auto;
   gap: 4px;
   padding: 2px 6px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   border-radius: 4px;
 }
 .ctx-mode-dd .dd-caret {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale));
 }
 .ctx-mode-dd .dd-popup {
   left: 0;
@@ -701,10 +703,10 @@ select option {
 }
 .ctx-mode-dd .dd-item {
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
 }
 .context-tokens {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
 }
 
@@ -737,7 +739,7 @@ select option {
 }
 /* История чата выключена: вместо прогресса короткая поясняющая надпись. */
 .compact-off {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   color: var(--orca-muted);
   white-space: nowrap;
 }
@@ -759,7 +761,7 @@ select option {
 .compact-progress-text {
   flex: 0 0 auto;
   min-width: 24px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   line-height: 1;
   color: var(--orca-muted);
   text-align: left;
@@ -805,7 +807,7 @@ select option {
   gap: 10px;
   padding: 7px 10px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .cmd-suggest-item:hover {
   background: var(--orca-input);
@@ -827,7 +829,7 @@ select option {
 }
 .cmd-suggest-empty {
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
 }
 .attach-preview {
@@ -843,7 +845,7 @@ select option {
   border: 1px solid var(--orca-border);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   background: var(--orca-input);
 }
 .attach-card img {
@@ -863,7 +865,7 @@ select option {
   background: transparent;
   color: var(--orca-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
 }
 .attach-remove:hover {
   color: var(--orca-accent);
@@ -881,7 +883,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale));
   padding: 9px 12px;
   max-height: 120px;
   line-height: 1.4;
@@ -897,7 +899,7 @@ select option {
   border-radius: 8px;
   padding: 9px 14px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: calc(15px * var(--fs-scale));
   line-height: 1;
 }
 .send-btn:hover {
@@ -910,7 +912,7 @@ select option {
   border-radius: 8px;
   padding: 9px 12px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .stop-btn:hover {
   background: var(--orca-accent);
@@ -947,7 +949,7 @@ select option {
   margin-bottom: 14px;
 }
 .modal-header span {
-  font-size: 15px;
+  font-size: calc(15px * var(--fs-scale));
   font-weight: 600;
 }
 .field {
@@ -955,7 +957,7 @@ select option {
 }
 .field label {
   display: block;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   margin-bottom: 5px;
 }
@@ -969,7 +971,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .field select:focus,
 .field input:focus {
@@ -990,7 +992,7 @@ select option {
 .key-status {
   display: none;
   margin-top: 6px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
 }
 .key-status.set {
@@ -1003,7 +1005,7 @@ select option {
   border-radius: 6px;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   line-height: 1;
   white-space: nowrap;
 }
@@ -1039,7 +1041,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: Consolas, monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   padding: 8px;
   margin-bottom: 12px;
 }
@@ -1054,7 +1056,7 @@ select option {
   border-radius: 6px;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   white-space: nowrap;
 }
 .ghost-btn:hover {
@@ -1074,7 +1076,7 @@ select option {
 }
 /* Компактная кнопка синхронизации моделей провайдера. */
 .ghost-btn.sync-btn {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   padding: 3px 10px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1091,15 +1093,15 @@ select option {
   border-radius: 6px;
   background: var(--orca-input);
   color: var(--orca-fg);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
 }
 .usage-row span {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
 }
 /* ===== Модалка поддержки проекта ===== */
 .donate-hint {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   margin: 0 0 12px;
   line-height: 1.45;
@@ -1112,13 +1114,13 @@ select option {
   background: var(--orca-input);
 }
 .donate-title {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   font-weight: 600;
   margin-bottom: 6px;
 }
 .donate-value {
   font-family: Consolas, monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   word-break: break-all;
   white-space: normal;
@@ -1130,7 +1132,7 @@ select option {
   gap: 8px;
 }
 .donate-link {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-accent);
   text-decoration: none;
   border: 1px solid var(--orca-accent);
@@ -1143,7 +1145,7 @@ select option {
   color: var(--orca-accent-fg);
 }
 .donate-note {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   color: var(--orca-muted);
   margin: 4px 0 14px;
   line-height: 1.45;
@@ -1169,7 +1171,7 @@ select option {
   border-radius: 6px;
   padding: 7px 12px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .danger-btn:hover {
   background: var(--orca-accent);
@@ -1182,7 +1184,7 @@ select option {
   border-radius: 6px;
   padding: 7px 14px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .primary-btn:hover {
   filter: brightness(1.1);
@@ -1198,7 +1200,7 @@ select option {
   color: var(--orca-bg);
   border-radius: 8px;
   padding: 9px 16px;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   z-index: 200;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   transition: opacity 0.3s;
@@ -1243,10 +1245,10 @@ select option {
 /* Кнопка поддержки в строке композера: компактнее, чем в шапке. */
 .composer-export .donate-btn {
   padding: 3px 9px;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .export-btn {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   padding: 3px 14px;
 }
 .export-menu {
@@ -1272,7 +1274,7 @@ select option {
   background: transparent;
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   text-align: left;
   padding: 6px 10px;
   border-radius: 6px;
@@ -1293,7 +1295,7 @@ select option {
   color: var(--orca-fg);
   border-radius: 999px;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   font-family: var(--orca-font);
   cursor: pointer;
   transition: border-color 0.15s;
@@ -1315,7 +1317,7 @@ select option {
 }
 .chip-caret {
   color: var(--orca-muted);
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale));
   flex-shrink: 0;
 }
 .chip-vision {
@@ -1325,7 +1327,7 @@ select option {
 }
 .chip-vision .mp-vision {
   margin-right: 0;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
 }
 
 /* ===== Модалка выбора модели ===== */
@@ -1361,7 +1363,7 @@ select option {
 }
 .mp-price {
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   color: var(--orca-muted);
   white-space: nowrap;
 }
@@ -1373,7 +1375,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .mp-search:focus {
   outline: none;
@@ -1386,7 +1388,7 @@ select option {
   min-height: 120px;
 }
 .mp-group-title {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1400,7 +1402,7 @@ select option {
   padding: 7px 10px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .mp-item:hover {
   background: var(--orca-input);
@@ -1418,7 +1420,7 @@ select option {
 .mp-vision {
   position: relative;
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-accent);
   margin-right: 6px;
 }
@@ -1441,7 +1443,7 @@ select option {
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 15px;
+  font-size: calc(15px * var(--fs-scale));
   color: var(--orca-muted);
   padding: 0 2px;
   flex-shrink: 0;
@@ -1456,7 +1458,7 @@ select option {
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale));
   color: var(--orca-muted);
   padding: 0 2px;
   flex-shrink: 0;
@@ -1469,7 +1471,7 @@ select option {
 }
 .mp-empty {
   padding: 14px 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   text-align: center;
 }
@@ -1494,7 +1496,7 @@ select option {
   border-radius: 6px;
   padding: 6px 10px;
   font-family: var(--orca-font);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   cursor: pointer;
   text-align: left;
 }
@@ -1509,7 +1511,7 @@ select option {
 }
 .dd-caret {
   color: var(--orca-muted);
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale));
   flex-shrink: 0;
 }
 .dd-popup {
@@ -1539,7 +1541,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .dd-search:focus {
   outline: none;
@@ -1556,7 +1558,7 @@ select option {
   padding: 7px 10px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
 }
 .dd-item:hover {
   background: var(--orca-input);
@@ -1573,12 +1575,12 @@ select option {
 }
 .dd-empty {
   padding: 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   text-align: center;
 }
 .dd-default-badge {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale));
   color: var(--orca-muted);
   border: 1px dashed var(--orca-border);
   border-radius: 4px;
@@ -1593,7 +1595,7 @@ select option {
   border-radius: 6px;
   padding: 3px 8px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   line-height: 1;
   flex-shrink: 0;
 }
@@ -1620,7 +1622,7 @@ select option {
   color: var(--orca-muted);
   padding: 7px 12px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   border-bottom: 2px solid transparent;
   font-family: var(--orca-font);
 }
@@ -1640,7 +1642,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   padding: 8px;
   box-sizing: border-box;
 }
@@ -1671,7 +1673,7 @@ select option {
   border-radius: 6px;
   margin-bottom: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   background: var(--orca-input);
 }
 .provider-model-row:hover {
@@ -1688,7 +1690,7 @@ select option {
 }
 .provider-model-id {
   font-family: Consolas, monospace;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   color: var(--orca-muted);
   max-width: 40%;
   overflow: hidden;
@@ -1700,7 +1702,7 @@ select option {
   background: transparent;
   color: var(--orca-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   flex-shrink: 0;
 }
 .provider-model-del:hover {
@@ -1719,7 +1721,7 @@ select option {
   background: var(--orca-input);
   color: var(--orca-fg);
   font-family: var(--orca-font);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   margin-bottom: 8px;
   box-sizing: border-box;
 }
@@ -1735,7 +1737,7 @@ select option {
 #addModelForm label,
 #ctAddForm label {
   display: block;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   margin-bottom: 5px;
 }
@@ -1749,7 +1751,7 @@ select option {
 }
 details.field summary {
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   color: var(--orca-muted);
   margin-bottom: 8px;
 }
@@ -1774,7 +1776,7 @@ details.field summary:hover {
   padding: 5px 8px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   font-family: var(--orca-font);
   white-space: nowrap;
 }
@@ -1793,13 +1795,13 @@ details.field summary:hover {
   margin: 14px 0;
 }
 .settings-subtitle {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   font-weight: 600;
   color: var(--orca-fg);
   margin-bottom: 4px;
 }
 .settings-hint {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   color: var(--orca-muted);
   margin-bottom: 10px;
   line-height: 1.4;
@@ -1835,7 +1837,7 @@ details.field summary:hover {
   border-radius: 50%;
   border: 1px solid var(--orca-muted);
   color: var(--orca-muted);
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale));
   line-height: 1;
   cursor: help;
   margin-left: 4px;
@@ -1862,7 +1864,7 @@ details.field summary:hover {
   border: 1px solid var(--orca-border);
   border-radius: 6px;
   padding: 7px 9px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   line-height: 1.45;
   text-align: left;
   /* pre-line: переносы «\n» в тексте подсказки сохраняются, длинные строки переносятся. */
@@ -1883,7 +1885,7 @@ details.field summary:hover {
 .price-tip-title,
 .info-tip-title {
   color: var(--orca-muted);
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale));
   margin-bottom: 4px;
 }
 .price-tip-row,
@@ -1920,7 +1922,7 @@ details.field summary:hover {
   background: transparent;
   color: var(--orca-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
   line-height: 1;
   padding: 0 2px;
   flex-shrink: 0;
@@ -1960,7 +1962,7 @@ details.field summary:hover {
   top: 6px;
   right: 6px;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   border: 1px solid var(--orca-border);
   border-radius: 4px;
   background: var(--orca-input);
@@ -1987,7 +1989,7 @@ table.md-table {
   border-collapse: collapse;
   width: auto;
   max-width: 100%;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale));
   line-height: 1.45;
 }
 table.md-table th,
@@ -2015,7 +2017,7 @@ table.md-table .md-align-left {
 }
 table.md-table code {
   font-family: var(--orca-mono, monospace);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale));
 }
 table.md-table strong {
   font-weight: 600;
@@ -2028,7 +2030,7 @@ table.md-table strong {
   gap: 4px;
 }
 .variant-pos {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale));
   color: var(--orca-muted);
   min-width: 28px;
   text-align: center;
