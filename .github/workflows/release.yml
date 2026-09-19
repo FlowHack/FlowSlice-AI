@@ -79,7 +79,8 @@ jobs:
           import glob
           import zipfile
 
-          whl = glob.glob("dist/*.whl")[0]
+          # Проверяем канонический wheel (копия для OrcaCloud — байт-в-байт та же).
+          whl = next(w for w in sorted(glob.glob("dist/*.whl")) if not w.endswith("_any.whl"))
           archive = zipfile.ZipFile(whl)
           names = archive.namelist()
           bad = [n for n in names if any(

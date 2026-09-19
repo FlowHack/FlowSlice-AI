@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # "FlowSlice-AI". Человекочитаемое имя "FlowSlice AI" проставляет в METADATA
 # пост-сборочный скрипт tools/patch_wheel.py (Orca читает имя и автора оттуда).
 name = "FlowSlice-AI"
-description = "ИИ-инженер 3D-печати внутри OrcaSlicer: видит модель, пресеты и историю печати и помогает с механикой, Klipper и тонкой настройкой материалов (PETG, TPU и другие)."
+description = "AI 3D-printing engineer inside OrcaSlicer: sees the model, presets and print history, and helps with mechanics, Klipper and fine-tuning materials (PETG, TPU and more)."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"
