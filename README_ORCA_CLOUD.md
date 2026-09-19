@@ -37,9 +37,10 @@ What the assistant can do:
 
 ### 💬 Chat
 - Streaming responses (SSE) — text appears as it is generated
-- Stop generation, regenerate
-- Edit & resend
-- Regenerate any answer
+- Reasoning blocks for reasoning models: expandable, open while streaming and auto-collapsed when the answer is done (chevron, red live highlight). Supported for OpenRouter (`delta.reasoning`), DeepSeek and Anthropic
+- Stop generation; a stopped reply is marked "interrupted by the user" instead of staying empty
+- Regenerate and edit & resend
+- Answer variants
 
 ### 🗂 Multi-chat
 - Unlimited conversations
@@ -48,6 +49,7 @@ What the assistant can do:
 - Pin important chats
 - History saved between sessions
 - Up to 200 messages per chat
+- The selected model is remembered per chat and restored on restart, with a footnote showing the model that produced each answer
 
 </td>
 <td width="50%" valign="top">
@@ -56,15 +58,19 @@ What the assistant can do:
 - Model on the plate: dimensions, volume, surface area, triangles, position, mesh integrity (manifold), instances
 - Printer, filament and print profiles
 - Full parameter dump or only changed vs. the base preset
+- Human-readable, localized parameter names, e.g. "Brim type (brim_type)" — 823 OrcaSlicer settings with 753 Russian translations (English and Russian)
 - Profile notes and start/end G-code
 - Context checkboxes right in the chat panel, remembered per chat
 
 ### 🔌 Providers & models
 - 11 built-in providers out of the box
 - Your own OpenAI/Anthropic-compatible providers
+- Favorite models: a pinned "Favorites" group and a ♥ button; the choice is kept across restarts
 - Model catalog sync: "Refresh from provider" button and auto-refresh
+- Model search independent of word order (finds full ids with `/` and `:` and versions like `3.7`)
 - Per-model tuning: temperature, max tokens, reasoning mode
 - Default model and per-model notes
+- Exact usage and cost: `stream_options.include_usage` for all providers with automatic fallback on HTTP 400; real prompt/completion tokens and cost from OpenRouter, exact token counts from Anthropic, otherwise an estimate. Cost is shown only when both input and output prices are known
 - Usage statistics (📊)
 
 </td>
@@ -96,7 +102,7 @@ FlowSlice AI is distributed through **OrcaCloud**:
 3. Open the **FlowSlice AI** tab in Orca Slicer.
 4. Restart Orca Slicer if the tab does not appear right away.
 
-> No separate `.whl` installation is required — everything is done from the interface.
+> Installation is done entirely from the interface.
 
 ---
 
@@ -177,13 +183,17 @@ Settings open via the gear in the chat window and are split into four tabs.
 
 | Tab | What you can configure |
 | --- | --- |
-| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode. The **Refresh from provider** button and the trash icon sit next to it. |
+| **Models** | Provider, API key, model, temperature, max tokens, reasoning mode, input/output price. The **Refresh from provider** button and the trash icon sit next to it. |
 | **Custom** | Your own OpenAI/Anthropic-compatible providers and models: base URL, API scheme, key, model ID and name. |
 | **General** | Notes for the context, default temperature / max tokens / reasoning mode; provider auto-refresh (`auto_sync_providers`); reset models. |
 | **Appearance** | Theme (auto / white / black), font size and style, interface language. |
 
 - Model values can be tuned individually; if a field is left empty, the general defaults apply
-  (`temperature = 0.7`, `max_tokens = 4096`, reasoning off by default).
+  (`temperature = 0.3`, `max_tokens = 8192`, reasoning off by default). When reasoning is enabled,
+  the token limit is never lower than `16384` so the model has room to think.
+- Prices for input and output tokens are used to show the cost of a reply; the cost appears only when
+  both prices are known. Tokens and cost come from the provider when available and are estimated
+  otherwise.
 - The **Reset** button affects only the current tab.
 - The **General** tab has **Reset models** and **Reset custom models**.
 - Changes apply only after clicking **Save**.
@@ -196,10 +206,14 @@ Settings open via the gear in the chat window and are split into four tabs.
   a session cache — the config does not grow. Names, prices and the image-support flag are refreshed.
 - The **Auto-refresh providers** checkbox (`auto_sync_providers`) is on by default and runs on plugin
   start and after an API key is saved.
+- Model search does not depend on word order: full ids with `/` and `:` and versions like `3.7` are
+  found without separators.
+- **Favorite models** are collected in a pinned **Favorites** group at the top of the model list and
+  toggled with the ♥ button. The selection is stored in the config and survives restarts.
 - **Prices** come from the specific provider: OpenRouter uses its own pricing catalog, NordRouter uses
   its public price list.
 - **Image support** is derived from the OpenRouter catalog with the provider prefix (for every
-  provider except OpenRouter itself).
+  provider except OpenRouter itself); other provider catalogs are used where they expose it.
 - When a model is added or imported, its metadata is requested from the provider immediately.
 - Manual values and `temperature` / `max_tokens` / `reasoning` are never overwritten by auto-sync.
 
@@ -219,6 +233,10 @@ The context panel in the chat decides what the assistant learns about your proje
 
 For profiles, two export modes are available: **changed** (only the parameters changed relative to the
 base preset) and **all** (the full profile). Selected checkboxes and modes are remembered per chat.
+
+Parameter keys are enriched with interface labels before they are sent, so the model writes
+"Brim type (brim_type)" instead of the internal key. The dictionary covers 823 OrcaSlicer settings;
+753 of them have Russian translations.
 
 ---
 
@@ -255,11 +273,11 @@ Type a command in the chat input and press **Enter**.
 
 | Command | Description |
 | --- | --- |
-| `/context` | Show slicer context (model, profiles, checkboxes, history) |
+| `/context` | Show the actual message list that will be sent to the model (full system prompt, history, images summarized) and the real token count of that request |
 | `/compact` | Compress the chat history into a short summary (manually) |
 | `/clear` | Clear the current chat |
 | `/model` | Show the model-on-the-plate report |
-| `/printer` | Show the print-profile summary |
+| `/printer` | Show the print-profile summary with human-readable parameter labels |
 | `/stats` | Show usage statistics |
 | `/help` | List commands |
 | `/reset` | Reset plugin settings (`/reset chats` — clear chats) |
@@ -307,7 +325,8 @@ will warn you automatically if a model cannot handle images.
 <summary><b>Responses are cut off or arrive slowly.</b></summary>
 
 Check your internet connection and the provider limits. Try increasing **Max tokens** in the model
-settings or choose a faster provider (e.g. Groq or Cerebras).
+settings or choose a faster provider (e.g. Groq or Cerebras). For reasoning models the limit is raised
+to at least `16384` automatically.
 </details>
 
 <details>
