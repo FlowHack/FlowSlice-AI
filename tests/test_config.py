@@ -33,6 +33,7 @@ def test_normalize_invalid_numbers(engine) -> None:
             "font_size": 999,
             "compact_threshold": 0,
             "context_window": 1,
+            "max_history_images": -3,
         }
     )
     assert result["temperature"] == 0.3
@@ -40,6 +41,15 @@ def test_normalize_invalid_numbers(engine) -> None:
     assert result["font_size"] == 14
     assert result["compact_threshold"] == 80
     assert result["context_window"] == 128000
+    assert result["max_history_images"] == 2
+
+
+def test_normalize_max_history_images_clamps(engine) -> None:
+    """Лимит фото из истории принимает 0 и обрезается сверху."""
+    assert engine._normalize_config({"max_history_images": 0})["max_history_images"] == 0
+    assert engine._normalize_config({"max_history_images": 7})["max_history_images"] == 7
+    assert engine._normalize_config({"max_history_images": 999})["max_history_images"] == 2
+    assert engine._normalize_config({"max_history_images": "нет"})["max_history_images"] == 2
 
 
 def test_normalize_string_bools(engine) -> None:

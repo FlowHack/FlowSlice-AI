@@ -537,6 +537,16 @@ def test_system_prompt_blocks_are_conditional(engine) -> None:
     assert "When slicer data is provided below" not in with_files
 
 
+def test_system_prompt_language_line_is_last(engine) -> None:
+    """Инструкция о языке ответа стоит в самом конце системного промпта."""
+    engine._config["language"] = "ru"
+    ctx = {"presets": {"print": {"name": "P", "params": {"brim_type": "no_brim"}}}}
+    prompt = engine._build_system_prompt(ctx)
+    assert prompt.rstrip().endswith(
+        "КРИТИЧНО К СОБЛЮДЕНИЮ: Отвечай строго на русском языке."
+    )
+
+
 def test_system_prompt_warns_about_internal_keys_after_data(engine) -> None:
     """Параметры идут как «Название (id)», напоминание — сразу после JSON."""
     engine._config["language"] = "ru"

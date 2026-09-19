@@ -168,8 +168,8 @@ def test_worker_marks_cancelled_generation(engine, monkeypatch) -> None:
     assert reply and reply[0]["text"] == engine._t("gen.stopped")
 
 
-def test_collect_context_images_keeps_all_current(engine) -> None:
-    """Все изображения текущего сообщения отправляются, история — ограниченно."""
+def test_current_message_images_only_current(engine) -> None:
+    """В текущий запрос идут только фото последнего сообщения пользователя."""
     chat = {
         "msgs": [
             {
@@ -189,14 +189,69 @@ def test_collect_context_images_keeps_all_current(engine) -> None:
             },
         ]
     }
-    result = engine._collect_context_images(chat)
-    assert result[:3] == [
+    result = engine._current_message_images(chat)
+    assert result == [
         "data:image/jpeg;base64,A",
         "data:image/jpeg;base64,B",
         "data:image/jpeg;base64,C",
     ]
-    assert "data:image/jpeg;base64,OLD" in result
-    assert len(result) == 4
+
+
+def test_history_messages_keeps_images_per_message(engine) -> None:
+    """Фото истории остаются в своих сообщениях и ограничены лимитом."""
+    engine._config["language"] = "en"
+    old = "data:image/jpeg;base64,OLD"
+    chat = {
+        "msgs": [
+            {
+                "role": "user",
+                "text": "старое",
+                "attachments": [{"image": old}],
+            },
+            {"role": "assistant", "text": "ок"},
+            {"role": "user", "text": "новое", "attachments": []},
+        ],
+        "summary_count": 0,
+    }
+    history = engine._history_messages(
+        chat, 100000, include_images=True, max_images=1, scheme="openai"
+    )
+    assert len(history) == 2
+    blocks = history[0]["content"]
+    assert isinstance(blocks, list)
+    images = [b for b in blocks if b.get("type") == "image_url"]
+    assert images == [{"type": "image_url", "image_url": {"url": old}}]
+    assert any(b.get("type") == "text" and "[photo]" in b.get("text", "") for b in blocks)
+    # Лимит 0 — фото не отправляем, остаётся только маркер.
+    plain = engine._history_messages(
+        chat, 100000, include_images=True, max_images=0, scheme="openai"
+    )
+    assert isinstance(plain[0]["content"], str)
+    assert "[photo]" in plain[0]["content"]
+
+
+def test_history_messages_skips_repeated_photo(engine) -> None:
+    """Повторно приложенное в текущем сообщении фото не дублируется в истории."""
+    engine._config["language"] = "en"
+    old = "data:image/jpeg;base64,OLD"
+    chat = {
+        "msgs": [
+            {"role": "user", "text": "старое", "attachments": [{"image": old}]},
+            {"role": "assistant", "text": "ок"},
+            {"role": "user", "text": "новое", "attachments": []},
+        ],
+        "summary_count": 0,
+    }
+    history = engine._history_messages(
+        chat,
+        100000,
+        include_images=True,
+        max_images=2,
+        skip_hashes={engine._image_hash(old)},
+        scheme="openai",
+    )
+    assert isinstance(history[0]["content"], str)
+    assert "[photo]" in history[0]["content"]
 
 
 def test_build_messages_adds_image_hints(engine, monkeypatch) -> None:
@@ -239,6 +294,53 @@ def test_build_messages_unknown_vision_adds_both_hints(engine, monkeypatch) -> N
     assert "cannot process images" in system
     user = messages[-1]["content"]
     assert isinstance(user, list)
+
+
+def test_build_messages_attributes_history_photos_and_dedupes(engine, monkeypatch) -> None:
+    """Фото истории идут в своих сообщениях; повторно приложенное не дублируется."""
+    chat = engine._active_chat()
+    engine._config["language"] = "en"
+    monkeypatch.setattr(engine, "_model_supports_images", lambda **_kwargs: True)
+    old = "data:image/jpeg;base64,OLD"
+    new = "data:image/jpeg;base64,NEW"
+    chat["msgs"] = [
+        {
+            "id": 1,
+            "role": "user",
+            "text": "первое",
+            "ts": 0,
+            "attachments": [{"image": old, "name": "old.jpg"}],
+        },
+        {"id": 2, "role": "assistant", "text": "ок", "ts": 0},
+        {
+            "id": 3,
+            "role": "user",
+            "text": "второе",
+            "ts": 0,
+            "attachments": [
+                {"image": old, "name": "old.jpg"},
+                {"image": new, "name": "new.jpg"},
+            ],
+        },
+    ]
+    messages = engine._build_messages(chat, "второе")
+    image_blocks = [
+        block
+        for message in messages
+        if isinstance(message["content"], list)
+        for block in message["content"]
+        if block.get("type") == "image_url"
+    ]
+    # Только два фото текущего сообщения: старое из истории не дублируется.
+    assert [b["image_url"]["url"] for b in image_blocks] == [old, new]
+    history_user = next(
+        message
+        for message in messages
+        if message["role"] == "user"
+        and isinstance(message["content"], str)
+        and "первое" in message["content"]
+    )
+    assert "[photo]" in history_user["content"]
 
 
 def test_build_messages_no_vision_model_skips_images(engine) -> None:

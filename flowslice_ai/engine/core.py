@@ -30,6 +30,8 @@ from flowslice_ai.constants import (
     DEFAULT_MAX_TOKENS,
     DONATION_OPTIONS,
     MAX_CHAT_MESSAGES,
+    MAX_IMAGES_IN_HISTORY,
+    MAX_IMAGES_IN_REQUEST,
     MAX_PERSISTED_FILE_CHARS,
     PRESET_CONTEXT_KEYS,
 )
@@ -276,6 +278,14 @@ class CoreMixin:
         if context_window < 1000 or context_window > 10_000_000:
             context_window = 128000
         merged["context_window"] = context_window
+        # Сколько фото из истории отправлять (0 — только маркеры [фото]).
+        try:
+            history_images = int(merged.get("max_history_images", MAX_IMAGES_IN_HISTORY))
+        except (TypeError, ValueError):
+            history_images = MAX_IMAGES_IN_HISTORY
+        if history_images < 0 or history_images > MAX_IMAGES_IN_REQUEST:
+            history_images = MAX_IMAGES_IN_HISTORY
+        merged["max_history_images"] = history_images
         # Расширенное мышление: bool.
         reasoning = merged.get("reasoning", False)
         if isinstance(reasoning, str):

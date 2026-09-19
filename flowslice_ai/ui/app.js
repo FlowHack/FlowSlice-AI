@@ -173,6 +173,8 @@
       "settings.help_compact_threshold": "Share of the context window at which the history is compressed",
       "settings.context_window": "Context window, tokens",
       "settings.help_context_window": "Context window size of the active model; used to estimate the compaction threshold",
+      "settings.max_history_images": "Photos from history, count",
+      "settings.help_max_history_images": "How many photos from previous messages to send to the model. 0 means the model only sees the [photo] marker. Photos re-attached in the current message are never duplicated.",
       "settings.global_badge": "global",
       "settings.reset_to_global": "Reset to global",
       "settings.add_model": "+ Add model",
@@ -419,6 +421,8 @@
       "settings.help_compact_threshold": "Доля окна контекста, при которой история сжимается",
       "settings.context_window": "Окно контекста, токенов",
       "settings.help_context_window": "Размер окна контекста активной модели; используется для оценки порога сжатия",
+      "settings.max_history_images": "Фото из истории, шт.",
+      "settings.help_max_history_images": "Сколько фотографий из прошлых сообщений отправлять модели. 0 — модель видит только пометку [фото]. Повторно приложенные в текущем сообщении фото не дублируются.",
       "settings.global_badge": "общий",
       "settings.reset_to_global": "Сбросить к общему",
       "settings.add_model": "+ Добавить модель",
@@ -665,6 +669,8 @@
       "settings.help_compact_threshold": "Deo prozora konteksta pri kojem se istorija sažima",
       "settings.context_window": "Prozor konteksta, tokena",
       "settings.help_context_window": "Veličina prozora konteksta aktivnog modela; koristi se za procenu praga sažimanja",
+      "settings.max_history_images": "Fotografije iz istorije, kom.",
+      "settings.help_max_history_images": "Koliko fotografija iz prethodnih poruka slati modelu. 0 znači da model vidi samo oznaku [foto]. Fotografije ponovo priložene u tekućoj poruci se ne dupliraju.",
       "settings.global_badge": "globalno",
       "settings.reset_to_global": "Resetuj na globalno",
       "settings.add_model": "+ Dodaj model",
@@ -3718,6 +3724,9 @@
     byId("setAutoSyncEnabled").checked = s.auto_sync_providers !== false;
     byId("setCompactThreshold").value = String(s.compact_threshold !== undefined ? s.compact_threshold : 80);
     byId("setContextWindow").value = String(s.context_window !== undefined ? s.context_window : 128000);
+    byId("setMaxHistoryImages").value = String(
+      s.max_history_images !== undefined ? s.max_history_images : 2
+    );
     updateThemeSwitch();
     setFontStyleDD.setSelected(s.font_style || "system");
     setLanguageDD.setSelected(s.language || "en");
@@ -3948,6 +3957,13 @@
       auto_sync_providers: byId("setAutoSyncEnabled").checked,
       compact_threshold: parseInt(byId("setCompactThreshold").value, 10) || 80,
       context_window: parseInt(byId("setContextWindow").value, 10) || 128000,
+      max_history_images: (function () {
+        var n = parseInt(byId("setMaxHistoryImages").value, 10);
+        if (isNaN(n) || n < 0) {
+          return 0;
+        }
+        return n > 10 ? 10 : n;
+      })(),
       theme: themeBtn ? themeBtn.getAttribute("data-theme") : "auto",
       font_size: parseInt(byId("setFontSize").value, 10) || 14,
       font_style: setFontStyleDD.getSelected(),

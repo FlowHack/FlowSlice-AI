@@ -9,6 +9,7 @@
 # pylint: disable=too-many-lines,too-many-branches,too-many-statements,broad-exception-caught
 # pylint: disable=too-many-public-methods,too-few-public-methods
 
+import hashlib
 import threading
 import time
 from typing import TYPE_CHECKING, Any
@@ -288,28 +289,45 @@ class GenerationMixin:
                     return True
         return False
 
-    def _collect_context_images(self: "_ChatEngine", chat: dict[str, Any]) -> list[str]:
-        """Собирает изображения: все из текущего запроса + ограниченно из истории."""
-        images: list[str] = []
-        history_count = 0
-        current_seen = False
-        for msg in reversed(chat.get("msgs", [])):
-            candidates = self._message_images(msg)
-            if not candidates:
-                continue
-            is_current = not current_seen and msg.get("role") == "user"
-            if is_current:
-                current_seen = True
-                images.extend(candidates)
-            else:
-                for data in candidates:
-                    if history_count >= MAX_IMAGES_IN_HISTORY:
-                        break
-                    images.append(data)
-                    history_count += 1
-            if len(images) >= MAX_IMAGES_IN_REQUEST:
-                break
-        return images[:MAX_IMAGES_IN_REQUEST]
+    @staticmethod
+    def _image_hash(data_uri: str) -> str:
+        """Возвращает хеш содержимого изображения для поиска дублей."""
+        return hashlib.sha1(data_uri.encode("utf-8", "ignore")).hexdigest()
+
+    def _current_message_images(self: "_ChatEngine", chat: dict[str, Any]) -> list[str]:
+        """Возвращает изображения последнего сообщения пользователя.
+
+        Фотографии из истории в запрос не примешиваются: они остаются в своих
+        сообщениях (см. _history_messages), поэтому модель понимает, какое фото
+        к какому сообщению относится.
+        """
+        last_user = self._last_user_msg(chat)
+        if last_user is None:
+            return []
+        return self._message_images(last_user)[:MAX_IMAGES_IN_REQUEST]
+
+    def _history_image_limit(self: "_ChatEngine") -> int:
+        """Сколько изображений из истории разрешено отправлять (настройка)."""
+        raw = self._config.get("max_history_images", MAX_IMAGES_IN_HISTORY)
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            value = MAX_IMAGES_IN_HISTORY
+        return max(0, min(value, MAX_IMAGES_IN_REQUEST))
+
+    def _image_block(self: "_ChatEngine", data_uri: str, scheme: str) -> dict[str, Any]:
+        """Формирует блок изображения под схему активного провайдера."""
+        if scheme == "anthropic":
+            b64 = data_uri.split(",", 1)[1] if "," in data_uri else data_uri
+            return {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": self._image_media_type(data_uri),
+                    "data": b64,
+                },
+            }
+        return {"type": "image_url", "image_url": {"url": data_uri}}
 
     def _build_messages(
         self: "_ChatEngine",
@@ -325,15 +343,18 @@ class GenerationMixin:
         flags = chat.get("context_flags", {})
         modes = chat.get("context_modes", {})
         ctx = self._collect_context(flags, modes)
-        # Изображения собираем заранее: от их наличия зависит системный промпт.
-        images = self._collect_context_images(chat)
+        # Изображения текущего сообщения: от их наличия зависит системный промпт.
+        images = self._current_message_images(chat)
         vision = self._model_supports_images(refresh=refresh_vision)
+        scheme = self._active_scheme()
         no_vision = False
+        allow_images = True
         if vision is False:
-            # Модель без зрения: картинку не отправляем, но просим честно
+            # Модель без зрения: картинки не отправляем, но просим честно
             # сказать, что анализировать изображения она не умеет.
             no_vision = self._message_has_image(self._last_user_msg(chat) or {})
             images = []
+            allow_images = False
         elif vision is None and images:
             # Возможности модели неизвестны: изображение отправляем, но на
             # всякий случай добавляем подсказку — вдруг модель его не видит.
@@ -342,7 +363,16 @@ class GenerationMixin:
         last_files = self._collect_files(last_user) if last_user is not None else []
         history: list[dict[str, Any]] = []
         if flags.get("history"):
-            history = self._history_messages(chat, MAX_CONTEXT_CHARS)
+            # Фото истории идут в своих сообщениях; дубли текущего запроса
+            # (то же изображение приложено повторно) повторно не отправляются.
+            history = self._history_messages(
+                chat,
+                MAX_CONTEXT_CHARS,
+                include_images=allow_images,
+                max_images=self._history_image_limit(),
+                skip_hashes={self._image_hash(data) for data in images},
+                scheme=scheme,
+            )
         # Вложения могут прийти и в истории, поэтому ищем <document> в обоих местах.
         has_files = bool(last_files) or any(
             "<document>" in self._message_text(m) for m in history
@@ -364,28 +394,11 @@ class GenerationMixin:
         user_content = user_text
         for file_info in last_files:
             user_content += self._render_file(file_info)
-        scheme = self._active_scheme()
-        if images and scheme == "anthropic":
-            # Нативный Messages API: изображения как base64-блоки.
+        if images:
+            # Изображения текущего сообщения: текстовый блок, затем блоки фото.
             content: list[dict[str, Any]] = [{"type": "text", "text": user_content}]
             for img in images:
-                b64 = img.split(",", 1)[1] if "," in img else img
-                content.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": self._image_media_type(img),
-                            "data": b64,
-                        },
-                    }
-                )
-            messages.append({"role": "user", "content": content})
-        elif images:
-            content = [{"type": "text", "text": user_content}]
-            content.extend(
-                {"type": "image_url", "image_url": {"url": img}} for img in images
-            )
+                content.append(self._image_block(img, scheme))
             messages.append({"role": "user", "content": content})
         else:
             messages.append({"role": "user", "content": user_content})
@@ -437,11 +450,19 @@ class GenerationMixin:
         chat: dict[str, Any],
         max_chars: int,
         include_last_user: bool = False,
+        include_images: bool = False,
+        max_images: int = 0,
+        skip_hashes: set[str] | None = None,
+        scheme: str = "openai",
     ) -> list[dict[str, Any]]:
         """Собирает историю сообщений для контекста, отбрасывая старые.
 
         При include_last_user=True (команда /context) включается и последнее
-        сообщение пользователя — для полного дампа истории.
+        сообщение пользователя — для полного дампа истории. При
+        include_images=True фото из истории остаются в своих сообщениях (не
+        больше max_images за весь запрос); изображения, чей хеш есть в
+        skip_hashes (то же фото приложено повторно в текущем сообщении), не
+        отправляются второй раз — вместо блока остаётся маркер.
         """
         msgs = chat.get("msgs", [])
         start = int(chat.get("summary_count", 0) or 0)
@@ -459,6 +480,9 @@ class GenerationMixin:
                     history = msgs[start:cut]
         result: list[dict[str, Any]] = []
         total = 0
+        images_left = max(0, max_images)
+        skip = skip_hashes if isinstance(skip_hashes, set) else set()
+        seen = set(skip)
         for msg in reversed(history):
             if msg.get("role") not in ("user", "assistant"):
                 continue
@@ -466,7 +490,8 @@ class GenerationMixin:
             if msg.get("error"):
                 continue
             text = str(msg.get("text", ""))
-            if msg.get("image"):
+            has_photo = bool(msg.get("image"))
+            if has_photo:
                 text += self._t("chat.photo_marker")
             legacy_file = msg.get("file")
             if isinstance(legacy_file, dict):
@@ -477,6 +502,7 @@ class GenerationMixin:
                     if not isinstance(att, dict):
                         continue
                     if att.get("image"):
+                        has_photo = True
                         text += self._t("chat.photo_marker")
                     elif isinstance(att.get("file"), dict):
                         text += self._render_file(att["file"])
@@ -486,7 +512,23 @@ class GenerationMixin:
                 if not result and max_chars > 0:
                     result.append({"role": msg["role"], "content": text[:max_chars]})
                 break
-            result.append({"role": msg["role"], "content": text})
+            content: Any = text
+            if include_images and has_photo and images_left > 0:
+                blocks: list[dict[str, Any]] = [{"type": "text", "text": text}]
+                added = 0
+                for data in self._message_images(msg):
+                    digest = self._image_hash(data)
+                    if digest in seen:
+                        continue
+                    seen.add(digest)
+                    blocks.append(self._image_block(data, scheme))
+                    added += 1
+                    images_left -= 1
+                    if images_left <= 0:
+                        break
+                if added:
+                    content = blocks
+            result.append({"role": msg["role"], "content": content})
             total += len(text)
         result.reverse()
         return result

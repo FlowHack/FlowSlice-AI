@@ -689,8 +689,6 @@ class SlicerContextMixin:
         <document>, при наличии профилей — правила именования параметров.
         """
         parts = [SYSTEM_PROMPT]
-        # Язык ответа задаётся отдельно: базовый промпт всегда на английском.
-        parts.append(self._t("prompt.language"))
         if has_images:
             parts.append(IMAGE_ANALYSIS_HINT)
         if no_vision:
@@ -729,6 +727,10 @@ class SlicerContextMixin:
                 )
         if has_files:
             parts.append(FILE_ATTACHMENT_HINT)
+        # Язык ответа — последним: инструкция стоит в конце системного промпта,
+        # сразу перед сообщением пользователя, и модель реже переключается
+        # на английский из-за англоязычных данных и подсказок выше.
+        parts.append(self._t("prompt.language"))
         return "\n\n".join(parts)
 
     @staticmethod
