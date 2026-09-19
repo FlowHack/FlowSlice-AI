@@ -246,6 +246,15 @@ select option {
   font-weight: 700;
   font-size: 15px;
 }
+/* Центральная зона шапки: индикатор заполнения контекста. */
+.header-center {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+  padding: 0 12px;
+}
 .header-right {
   display: flex;
   align-items: center;
@@ -694,18 +703,19 @@ select option {
   color: var(--orca-accent);
 }
 
-/* Заполнение истории до автосжатия: тонкая полоса и процент.
+/* Заполнение истории до автосжатия: полоса в центре шапки и процент.
    Обычное состояние нейтральное; красный — только в опасной зоне. */
 .compact-progress {
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 124px;
+  gap: 8px;
+  width: clamp(160px, 32vw, 320px);
+  max-width: 100%;
   cursor: default;
 }
 .compact-progress-track {
   flex: 1 1 auto;
-  height: 3px;
+  height: 4px;
   border-radius: 2px;
   background: var(--orca-border);
   overflow: hidden;
