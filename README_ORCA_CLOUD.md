@@ -1,6 +1,6 @@
 # FlowSlice AI
 
-![FlowSlice AI](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/preview_orca.png)
+![FlowSlice AI](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/preview.png)
 
 <p align="center">
   <b>An AI 3D-printing engineer right inside Orca Slicer.</b><br>
