@@ -1113,6 +1113,7 @@ class ApiClientMixin:
         sent = 0
         sent_thought = 0
         last_post = 0.0
+        last_finish = ""
         for raw in resp:
             if not self._gen:
                 break
@@ -1131,11 +1132,27 @@ class ApiClientMixin:
                 break
             try:
                 chunk = json.loads(data)
-                delta_obj = chunk["choices"][0].get("delta") or {}
-                delta = delta_obj.get("content") or ""
-                reasoning_delta = delta_obj.get("reasoning_content") or ""
-            except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+            except ValueError:
                 continue
+            if not isinstance(chunk, dict):
+                continue
+            # Провайдер может прислать ошибку прямо внутри потока (HTTP уже 200).
+            error = chunk.get("error")
+            if error:
+                detail = error.get("message") if isinstance(error, dict) else error
+                raise ApiError(str(detail) if detail else self._t("gen.empty_reply"))
+            choices = chunk.get("choices")
+            if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+                continue
+            choice = choices[0]
+            finish = choice.get("finish_reason")
+            if finish:
+                last_finish = str(finish)
+            delta_obj = choice.get("delta")
+            if not isinstance(delta_obj, dict):
+                delta_obj = {}
+            delta = delta_obj.get("content") or ""
+            reasoning_delta = delta_obj.get("reasoning_content") or ""
             if reasoning_delta:
                 thought += reasoning_delta
             if delta:
@@ -1170,6 +1187,12 @@ class ApiClientMixin:
             )
         if len(acc) > sent:
             self._post({"type": "delta", "chat_id": chat_id, "text": acc[sent:]})
+        if not acc:
+            _LOGGER.warning(
+                "Пустой ответ модели в потоке: finish_reason=%s, размышлений=%s символов",
+                last_finish or "нет",
+                len(thought),
+            )
         return acc, thought
 
     def _read_sse_anthropic(self: "_ChatEngine", resp: Any, chat_id: int) -> tuple[str, str]:
@@ -1182,6 +1205,7 @@ class ApiClientMixin:
         sent = 0
         sent_thought = 0
         last_post = 0.0
+        last_finish = ""
         for raw in resp:
             if not self._gen:
                 break
@@ -1201,6 +1225,17 @@ class ApiClientMixin:
             try:
                 event = json.loads(data)
             except ValueError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "error":
+                error = event.get("error")
+                detail = error.get("message") if isinstance(error, dict) else error
+                raise ApiError(str(detail) if detail else self._t("gen.empty_reply"))
+            if event.get("type") == "message_delta":
+                stop = (event.get("delta") or {}).get("stop_reason")
+                if stop:
+                    last_finish = str(stop)
                 continue
             if event.get("type") != "content_block_delta":
                 continue
@@ -1244,6 +1279,12 @@ class ApiClientMixin:
             )
         if len(acc) > sent:
             self._post({"type": "delta", "chat_id": chat_id, "text": acc[sent:]})
+        if not acc:
+            _LOGGER.warning(
+                "Пустой ответ модели в потоке: finish_reason=%s, размышлений=%s символов",
+                last_finish or "нет",
+                len(thought),
+            )
         return acc, thought
 
     def _test_key_worker(

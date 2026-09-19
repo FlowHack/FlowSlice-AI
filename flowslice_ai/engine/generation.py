@@ -91,7 +91,9 @@ class GenerationMixin:
         не показывается, а не подменяется нулём.
         """
         price_in, price_out = self._active_model_prices()
-        if price_in is None and price_out is None:
+        # Нужны обе цены: при частично загруженных данных оценка вводила бы
+        # в заблуждение (недостающая цена считалась бы нулевой).
+        if price_in is None or price_out is None:
             return None
         total = in_tokens * (price_in or 0.0) + out_tokens * (price_out or 0.0)
         return total / 1_000_000.0

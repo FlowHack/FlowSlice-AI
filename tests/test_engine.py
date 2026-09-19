@@ -13,6 +13,7 @@ from flowslice_ai.constants import (
     MAX_PERSISTED_FILE_CHARS,
     MAX_TOTAL_FILE_CHARS,
 )
+from flowslice_ai.errors import ApiError
 
 
 def test_estimate_tokens(engine) -> None:
@@ -672,6 +673,16 @@ def test_estimate_cost_unknown_price_returns_none(engine) -> None:
     assert engine._estimate_cost(1000, 500) is None
 
 
+def test_estimate_cost_partial_price_returns_none(engine) -> None:
+    """Если загружена только одна цена, стоимость не показывается вовсе."""
+    engine._config["active_provider"] = "deepseek"
+    engine._config["active_model"] = "deepseek-chat"
+    model = engine._config["providers"]["deepseek"]["models"]["deepseek-chat"]
+    model["price_in"] = 1.0
+    model.pop("price_out", None)
+    assert engine._estimate_cost(1000, 500) is None
+
+
 def test_estimate_cost_calculates_usd(engine) -> None:
     """При известных ценах стоимость считается из токенов за 1М."""
     engine._config["active_provider"] = "deepseek"
@@ -680,6 +691,23 @@ def test_estimate_cost_calculates_usd(engine) -> None:
     model["price_in"] = 1.0
     model["price_out"] = 2.0
     assert engine._estimate_cost(1_000_000, 500_000) == 2.0
+
+
+def test_read_sse_raises_on_stream_error(engine) -> None:
+    """Ошибка провайдера внутри SSE-потока превращается в ApiError с текстом."""
+    engine._gen = True
+    lines = [
+        b'data: {"error": {"message": "model does not support image input"}}\n',
+        b"data: [DONE]\n",
+    ]
+    with pytest.raises(ApiError, match="does not support image input"):
+        engine._read_sse(iter(lines), 1)
+
+
+def test_read_sse_empty_stream_returns_empty(engine) -> None:
+    """Пустой поток без ошибок не падает, а отдаёт пустой ответ."""
+    engine._gen = True
+    assert engine._read_sse(iter([b"data: [DONE]\n"]), 1) == ("", "")
 
 
 def test_update_model_from_api_marks_provider_price(engine) -> None:
