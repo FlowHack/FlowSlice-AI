@@ -84,6 +84,14 @@ check("renderMarkdown запрет script", injected.indexOf("<script>") === -1,
 const list = pure.renderMarkdown("- один\n- два");
 check("renderMarkdown список", list, "<ul><li>один</li><li>два</li></ul>");
 
+// Поиск по моделям: порядок слов не важен, слово может быть префиксом.
+check("поиск фраза", pure.matchesModelQuery("Free Models Router", "free models"), true);
+check("поиск перестановка", pure.matchesModelQuery("Free Models Router", "router free"), true);
+check("поиск префикс", pure.matchesModelQuery("Free Models Router", "free r"), true);
+check("поиск кириллица перестановка", pure.matchesModelQuery("Модель Быстрая", "быстрая модель"), true);
+check("поиск нет совпадений", pure.matchesModelQuery("Free Models Router", "gpt"), false);
+check("поиск пустой запрос", pure.matchesModelQuery("Free Models Router", "  "), true);
+
 if (failures > 0) {
   console.error(`Провалено проверок: ${failures}`);
   process.exit(1);

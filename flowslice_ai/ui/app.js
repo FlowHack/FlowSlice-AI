@@ -1408,7 +1408,7 @@
       if (cached && cached.loading && apiModelsFor(provider.id).length === 0) {
         provName += " …";
       }
-      var provMatch = query && provName.toLowerCase().indexOf(query) !== -1;
+      var provMatch = query && matchesModelQuery(provName, query);
       var models = mergedModels(provider).slice().sort(function (a, b) {
         var na = (a.name || a.id).toLowerCase();
         var nb = (b.name || b.id).toLowerCase();
@@ -1418,7 +1418,7 @@
       for (var m = 0; m < models.length; m++) {
         var model = models[m];
         var modelName = model.name || model.id;
-        if (query && !provMatch && modelName.toLowerCase().indexOf(query) === -1) {
+        if (query && !provMatch && !matchesModelQuery(modelName, query)) {
           continue;
         }
         groupItems.push(model);
@@ -4592,6 +4592,37 @@
     post({ type: "get_state" });
   }
 
+  /* Поиск по названию модели/провайдера.
+     Сначала точная подстрока (сохраняет прежнее поведение для фраз),
+     затем независимый порядок слов: каждое слово запроса должно начинать
+     какое-нибудь слово названия. Так «Free R» находит «Free Models Router»,
+     а «Router Free» — то же самое: пользователи часто путают порядок слов. */
+  function matchesModelQuery(haystack, query) {
+    var text = (haystack || "").toLowerCase();
+    var q = (query || "").trim().toLowerCase();
+    if (!q) {
+      return true;
+    }
+    if (text.indexOf(q) !== -1) {
+      return true;
+    }
+    var words = text.split(/[^0-9a-zа-яё]+/i).filter(Boolean);
+    var tokens = q.split(/\s+/).filter(Boolean);
+    for (var i = 0; i < tokens.length; i++) {
+      var found = false;
+      for (var j = 0; j < words.length; j++) {
+        if (words[j].indexOf(tokens[i]) === 0) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // Чистые функции, доступные юнит-тестам node (tests/js/pure.test.js).
   window.FlowSlicePure = {
     escapeHtml: escapeHtml,
@@ -4601,6 +4632,7 @@
     formatPrice: formatPrice,
     codeBlockHtml: codeBlockHtml,
     renderMarkdown: renderMarkdown,
+    matchesModelQuery: matchesModelQuery,
   };
 
   document.addEventListener("DOMContentLoaded", init);
