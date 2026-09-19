@@ -1970,6 +1970,49 @@ details.field summary:hover {
   border-color: var(--orca-accent);
 }
 
+/* ===== Таблицы Markdown ===== */
+.md-table-wrap {
+  margin: 4px 0 8px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+table.md-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.45;
+}
+table.md-table th,
+table.md-table td {
+  border: 1px solid var(--orca-border);
+  padding: 5px 8px;
+  vertical-align: top;
+}
+table.md-table th {
+  background: var(--orca-input);
+  font-weight: 600;
+  white-space: nowrap;
+}
+table.md-table td {
+  word-break: break-word;
+}
+table.md-table .md-align-center {
+  text-align: center;
+}
+table.md-table .md-align-right {
+  text-align: right;
+}
+table.md-table .md-align-left {
+  text-align: left;
+}
+table.md-table code {
+  font-family: var(--orca-mono, monospace);
+  font-size: 12px;
+}
+table.md-table strong {
+  font-weight: 600;
+}
+
 /* ===== Листание вариантов ответа ===== */
 .variant-nav {
   display: inline-flex;

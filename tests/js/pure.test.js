@@ -84,6 +84,22 @@ check("renderMarkdown запрет script", injected.indexOf("<script>") === -1,
 const list = pure.renderMarkdown("- один\n- два");
 check("renderMarkdown список", list, "<ul><li>один</li><li>два</li></ul>");
 
+// GFM-таблицы: шапка, тело, выравнивание и экранирование внутри ячеек.
+const table = pure.renderMarkdown(
+  "| Параметр | Значение |\n| :--- | ---: |\n| Поток | 0.97 |\n| Обдув | 40 |"
+);
+check("renderMarkdown таблица есть", table.indexOf('class="md-table"') !== -1, true);
+check("renderMarkdown таблица шапка", table.indexOf(">Параметр</th>") !== -1, true);
+check("renderMarkdown таблица выравнивание", table.indexOf('class="md-align-right"') !== -1, true);
+check("renderMarkdown таблица строки", table.indexOf(">Поток</td>") !== -1, true);
+const tableInline = pure.renderMarkdown("| Поле |\n| --- |\n| `код` и **жирный** |");
+check("renderMarkdown таблица формат", tableInline.indexOf("<code>код</code>") !== -1, true);
+check("renderMarkdown таблица жирный", tableInline.indexOf("<strong>жирный</strong>") !== -1, true);
+const fakeTable = pure.renderMarkdown("просто | текст\nбез разделителя");
+check("renderMarkdown без разделителя не таблица", fakeTable.indexOf("md-table") === -1, true);
+const injectedTable = pure.renderMarkdown("| a |\n| --- |\n| <script>x</script> |");
+check("renderMarkdown таблица экранирует", injectedTable.indexOf("<script>") === -1, true);
+
 // Поиск по моделям: порядок слов не важен, слово может быть префиксом.
 check("поиск фраза", pure.matchesModelQuery("Free Models Router", "free models"), true);
 check("поиск перестановка", pure.matchesModelQuery("Free Models Router", "router free"), true);

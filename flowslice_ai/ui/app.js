@@ -1876,6 +1876,59 @@
     );
   }
 
+  // Разбирает строку таблицы на ячейки, не разрывая содержимое внутри `кода`.
+  function mdSplitRow(line) {
+    var text = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+    var cells = [];
+    var buf = "";
+    var inCode = false;
+    for (var n = 0; n < text.length; n++) {
+      var ch = text.charAt(n);
+      if (ch === "`") {
+        inCode = !inCode;
+        buf += ch;
+      } else if (ch === "|" && !inCode) {
+        cells.push(buf.trim());
+        buf = "";
+      } else {
+        buf += ch;
+      }
+    }
+    cells.push(buf.trim());
+    return cells;
+  }
+
+  // Разделительная строка GFM-таблицы: | :--- | ---: | и т.п.
+  function mdIsTableDelimiter(line) {
+    var text = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+    if (text.indexOf("-") === -1 || text.indexOf("|") === -1) {
+      return false;
+    }
+    return /^\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*$/.test(text);
+  }
+
+  // Выравнивание колонок из разделительной строки.
+  function mdTableAligns(delim) {
+    return mdSplitRow(delim).map(function (cell) {
+      var left = cell.charAt(0) === ":";
+      var right = cell.charAt(cell.length - 1) === ":";
+      if (left && right) {
+        return "center";
+      }
+      if (right) {
+        return "right";
+      }
+      if (left) {
+        return "left";
+      }
+      return "";
+    });
+  }
+
+  function mdAlignAttr(align) {
+    return align ? ' class="md-align-' + align + '"' : "";
+  }
+
   function renderMarkdown(raw) {
     var escaped = escapeHtml(raw);
     var lines = escaped.split("\n");
@@ -1889,6 +1942,35 @@
         html.push("</" + listType + ">");
         listType = null;
       }
+    }
+    function isTableStart(idx) {
+      return (
+        idx + 1 < lines.length &&
+        lines[idx].trim() !== "" &&
+        lines[idx].indexOf("|") !== -1 &&
+        mdIsTableDelimiter(lines[idx + 1])
+      );
+    }
+    function tableHtml(start) {
+      var headers = mdSplitRow(lines[start]);
+      var aligns = mdTableAligns(lines[start + 1]);
+      var j = start + 2;
+      var out = '<div class="md-table-wrap"><table class="md-table"><thead><tr>';
+      for (var c = 0; c < headers.length; c++) {
+        out += "<th" + mdAlignAttr(aligns[c]) + ">" + mdInline(headers[c]) + "</th>";
+      }
+      out += "</tr></thead><tbody>";
+      while (j < lines.length && lines[j].trim() !== "" && lines[j].indexOf("|") !== -1) {
+        var row = mdSplitRow(lines[j]);
+        out += "<tr>";
+        for (var k = 0; k < headers.length; k++) {
+          out += "<td" + mdAlignAttr(aligns[k]) + ">" + mdInline(row[k] || "") + "</td>";
+        }
+        out += "</tr>";
+        j++;
+      }
+      out += "</tbody></table></div>";
+      return { html: out, next: j };
     }
     function isBlockStart(line) {
       return (
@@ -1919,6 +2001,13 @@
         inCode = true;
         codeBuf = [];
         i++;
+        continue;
+      }
+      if (isTableStart(i)) {
+        closeList();
+        var table = tableHtml(i);
+        html.push(table.html);
+        i = table.next;
         continue;
       }
       var heading = line.match(/^(#{1,6})\s+(.*)$/);
@@ -1963,7 +2052,12 @@
       closeList();
       var para = [line];
       i++;
-      while (i < lines.length && lines[i].trim() !== "" && !isBlockStart(lines[i])) {
+      while (
+        i < lines.length &&
+        lines[i].trim() !== "" &&
+        !isBlockStart(lines[i]) &&
+        !isTableStart(i)
+      ) {
         para.push(lines[i]);
         i++;
       }
