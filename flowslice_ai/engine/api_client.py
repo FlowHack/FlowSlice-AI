@@ -31,6 +31,10 @@ from flowslice_ai.constants import (
 from flowslice_ai.engine.net import normalize_base_url
 from flowslice_ai.errors import ApiError, ConfigError, NetworkError, StreamError
 from flowslice_ai.logging import _LOGGER
+from flowslice_ai.sync.base import SourceContext, SourceResult
+from flowslice_ai.sync.fetch import fetch_provider_metadata
+from flowslice_ai.sync.merge import apply_models
+from flowslice_ai.sync.sources import VisionCrossMapSource, vision_from_entry
 
 _OR_MODELS_TTL = 600.0  # секунд: срок жизни кэша списка моделей OpenRouter
 _OR_MODELS_TIMEOUT = 6  # секунд: короткий таймаут, чтобы не блокировать UI
@@ -41,6 +45,9 @@ _OR_MODELS_URL = "https://openrouter.ai/api/v1/models"
 # Cerebras исключён: по официальной доке /v1/models возвращает только
 # id/object/created/owned_by, признака модальностей там нет.
 _VISION_API_PROVIDERS = ("openrouter", "anthropic", "mistral", "xai")
+# Провайдеры без собственных модальностей: зрение определяется по каталогу
+# OpenRouter через VisionCrossMapSource (см. пакет flowslice_ai.sync).
+_VISION_CROSS_PROVIDERS = ("nordrouter",)
 _VISION_CACHE_TTL = 600.0  # секунд: срок жизни кэша зрения по провайдеру
 _VISION_TIMEOUT = 8  # секунд
 _ANTHROPIC_VERSION = "2023-06-01"
@@ -178,34 +185,10 @@ class ApiClientMixin:
     def _vision_from_entry(entry: dict[str, Any]) -> bool | None:
         """Извлекает признак «модель принимает изображения и отвечает текстом».
 
-        Нам нужна модель, которая получает на вход текст и изображение, а на
-        выходе даёт текст (дополнительно может отдавать изображения — это
-        неважно). Поддерживаются форматы: ``architecture.input/output_modalities``
-        (OpenRouter), ``input/output_modalities`` (xAI), ``capabilities.vision``
-        (Mistral, Cerebras) и ``capabilities.image_input.supported`` (Anthropic).
+        Делегирует в общую реализацию пакета синхронизации, чтобы правила
+        разбора модальностей были едины для UI и фонового синка.
         """
-        arch = entry.get("architecture")
-        inputs = arch.get("input_modalities") if isinstance(arch, dict) else None
-        outputs = arch.get("output_modalities") if isinstance(arch, dict) else None
-        if not isinstance(inputs, list):
-            inputs = entry.get("input_modalities")
-        if not isinstance(outputs, list):
-            outputs = entry.get("output_modalities")
-        if isinstance(inputs, list):
-            if "image" not in inputs or "text" not in inputs:
-                return False
-            if isinstance(outputs, list) and "text" not in outputs:
-                return False
-            return True
-        caps = entry.get("capabilities")
-        if isinstance(caps, dict):
-            image_input = caps.get("image_input")
-            if isinstance(image_input, dict) and isinstance(image_input.get("supported"), bool):
-                return image_input["supported"]
-            vision = caps.get("vision")
-            if isinstance(vision, bool):
-                return vision
-        return None
+        return vision_from_entry(entry)
 
     def _provider_vision_map(self: "_ChatEngine", provider_id: str) -> dict[str, bool]:
         """Возвращает карту «id модели → поддержка изображений» для провайдера.
@@ -383,29 +366,26 @@ class ApiClientMixin:
         except ConfigError as exc:
             _LOGGER.warning("Некорректный base_url провайдера %s: %s", provider_id, exc)
             return (cached[1] if cached else []), self._t("models.fetch_failed")
-        api_key = str(prov.get("api_key", "")).strip()
-        if not api_key and provider_id != "openrouter":
-            return [], self._t("models.need_key")
-        url = self._provider_models_url(provider_id, base_url)
-        headers = self._provider_models_headers(provider_id, api_key)
         stale = cached[1] if cached else []
-        try:
-            request = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(request, timeout=_MODELS_TIMEOUT) as response:
-                payload = json.loads(response.read().decode("utf-8", "replace"))
-            models = self._parse_models_payload(provider_id, payload)
-        except urllib.error.HTTPError as exc:
-            detail = self._http_error_detail(exc)
+        ctx = SourceContext(
+            provider_id=provider_id,
+            base_url=base_url,
+            api_key=str(prov.get("api_key", "")).strip(),
+            scheme=str(prov.get("scheme") or "openai"),
+            timeout=_MODELS_TIMEOUT,
+        )
+        # Список, зрение и цены берутся из единой системы источников, чтобы
+        # выпадающий список и кнопка «Обновить от провайдера» показывали одни
+        # и те же данные (включая публичные каталоги вроде NordRouter).
+        fetched = fetch_provider_metadata(ctx)
+        if not fetched.models and fetched.error:
+            if fetched.error.startswith("models."):
+                return stale, self._t(fetched.error)
             _LOGGER.warning(
-                "Не удалось получить список моделей %s: HTTP %s %s",
-                provider_id,
-                exc.code,
-                detail,
+                "Не удалось получить список моделей %s: %s", provider_id, fetched.error
             )
-            return stale, detail or self._t("models.fetch_failed")
-        except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
-            _LOGGER.warning("Не удалось получить список моделей %s: %s", provider_id, exc)
             return stale, self._t("models.fetch_failed")
+        models = self._ui_models_from_fetched(provider_id, fetched)
         if models:
             self._api_models_cache[provider_id] = (now, models)
         return models, ""
@@ -438,6 +418,197 @@ class ApiClientMixin:
                 "error": error,
             }
         )
+
+    def _sync_provider_metadata(
+        self: "_ChatEngine", provider_id: str, full: bool = False
+    ) -> tuple[int, int, str]:
+        """Синхронизирует метаданные моделей провайдера с внешними источниками.
+
+        Возвращает (добавлено, обновлено, текст ошибки). Ошибка пуста, если
+        данные получены и применены. Кэш UI-списка моделей обновляется, чтобы
+        кнопка «Обновить» сразу показала актуальные цены и значки зрения.
+        """
+        prov = self._config.get("providers", {}).get(provider_id)
+        if not isinstance(prov, dict):
+            return 0, 0, self._t("provider.not_found")
+        base_url = str(prov.get("base_url", "")).strip()
+        if not base_url:
+            return 0, 0, self._t("models.no_base_url")
+        try:
+            base_url = normalize_base_url(base_url)
+        except ConfigError as exc:
+            _LOGGER.warning("Некорректный base_url провайдера %s: %s", provider_id, exc)
+            return 0, 0, self._t("models.fetch_failed")
+        ctx = SourceContext(
+            provider_id=provider_id,
+            base_url=base_url,
+            api_key=str(prov.get("api_key", "")).strip(),
+            scheme=str(prov.get("scheme") or "openai"),
+        )
+        fetched = fetch_provider_metadata(ctx)
+        if not fetched.models and fetched.error:
+            known = fetched.error.startswith("models.")
+            error_key = fetched.error if known else "models.fetch_failed"
+            return 0, 0, self._t(error_key)
+        models = prov.setdefault("models", {})
+        added, updated = apply_models(models, fetched.models, full, allow_add=False)
+        self._api_models_cache[provider_id] = (
+            time.time(),
+            self._ui_models_from_fetched(provider_id, fetched),
+        )
+        if added or updated:
+            self._config = self._normalize_config(self._config)
+            self._persist_config()
+        return added, updated, ""
+
+    def _ui_models_from_fetched(
+        self: "_ChatEngine", provider_id: str, fetched: SourceResult
+    ) -> list[dict[str, Any]]:
+        """Собирает UI-список моделей из результатов синхронизации."""
+        prov = self._config.get("providers", {}).get(provider_id)
+        configured = prov.get("models", {}) if isinstance(prov, dict) else {}
+        if not isinstance(configured, dict):
+            configured = {}
+        result: list[dict[str, Any]] = []
+        for model in fetched.models:
+            mdef = configured.get(model.id)
+            if not isinstance(mdef, dict):
+                mdef = {}
+            vision = model.vision if model.vision is not None else mdef.get("vision")
+            price_in = model.price_in if model.price_in is not None else mdef.get("price_in")
+            price_out = model.price_out if model.price_out is not None else mdef.get("price_out")
+            result.append(
+                {
+                    "id": model.id,
+                    "name": str(mdef.get("name") or model.name or model.id),
+                    "vision": vision,
+                    "price_in": price_in,
+                    "price_out": price_out,
+                }
+            )
+        result.sort(key=lambda item: str(item.get("name", "")).lower())
+        return result
+
+    def _handle_sync_provider(self: "_ChatEngine", message: dict) -> None:
+        """Запускает фоновую синхронизацию метаданных провайдера по запросу UI."""
+        provider_id = str(message.get("provider", ""))
+        full = bool(message.get("full", False))
+        if provider_id not in self._config.get("providers", {}):
+            self._post(
+                {"type": "toast", "text": self._t("provider.not_found"), "kind": "err"}
+            )
+            return
+        if self._post_sink is None:
+            return
+        self._post({"type": "models_loading", "provider": provider_id, "loading": True})
+        threading.Thread(
+            target=self._provider_sync_worker,
+            args=(provider_id, full),
+            name="flowslice-provider-sync",
+            daemon=True,
+        ).start()
+
+    def _provider_sync_worker(self: "_ChatEngine", provider_id: str, full: bool) -> None:
+        """Фоновая синхронизация метаданных и отправка результата в UI."""
+        try:
+            added, updated, error = self._sync_provider_metadata(provider_id, full)
+        except Exception as exc:  # pylint: disable=broad-except
+            _LOGGER.exception("Ошибка синхронизации провайдера %s: %s", provider_id, exc)
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("sync.failed", err=str(exc)),
+                    "kind": "err",
+                }
+            )
+            return
+        cached = self._api_models_cache.get(provider_id)
+        models = cached[1] if cached else []
+        self._post(
+            {
+                "type": "api_models",
+                "provider": provider_id,
+                "models": models,
+                "error": error,
+            }
+        )
+        if error:
+            self._post(
+                {"type": "toast", "text": self._t("sync.failed", err=error), "kind": "err"}
+            )
+        elif added == 0 and updated == 0:
+            self._post({"type": "toast", "text": self._t("sync.nothing"), "kind": "ok"})
+        else:
+            self._post(
+                {
+                    "type": "toast",
+                    "text": self._t("sync.done", added=str(added), updated=str(updated)),
+                    "kind": "ok",
+                }
+            )
+        if added or updated:
+            self._send_state()
+
+    def _start_provider_sync(
+        self: "_ChatEngine", provider_id: str, full: bool = False
+    ) -> None:
+        """Запускает синхронизацию из фоновых мест (после ввода ключа, при старте)."""
+        if self._post_sink is None:
+            return
+        self._handle_sync_provider({"provider": provider_id, "full": full})
+
+    def _start_all_provider_sync(self: "_ChatEngine") -> None:
+        """Запускает автосинхронизацию доступных провайдеров в одном потоке."""
+        threading.Thread(
+            target=self._all_provider_sync_worker,
+            name="flowslice-provider-sync",
+            daemon=True,
+        ).start()
+
+    def _all_provider_sync_worker(self: "_ChatEngine") -> None:
+        """Автосинхронизация: провайдеры с ключом плюс публичные каталоги."""
+        providers = self._config.get("providers", {})
+        changed = False
+        for provider_id, pdef in providers.items():
+            if not isinstance(pdef, dict):
+                continue
+            has_key = bool(str(pdef.get("api_key", "")).strip())
+            if not has_key and provider_id not in ("openrouter", "nordrouter"):
+                continue
+            try:
+                added, updated, _error = self._sync_provider_metadata(provider_id, full=False)
+            except Exception as exc:  # pylint: disable=broad-except
+                _LOGGER.exception(
+                    "Ошибка автосинхронизации провайдера %s: %s", provider_id, exc
+                )
+                continue
+            if added or updated:
+                changed = True
+        if changed:
+            self._send_state()
+
+    def _vision_cross_map(self: "_ChatEngine", provider_id: str) -> dict[str, bool]:
+        """Определяет зрение провайдера по публичному каталогу OpenRouter."""
+        now = time.time()
+        cached = self._vision_cache.get(provider_id)
+        if cached and now - cached[0] < _VISION_CACHE_TTL:
+            return cached[1]
+        prov = self._config.get("providers", {}).get(provider_id)
+        if not isinstance(prov, dict):
+            return {}
+        ctx = SourceContext(
+            provider_id=provider_id,
+            base_url=str(prov.get("base_url", "")),
+            api_key="",
+            scheme=str(prov.get("scheme") or "openai"),
+        )
+        result: dict[str, bool] = {}
+        source = VisionCrossMapSource()
+        if source.matches(ctx):
+            result = source.fetch(ctx).vision
+        if result:
+            self._vision_cache[provider_id] = (now, result)
+        return result
 
     def _refresh_provider_vision(self: "_ChatEngine", provider_id: str) -> None:
         """Фоновое уточнение зрения моделей провайдера и сохранение в конфиг."""
@@ -498,6 +669,8 @@ class ApiClientMixin:
             return self._openrouter_vision_map().get(model_id)
         if provider_id in _VISION_API_PROVIDERS:
             return self._provider_vision_map(provider_id).get(model_id)
+        if provider_id in _VISION_CROSS_PROVIDERS:
+            return self._vision_cross_map(provider_id).get(model_id)
         return None
 
     def _model_supports_images(

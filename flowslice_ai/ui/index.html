@@ -126,7 +126,10 @@
       <div id="tabModels">
         <div class="field">
           <label><span data-i18n="settings.provider">Провайдер</span> <span class="help-icon" data-i18n-tooltip="settings.help_provider" data-i18n-title="settings.help_provider">?</span></label>
-          <div class="dd-wrap" id="setProviderDD"></div>
+          <div class="model-row">
+            <div class="dd-wrap" id="setProviderDD"></div>
+            <button type="button" id="setSyncProviderBtn" class="ghost-btn" data-i18n="settings.syncProvider" data-i18n-title="settings.syncProviderHint" title="Обновить от провайдера">Обновить от провайдера</button>
+          </div>
         </div>
         <div class="field">
           <label for="setApiKey"><span data-i18n="settings.api_key">API-ключ (провайдера)</span> <span class="help-icon" data-i18n-tooltip="settings.help_api_key" data-i18n-title="settings.help_api_key">?</span></label>
@@ -252,7 +255,10 @@
         <div id="ctMainBlock" style="display:none">
           <div class="field">
             <label><span data-i18n="settings.provider">Провайдер</span> <span class="help-icon" data-i18n-tooltip="settings.help_provider" data-i18n-title="settings.help_provider">?</span></label>
-            <div class="dd-wrap" id="ctProviderDD"></div>
+            <div class="model-row">
+              <div class="dd-wrap" id="ctProviderDD"></div>
+              <button type="button" id="ctSyncProviderBtn" class="ghost-btn" data-i18n="settings.syncProvider" data-i18n-title="settings.syncProviderHint" title="Обновить от провайдера">Обновить от провайдера</button>
+            </div>
           </div>
           <div class="field">
             <label for="ctBaseUrl"><span data-i18n="settings.base_url">Базовый URL API</span> <span class="help-icon" data-i18n-tooltip="settings.help_url" data-i18n-title="settings.help_url">?</span></label>

@@ -729,7 +729,8 @@ class CoreMixin:
             if start_vision:
                 self._or_vision_started = True
         if start_vision:
-            threading.Thread(target=self._refresh_all_vision, daemon=True).start()
+            # Синхронизация моделей, зрения и цен по всем доступным источникам.
+            self._start_all_provider_sync()
         for pid, pdef in providers.items():
             if not isinstance(pdef, dict):
                 continue

@@ -177,6 +177,9 @@
       "settings.help_provider": "API provider used to send requests to models",
       "settings.help_model": "Active model for new messages",
       "settings.refresh_models": "Refresh model list from provider",
+      "settings.syncProvider": "Refresh from provider",
+      "settings.syncProviderHint": "Fetch all provider models and refresh prices, image support and names (your manual settings are preserved)",
+      "settings.syncing": "Refreshing...",
       "settings.help_url": "API server address of the provider",
       "settings.help_model_name": "Model name in the provider system (id)",
       "settings.help_model_alias": "Friendly model name shown in the UI",
@@ -396,6 +399,9 @@
       "settings.help_provider": "Провайдер API, через который отправляются запросы к моделям",
       "settings.help_model": "Активная модель для новых сообщений",
       "settings.refresh_models": "Обновить список моделей у провайдера",
+      "settings.syncProvider": "Обновить от провайдера",
+      "settings.syncProviderHint": "Подгрузить все модели провайдера и обновить цены, поддержку изображений и названия (ваши ручные настройки не затрагиваются)",
+      "settings.syncing": "Обновление…",
       "settings.help_url": "Адрес API-сервера провайдера",
       "settings.help_model_name": "Название модели в системе провайдера (id)",
       "settings.help_model_alias": "Удобное имя модели для отображения в интерфейсе",
@@ -615,6 +621,9 @@
       "settings.help_provider": "API provajder kroz koji se šalju zahtevi ka modelima",
       "settings.help_model": "Aktivni model za nove poruke",
       "settings.refresh_models": "Osveži listu modela od provajdera",
+      "settings.syncProvider": "Osveži od provajdera",
+      "settings.syncProviderHint": "Preuzmi sve modele provajdera i osveži cene, podršku za slike i nazive (vaše ručne izmene se čuvaju)",
+      "settings.syncing": "Osvežavanje…",
       "settings.help_url": "Adresa API servera provajdera",
       "settings.help_model_name": "Naziv modela u sistemu provajdera (id)",
       "settings.help_model_alias": "Prikazano ime modela u interfejsu",
@@ -1046,6 +1055,62 @@
     }
     state.apiModels[providerId].loading = true;
     post({ type: "refresh_models", provider: providerId, force: !!force });
+  }
+
+  /* ===== Полный синк провайдера =====
+     Кнопки «Обновить от провайдера» шлют sync_provider{full:true} и ждут
+     api_models/state. На время ожидания кнопка disabled; страховочный таймаут
+     возвращает её в строй, если ответа не будет. */
+  var SYNC_TIMEOUT_MS = 30000;
+  var syncPending = {}; // id кнопки -> { provider, timer }
+
+  function startProviderSync(btnId, providerId) {
+    if (!providerId) {
+      return;
+    }
+    finishProviderSync(btnId);
+    syncPending[btnId] = {
+      provider: providerId,
+      timer: setTimeout(function () {
+        finishProviderSync(btnId);
+      }, SYNC_TIMEOUT_MS)
+    };
+    var btn = byId(btnId);
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+      btn.textContent = t("settings.syncing");
+    }
+    post({ type: "sync_provider", provider: providerId, full: true });
+  }
+
+  function finishProviderSync(btnId) {
+    var entry = syncPending[btnId];
+    if (entry && entry.timer) {
+      clearTimeout(entry.timer);
+    }
+    delete syncPending[btnId];
+    var btn = byId(btnId);
+    if (!btn) {
+      return;
+    }
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    btn.textContent = t("settings.syncProvider");
+  }
+
+  function finishSyncForProvider(providerId) {
+    Object.keys(syncPending).forEach(function (btnId) {
+      if (syncPending[btnId] && syncPending[btnId].provider === providerId) {
+        finishProviderSync(btnId);
+      }
+    });
+  }
+
+  function finishAllSyncs() {
+    Object.keys(syncPending).forEach(function (btnId) {
+      finishProviderSync(btnId);
+    });
   }
 
   function requestModelsForProviders(force) {
@@ -3964,6 +4029,8 @@
         if (byId("modelPickerModal").style.display !== "none") {
           renderModelPicker();
         }
+        // Состояние перечитано — провайдеры/модели обновлены, снимаем загрузку.
+        finishAllSyncs();
         break;
       case "delta":
         handleDelta(msg);
@@ -4035,6 +4102,8 @@
         if (byId("settingsModal").style.display !== "none") {
           refreshSettingsModels();
         }
+        // Ответ пришёл — снимаем состояние загрузки с кнопок полного синка.
+        finishSyncForProvider(msg.provider);
         break;
       case "usage":
         renderUsage(msg);
@@ -4309,6 +4378,12 @@
       if (pid) {
         requestApiModels(pid, true);
       }
+    });
+    byId("setSyncProviderBtn").addEventListener("click", function () {
+      startProviderSync("setSyncProviderBtn", setProviderDD.getSelected());
+    });
+    byId("ctSyncProviderBtn").addEventListener("click", function () {
+      startProviderSync("ctSyncProviderBtn", ctProviderDD.getSelected());
     });
     byId("modelPickerModal").addEventListener("click", function (e) {
       if (e.target === this) {

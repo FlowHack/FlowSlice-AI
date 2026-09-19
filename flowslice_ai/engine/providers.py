@@ -316,7 +316,14 @@ class ProvidersMixin:
                 }
             )
             return
-        entry: dict[str, Any] = {"name": name, "builtin": False}
+        # Модель создана пользователем: синхронизация её не перезаписывает,
+        # а имя не подменяется на данные провайдера.
+        entry: dict[str, Any] = {
+            "name": name,
+            "builtin": False,
+            "source": "user",
+            "name_source": "manual",
+        }
         label = str(message.get("label", "")).strip()
         if label:
             entry["name"] = label
@@ -428,6 +435,8 @@ class ProvidersMixin:
             new_name = str(message["name"]).strip()
             if new_name:
                 mdef["name"] = new_name
+                # Имя задано вручную: синхронизация его больше не трогает.
+                mdef["name_source"] = "manual"
         temperature = message.get("temperature")
         if "temperature" in message:
             mdef["temperature"] = normalize_temperature(temperature)

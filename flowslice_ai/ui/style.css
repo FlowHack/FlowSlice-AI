@@ -908,6 +908,17 @@ select option {
   border-color: var(--orca-accent);
   color: var(--orca-accent);
 }
+/* Состояние ожидания ответа провайдера: кнопка недоступна, акцент — красный. */
+.ghost-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.ghost-btn.is-loading {
+  cursor: progress;
+  border-color: var(--orca-accent);
+  color: var(--orca-accent);
+  opacity: 0.75;
+}
 .usage-row {
   display: flex;
   align-items: center;

@@ -100,6 +100,8 @@ class HandlersMixin:
             self._handle_import_api_model(message)
         elif msg_type == "refresh_models":
             self._handle_refresh_models(message)
+        elif msg_type == "sync_provider":
+            self._handle_sync_provider(message)
         elif msg_type == "compact":
             self._handle_compact(message)
         elif msg_type == "set_default_model":
@@ -453,6 +455,7 @@ class HandlersMixin:
             self._config["active_provider"] = settings["provider"]
         if "model" in settings:
             self._config["active_model"] = settings["model"]
+        synced_provider = ""
         if "api_key" in settings:
             api_key = settings["api_key"]
             # Пустое поле означает «не менять ключ»: в UI ключ не предзаполняется.
@@ -460,6 +463,7 @@ class HandlersMixin:
                 provider_id = str(self._config.get("active_provider", "deepseek"))
                 providers = self._config.setdefault("providers", {})
                 providers.setdefault(provider_id, {})["api_key"] = api_key.strip()
+                synced_provider = provider_id
         self._config = self._normalize_config(self._config)
         self._persist_config()
         self._post_settings()
@@ -467,8 +471,11 @@ class HandlersMixin:
         # в UI должен сразу увидеть has_key, иначе он остаётся пустым.
         self._send_state()
         self._post({"type": "toast", "text": self._t("settings.saved"), "kind": "ok"})
-        # Ключ мог появиться в текущей сессии: уточняем зрение в фоне.
-        self._schedule_vision_refresh()
+        # Ключ мог появиться в текущей сессии: тянем модели, зрение и цены.
+        if synced_provider:
+            self._start_provider_sync(synced_provider, full=False)
+        else:
+            self._schedule_vision_refresh()
 
     def _handle_reset_settings(self: "_ChatEngine", message: dict) -> None:
         """Сбрасывает к заводским значениям только ключи текущей вкладки настроек."""

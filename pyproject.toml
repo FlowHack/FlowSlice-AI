@@ -26,7 +26,7 @@ version = { attr = "flowslice_ai.version.__version__" }
 # В wheel попадают ТОЛЬКО перечисленные пакеты: никаких docs/, example/,
 # assets/, stubs/, tests/ и монолита flowslice_ai_plugin.py.
 [tool.setuptools]
-packages = ["flowslice_ai", "flowslice_ai.ui", "flowslice_ai.engine"]
+packages = ["flowslice_ai", "flowslice_ai.ui", "flowslice_ai.engine", "flowslice_ai.sync"]
 
 [tool.setuptools.package-data]
 "flowslice_ai.ui" = ["*.css", "*.html", "*.js"]

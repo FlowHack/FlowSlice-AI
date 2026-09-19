@@ -309,6 +309,85 @@ DEFAULT_PROVIDERS: dict[str, dict[str, Any]] = {
             },
         },
     },
+    "nordrouter": {
+        "name": "NordRouter",
+        "base_url": "https://nordrouter.com/v1",
+        "api_key": "",
+        "builtin": True,
+        "scheme": "openai",
+        "models": {
+            "deepseek/deepseek-v4-flash": {
+                "name": "DeepSeek V4 Flash",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "deepseek/deepseek-v4-pro": {
+                "name": "DeepSeek V4 Pro",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "anthropic/claude-sonnet-4.6": {
+                "name": "Claude Sonnet 4.6",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "anthropic/claude-opus-4.8": {
+                "name": "Claude Opus 4.8",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "openai/gpt-5.4": {
+                "name": "GPT-5.4",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "google/gemini-3.1-pro-preview": {
+                "name": "Gemini 3.1 Pro",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "x-ai/grok-4.5": {
+                "name": "Grok 4.5",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "qwen/qwen3.7-plus": {
+                "name": "Qwen 3.7 Plus",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "z-ai/glm-5.1": {
+                "name": "GLM 5.1",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+            "moonshotai/kimi-k3": {
+                "name": "Kimi K3",
+                "builtin": True,
+                "temperature": None,
+                "max_tokens": None,
+                "reasoning": None,
+            },
+        },
+    },
 }
 
 # Поддержка изображений по умолчанию: True — модель принимает изображения,
@@ -325,6 +404,7 @@ _VISION_BY_MODEL: dict[tuple[str, str], bool | None] = {
     ("cerebras", "*"): False,
     ("mistral", "*"): True,
     ("xai", "*"): None,
+    ("nordrouter", "*"): None,
 }
 
 
