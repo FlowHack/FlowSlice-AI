@@ -151,7 +151,7 @@ Tick what the assistant should take into account. Each profile has a dropdown ne
 - **changed** — send only the parameters you changed (saves tokens);
 - **all** — send the full profile.
 
-The model has its own modes: **brief**, **full** and **deep** (**deep** requires numpy).
+The model has its own modes: **brief**, **full** and **deep**.
 
 Press **Enter** to send and **Shift+Enter** for a new line.
 
@@ -237,7 +237,7 @@ The context panel in the chat decides what the assistant learns about your proje
 
 | Checkbox | What it sends |
 | --- | --- |
-| **Model on the plate** | Dimensions, volume, surface area, triangle count, position on the plate, mesh integrity (manifold), number of instances. The model has **brief**, **full** and **deep** modes; surface area and advanced metrics require numpy. |
+| **Model on the plate** | Dimensions, volume, surface area, triangle count, position on the plate, mesh integrity (manifold), number of instances. The model has **brief**, **full** and **deep** modes. |
 | **Filament** | Filament profile: material, temperatures, flow, cooling and notes. |
 | **Printer** | Printer profile: kinematics, nozzle, bed, limits and start/end G-code. |
 | **Print settings** | Process profile: layers, perimeters, infill, speeds, supports. |
