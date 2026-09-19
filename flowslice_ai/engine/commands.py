@@ -21,6 +21,21 @@ from flowslice_ai.config import COMMANDS, DEFAULT_CONFIG
 from flowslice_ai.constants import MAX_CONTEXT_CHARS
 
 
+def _usage_int(value: Any) -> int:
+    """Приводит значение счётчика к целому числу, устойчиво к мусору в конфиге."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _usage_numbers(day: Any) -> tuple[int, int]:
+    """Извлекает пару (сообщения, токены) из дневной записи статистики."""
+    if not isinstance(day, dict):
+        return 0, 0
+    return _usage_int(day.get("msgs")), _usage_int(day.get("tokens"))
+
+
 class CommandsMixin:
     """Slash-команды, подтверждения и статистика использования."""
 
@@ -202,15 +217,22 @@ class CommandsMixin:
     def _record_usage(self: "_ChatEngine", user_text: str, answer_text: str) -> None:
         """Учитывает сообщение и токены в статистике использования."""
         today = time.strftime("%Y-%m-%d")
-        usage = self._config.setdefault("usage", {})
-        day = usage.setdefault(today, {"msgs": 0, "tokens": 0})
-        day["msgs"] += 1
-        day["tokens"] += (len(user_text) + len(answer_text)) // 4
+        usage = self._config.get("usage")
+        if not isinstance(usage, dict):
+            usage = {}
+        msgs, tokens = _usage_numbers(usage.get(today))
+        usage[today] = {
+            "msgs": msgs + 1,
+            "tokens": tokens + (len(user_text) + len(answer_text)) // 4,
+        }
+        self._config["usage"] = usage
         self._persist_config()
 
     def _usage_snapshot(self: "_ChatEngine", period: str) -> dict[str, Any]:
         """Возвращает сводку использования за выбранный период."""
-        usage = self._config.get("usage", {})
+        usage = self._config.get("usage")
+        if not isinstance(usage, dict):
+            usage = {}
         today = time.strftime("%Y-%m-%d")
         # UI исторически присылает "today", старый код ждал "day" — принимаем оба.
         if period in ("day", "today"):
@@ -221,9 +243,17 @@ class CommandsMixin:
                 for i in range(7)
             ]
         elif period == "month":
-            keys = [key for key in usage if key.startswith(today[:7])]
+            keys = [
+                key
+                for key in usage
+                if isinstance(key, str) and key.startswith(today[:7])
+            ]
         else:
             keys = list(usage)
-        msgs = sum(usage.get(key, {}).get("msgs", 0) for key in keys)
-        tokens = sum(usage.get(key, {}).get("tokens", 0) for key in keys)
+        msgs = 0
+        tokens = 0
+        for key in keys:
+            day_msgs, day_tokens = _usage_numbers(usage.get(key))
+            msgs += day_msgs
+            tokens += day_tokens
         return {"period": period, "msgs": msgs, "tokens": tokens}

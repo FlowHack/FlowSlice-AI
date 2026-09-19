@@ -225,6 +225,10 @@ class HandlersMixin:
 
     def _handle_new_chat(self: "_ChatEngine") -> None:
         """Создаёт новый чат и обновляет интерфейс."""
+        # Как и переключение чата, создание нового во время генерации
+        # оставило бы поток ответа без активного чата в UI.
+        if self._reject_while_generating():
+            return
         self._create_chat()
         self._send_state()
 

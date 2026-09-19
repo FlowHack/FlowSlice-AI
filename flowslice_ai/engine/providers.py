@@ -465,7 +465,7 @@ class ProvidersMixin:
             if mdef.get("price_in") is None and mdef.get("price_out") is None:
                 mdef.pop("price_source", None)
             else:
-                    mdef["price_source"] = "manual"
+                mdef["price_source"] = "manual"
         if any(message.get(key) is not None for key in ("base_url", "api_key", "scheme")):
             # Легаси-поля модели: URL, ключ и схема теперь только у провайдера.
             self._post(
