@@ -164,6 +164,7 @@ class CommandsMixin:
                 rest.append(message)
         lines.append(self._t("cmd.context.system_prompt"))
         lines.append(system_text or "  " + self._t("cmd.context.empty"))
+        lines.append("")
         lines.append(self._t("cmd.context.messages"))
         if rest:
             for message in rest:
@@ -175,6 +176,7 @@ class CommandsMixin:
                 )
         else:
             lines.append("  " + self._t("cmd.context.empty"))
+        lines.append("")
         lines.append(self._t("cmd.context.checkboxes"))
         for key, value in flags.items():
             lines.append(
@@ -183,6 +185,7 @@ class CommandsMixin:
                 + ": "
                 + self._t("cmd.context.on" if value else "cmd.context.off")
             )
+        lines.append("")
         lines.append(
             self._t("cmd.context.tokens", v=str(self._estimate_messages_tokens(messages)))
         )
