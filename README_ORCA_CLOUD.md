@@ -1,11 +1,7 @@
 # FlowSlice AI
 
-![FlowSlice AI](https://raw.githubusercontent.com/FlowHack/flowslice-ai/master/assets/preview.png)
-
-<p align="center">
-  <b>An AI 3D-printing engineer right inside Orca Slicer.</b><br>
-  It sees your model, profiles and print history, and helps with mechanics, Klipper and material fine-tuning.
-</p>
+**An AI 3D-printing engineer right inside Orca Slicer.**
+It sees your model, profiles and print history, and helps with mechanics, Klipper and material fine-tuning.
 
 ## 🤖 What it is
 
@@ -29,11 +25,8 @@ What the assistant can do:
 
 ## ✨ Features
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
 ### 💬 Chat
+
 - Streaming responses (SSE) — text appears as it is generated
 - Reasoning blocks for reasoning models: expandable, open while streaming and auto-collapsed when the answer is done (chevron, red live highlight). Supported for OpenRouter (`delta.reasoning`), DeepSeek and Anthropic
 - Stop generation; an empty reply is marked as interrupted by the user, while already received text is kept as is
@@ -42,6 +35,7 @@ What the assistant can do:
 - Answer variants with switching between them
 
 ### 🗂 Multi-chat
+
 - Unlimited conversations
 - Automatic titles from the first question
 - Chat history search
@@ -50,10 +44,8 @@ What the assistant can do:
 - Up to 200 messages per chat
 - The selected model is remembered per chat and restored on restart, with a footnote showing the model that produced each answer
 
-</td>
-<td width="50%" valign="top">
-
 ### 🧠 Slicer context
+
 - Model on the plate: dimensions, volume, surface area, triangles, position, mesh integrity (manifold), instances
 - Printer, filament and print profiles
 - Full parameter dump or only changed vs. the base preset
@@ -62,6 +54,7 @@ What the assistant can do:
 - Context checkboxes right in the chat panel, remembered per chat
 
 ### 🔌 Providers & models
+
 - 11 built-in providers out of the box
 - Your own OpenAI/Anthropic-compatible providers
 - Favorite models: a pinned "Favorites" group and a ♥ button; the choice is kept across restarts
@@ -72,9 +65,7 @@ What the assistant can do:
 - Tokens come from provider usage when it is reported (OpenRouter together with the real `cost`, Anthropic with exact token counts), otherwise they are estimated; automatic fallback on HTTP 400. Cost is shown only when both input and output prices are known
 - Usage statistics (📊)
 
-</td>
-</tr>
-</table>
+Other:
 
 - **Attachments:** photos (up to 4 MB on the client, compressed to 1024 px; 20 MB base64 total per request) and text files (up to 100,000 characters each, 400,000 in total).
 - **Localization:** English / Russian / Serbian (English by default).
@@ -131,13 +122,16 @@ FlowSlice AI is distributed through **OrcaCloud**:
 Never used AI chats and APIs before? Follow the steps — it takes a couple of minutes.
 
 ### Step 1. Open the plugin tab
+
 After installation, find the **FlowSlice AI** tab in Orca Slicer and open it.
 
 ### Step 2. Get an API key
+
 Pick any provider from the [table below](#-where-to-get-an-api-key), sign up and create an API key.
 It is free to start — almost all providers offer a trial quota.
 
 ### Step 3. Add the key to the plugin
+
 1. Click the **Settings** button (gear) in the chat window.
 2. Open the **Models** tab.
 3. In the **Provider** dropdown, select the provider you got the key from.
@@ -150,6 +144,7 @@ It is free to start — almost all providers offer a trial quota.
 > suitable model for you.
 
 ### Step 4. Ask your first question
+
 Type a message and press **Enter**. For example:
 
 - "Check my PETG print settings and tell me what to improve."
@@ -159,6 +154,7 @@ Type a message and press **Enter**. For example:
 - "Recommend nozzle and bed temperature for my filament."
 
 ### Step 5. Manage context
+
 The chat panel has **Filament**, **Printer**, **Print settings**, **Model on the plate** and **Chat history** checkboxes.
 Tick what the assistant should take into account. Each profile has a dropdown next to it:
 
@@ -170,6 +166,7 @@ The model has its own modes: **brief**, **full** and **deep** (**deep** requires
 Press **Enter** to send and **Shift+Enter** for a new line.
 
 ### Step 6. You're done!
+
 Use the chat like a regular messenger. History is saved; you can create new chats, search them and pin
 the important ones.
 
@@ -362,52 +359,39 @@ The donation details are static addresses hard-coded in the plugin; copying them
 
 ## ❓ FAQ
 
-<details>
-<summary><b>The plugin tab did not appear.</b></summary>
+### The plugin tab did not appear.
 
 Make sure the plugin subscription is active on OrcaCloud and the plugin is enabled in the Orca Slicer
 plugin list. Restart Orca Slicer. Check that your Orca Slicer version supports Python plugins (2.x
 branch).
-</details>
 
-<details>
-<summary><b>"API key missing" or "invalid key" error.</b></summary>
+### "API key missing" or "invalid key" error.
 
 Open **Settings → Models**, check that the key was pasted without extra spaces, and click the key
 check button. Make sure the provider account has funds on balance.
-</details>
 
-<details>
-<summary><b>The model does not accept photos.</b></summary>
+### The model does not accept photos.
 
 The selected model does not support images. Choose a vision model (e.g. via OpenRouter) — the plugin
 will warn you automatically if a model cannot handle images.
-</details>
 
-<details>
-<summary><b>Responses are cut off or arrive slowly.</b></summary>
+### Responses are cut off or arrive slowly.
 
 Check your internet connection and the provider limits. Try increasing **Max tokens** in the model
-settings or choose a faster provider (e.g. Groq or Cerebras). For reasoning models the limit is raised
-to at least `16384` automatically.
-</details>
+settings or choose a faster provider (e.g. Groq or Cerebras). For reasoning models the inherited limit
+is raised to at least `16384` automatically; a per-model **Max tokens** value you set yourself is not
+increased.
 
-<details>
-<summary><b>Where is the chat history stored?</b></summary>
+### Where is the chat history stored?
 
 In `data_dir()/flowslice_ai/chats.json` inside the Orca Slicer data directory.
-</details>
 
-<details>
-<summary><b>Can I use my own server?</b></summary>
+### Can I use my own server?
 
 Yes. On the **Custom** tab, add your own provider: specify the base URL, API scheme (OpenAI- or
 Anthropic-compatible), key and model ID.
-</details>
 
-<details>
-<summary><b>What if the model list is out of date?</b></summary>
+### What if the model list is out of date?
 
 Click **Refresh models** next to the provider, or enable **Auto-refresh providers** on the
 **General** tab — the catalog, prices and image-support flag will update automatically.
-</details>
