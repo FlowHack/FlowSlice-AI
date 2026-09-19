@@ -213,6 +213,23 @@ def test_openrouter_catalog_prices_and_vision(monkeypatch: pytest.MonkeyPatch) -
     assert result.models[0].price_out == 1.5
 
 
+def test_openrouter_catalog_skips_batch_variants(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Пакетные варианты OpenRouter (суффикс :batch) не попадают в список моделей."""
+
+    def fake_http_json(url, headers=None, timeout=10):
+        return {
+            "data": [
+                {"id": "vendor/chat", "architecture": {"output_modalities": ["text"]}},
+                {"id": "vendor/chat:batch", "architecture": {"output_modalities": ["text"]}},
+                {"id": "vendor/chat:free", "architecture": {"output_modalities": ["text"]}},
+            ]
+        }
+
+    monkeypatch.setattr("flowslice_ai.sync.base.http_json", fake_http_json)
+    result = fetch_provider_metadata(_ctx("openrouter"))
+    assert [model.id for model in result.models] == ["vendor/chat", "vendor/chat:free"]
+
+
 def test_vision_cross_map_for_nordrouter(monkeypatch: pytest.MonkeyPatch) -> None:
     """Карта зрения NordRouter строится по каталогу OpenRouter."""
 

@@ -25,6 +25,11 @@ _OPENROUTER_CATALOG_URL = "https://openrouter.ai/api/v1/models"
 # Подстроки в идентификаторе модели, по которым отсекаются заведомо
 # нетекстовые модели (распознавание речи, эмбеддинги, генерация картинок).
 _NON_TEXT_MODEL_HINTS = ("whisper", "tts", "embedding", "dall-e", "moderation", "image")
+# Суффиксы вариантов моделей OpenRouter, непригодных для интерактивного чата:
+# ":batch" — это пакетный API с очередью и задержкой, ответ приходит
+# асинхронно. Обычные варианты (":free", ":nitro", ":floor", ":online")
+# остаются в списке, так как работают в чате.
+_NON_CHAT_MODEL_SUFFIXES = (":batch",)
 # Кросс-карта зрения общая для всех провайдеров: каталог OpenRouter
 # запрашивается один раз и переиспользуется _OPENROUTER_VISION_TTL секунд.
 _OPENROUTER_VISION_TTL = 600
@@ -118,6 +123,17 @@ def is_text_model(model_id: str, entry: dict[str, Any]) -> bool:
     return not any(hint in lowered for hint in _NON_TEXT_MODEL_HINTS)
 
 
+def is_chat_model(model_id: str) -> bool:
+    """Проверяет, годится ли вариант модели для интерактивного чата.
+
+    OpenRouter отдаёт несколько вариантов одной модели через суффикс после
+    двоеточия. Пакетный ``:batch`` в чате не работает (ответ асинхронный,
+    с задержкой), поэтому такие записи в список моделей не попадают.
+    """
+    lowered = model_id.strip().lower()
+    return not any(lowered.endswith(suffix) for suffix in _NON_CHAT_MODEL_SUFFIXES)
+
+
 def models_headers(provider_id: str, api_key: str) -> dict[str, str]:
     """Собирает заголовки запроса списка моделей с учётом схемы провайдера."""
     headers = dict(HTTP_HEADERS)
@@ -185,7 +201,7 @@ def _models_from_items(
         model_id = _entry_id(entry, provider_id)
         if not model_id or model_id in seen:
             continue
-        if not is_text_model(model_id, entry):
+        if not is_text_model(model_id, entry) or not is_chat_model(model_id):
             continue
         seen.add(model_id)
         result.append(
