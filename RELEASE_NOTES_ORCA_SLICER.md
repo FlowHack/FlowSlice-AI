@@ -1,2 +1,2 @@
-• Photo settings on the General tab: compression side in pixels (1024 by default, 0 = send the original without compression), JPEG quality (85% by default) and the file size limit (16 MB by default). Camera photos for calibration (e.g. Pressure Advance) can now be attached without manual compression.
-• Server image limits raised: 12 MB base64 per image (was 6 MB) and 32 MB base64 per request (was 20 MB) — headroom for photos sent without client-side compression.
+• Provider heading in the model list is now always shown, even when only one provider is active or all favorites come from a single provider — no more confusion between Favorites and the rest of the list.
+• Clear button added to the chat search and model/provider search fields: one click wipes the whole query (the button appears only when the field has text).
