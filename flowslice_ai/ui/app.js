@@ -1573,7 +1573,6 @@
     var s = state.settings || {};
     var activeProvider = s.active_provider;
     var activeModel = s.active_model;
-    var single = withModels.length <= 1;
     var shown = 0;
     // Закреплённая группа «Избранное»: показываем только валидные ссылки,
     // доступные у провайдеров с ключом, с учётом текущего поиска.
@@ -1645,9 +1644,7 @@
       if (groupItems.length === 0) {
         continue;
       }
-      if (!single) {
-        list.appendChild(el("div", "mp-group-title", provName));
-      }
+      list.appendChild(el("div", "mp-group-title", provName));
       for (var k = 0; k < groupItems.length; k++) {
         var item = groupItems[k];
         var isActive = provider.id === activeProvider && item.id === activeModel;
