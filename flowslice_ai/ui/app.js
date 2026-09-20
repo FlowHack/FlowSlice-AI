@@ -54,6 +54,7 @@
   var I18N = {
     en: {
       "common.close": "Close",
+      "common.clear_search": "Clear search",
       "common.search": "Search",
       "common.nothing": "No results",
       "common.copied": "Copied!",
@@ -309,6 +310,7 @@
     },
     ru: {
       "common.close": "Закрыть",
+      "common.clear_search": "Очистить поиск",
       "common.search": "Поиск",
       "common.nothing": "Ничего не найдено",
       "common.copied": "Скопировано",
@@ -564,6 +566,7 @@
     },
     sr: {
       "common.close": "Zatvori",
+      "common.clear_search": "Očisti pretragu",
       "common.search": "Pretraga",
       "common.nothing": "Ništa nije pronađeno",
       "common.copied": "Kopirano!",
@@ -1479,8 +1482,16 @@
     return model.vision ? "true" : "false";
   }
 
+  // Показывает кнопку очистки поиска только когда в поле есть текст.
+  function syncSearchClear(inputId, btnId) {
+    var input = byId(inputId);
+    var btn = byId(btnId);
+    btn.style.display = input.value ? "block" : "none";
+  }
+
   function openModelPicker() {
     byId("mpSearch").value = "";
+    byId("mpSearchClear").style.display = "none";
     // Фоновая автоподгрузка: ошибки не всплывают тостами.
     requestModelsForProviders(false, true);
     renderModelPicker();
@@ -2523,6 +2534,8 @@
     applyFont(state.settings);
     updateTyping();
     applyI18n();
+    syncSearchClear("searchInput", "searchClear");
+    syncSearchClear("mpSearch", "mpSearchClear");
   }
 
   /* ===== Вложения ===== */
@@ -4912,7 +4925,16 @@
     byId("ctReasoningReset").addEventListener("click", function () {
       resetCtModelField("reasoning");
     });
-    byId("searchInput").addEventListener("input", renderSidebar);
+    byId("searchInput").addEventListener("input", function () {
+      syncSearchClear("searchInput", "searchClear");
+      renderSidebar();
+    });
+    byId("searchClear").addEventListener("click", function () {
+      byId("searchInput").value = "";
+      byId("searchClear").style.display = "none";
+      renderSidebar();
+      byId("searchInput").focus();
+    });
     byId("clearChatsBtn").addEventListener("click", function () {
       if (window.confirm(t("sidebar.clear_all_confirm"))) {
         post({ type: "clear_chats" });
@@ -4960,7 +4982,16 @@
         closeModelPicker();
       }
     });
-    byId("mpSearch").addEventListener("input", renderModelPicker);
+    byId("mpSearch").addEventListener("input", function () {
+      syncSearchClear("mpSearch", "mpSearchClear");
+      renderModelPicker();
+    });
+    byId("mpSearchClear").addEventListener("click", function () {
+      byId("mpSearch").value = "";
+      byId("mpSearchClear").style.display = "none";
+      renderModelPicker();
+      byId("mpSearch").focus();
+    });
     /* ===== Горячие клавиши ===== */
     document.addEventListener("keydown", function (e) {
       var ctrl = e.ctrlKey || e.metaKey;

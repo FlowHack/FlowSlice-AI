@@ -117,7 +117,7 @@ select option {
 }
 .sidebar-search {
   width: 100%;
-  padding: 6px 10px;
+  padding: 6px 30px 6px 10px;
   border: 1px solid var(--orca-border);
   border-radius: 6px;
   background: var(--orca-input);
@@ -1368,8 +1368,7 @@ select option {
   white-space: nowrap;
 }
 .mp-search {
-  margin: 0 12px 8px;
-  padding: 8px 12px;
+  padding: 8px 30px 8px 12px;
   border: 1px solid var(--orca-border);
   border-radius: 6px;
   background: var(--orca-input);
@@ -1380,6 +1379,37 @@ select option {
 .mp-search:focus {
   outline: none;
   border-color: var(--orca-accent);
+}
+/* Обёртка поискового поля с кнопкой очистки */
+.search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.search-wrap input {
+  flex: 1;
+  min-width: 0;
+}
+.mp-search-wrap {
+  margin: 0 12px 8px;
+}
+.search-clear {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--orca-muted);
+  font-size: calc(12px * var(--fs-scale));
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+}
+.search-clear:hover {
+  color: var(--orca-fg);
+  background: var(--orca-border);
 }
 .mp-list {
   flex: 1;

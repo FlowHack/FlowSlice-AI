@@ -35,7 +35,10 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title" data-i18n="sidebar.chats">Чаты</div>
-      <input type="text" id="searchInput" class="sidebar-search" placeholder="Поиск чатов…" data-i18n-placeholder="sidebar.search">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" class="sidebar-search" placeholder="Поиск чатов…" data-i18n-placeholder="sidebar.search">
+        <button type="button" id="searchClear" class="search-clear" title="Очистить поиск" data-i18n-title="common.clear_search" data-i18n-aria-label="common.clear_search">✕</button>
+      </div>
     </div>
     <div class="chat-list" id="chatList"></div>
     <div class="sidebar-footer">
@@ -498,7 +501,10 @@
         <button type="button" id="mpClose" class="icon-btn" title="Закрыть" data-i18n-title="common.close">✕</button>
       </span>
     </div>
-    <input type="text" id="mpSearch" class="mp-search" placeholder="Поиск модели или провайдера…" data-i18n-placeholder="mp.search">
+    <div class="search-wrap mp-search-wrap">
+      <input type="text" id="mpSearch" class="mp-search" placeholder="Поиск модели или провайдера…" data-i18n-placeholder="mp.search">
+      <button type="button" id="mpSearchClear" class="search-clear" title="Очистить поиск" data-i18n-title="common.clear_search" data-i18n-aria-label="common.clear_search">✕</button>
+    </div>
     <div class="mp-list" id="mpList"></div>
   </div>
 </div>
